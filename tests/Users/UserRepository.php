@@ -2,17 +2,19 @@
 
 namespace WScore\DecaORM\Tests\Users;
 
+use DateTimeImmutable;
+use PDO;
 use WScore\DecaORM\RepositoryTrait;
 
 class UserRepository
 {
     use RepositoryTrait;
 
-    public function __construct(\PDO $pdo)
+    public function __construct(PDO $pdo)
     {
         $this->db = $pdo;
         $this->hydrator = new UserHydrator();
-        $this->now = new \DateTimeImmutable();
+        $this->now = new DateTimeImmutable();
     }
 
     public function find(int $id): ?User

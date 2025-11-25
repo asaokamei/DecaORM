@@ -1,9 +1,7 @@
 <?php
 
-#namespace WScore\tests;
 namespace WScore\DecaORM\Tests;
 
-use DateTimeImmutable;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\Tests\Users\User;
@@ -69,10 +67,10 @@ class DecaOrmTest extends TestCase
 
     public function testUpdateUser()
     {
-        $user = $this->repo->createAndSave([
-                                               'name' => 'John Doe',
-                                               'email' => 'john@example.com'
-                                           ]);
+        $user = new User();
+        $user->set('name', 'Test User');
+        $user->set('email', 'test@example.com');
+        $user = $this->repo->save($user);
         $id = $user->getId();
 
         // Update
@@ -80,10 +78,11 @@ class DecaOrmTest extends TestCase
         $this->repo->save($user);
 
         // Reload from DB to verify persistence
-        // Clear cache logic relies on HydratorTrait static property, assuming new request or clearing cache in real app.
+        // Clear cache logic relies on HydratorTrait static property,
+        // assuming a new request or clearing cache in a real app.
         // For this test, we simulate fetching fresh data or rely on repository.
 
-        // Directly check DB to ensure update happened
+        // Directly check DB to ensure an update happened.
         $stmt = $this->pdo->prepare("SELECT * FROM users WHERE id = ?");
         $stmt->execute([$id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
