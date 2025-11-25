@@ -1,5 +1,5 @@
 {
-  "name": "WScore/decaorm",
+  "name": "wscore/decaorm",
   "description": "a simple and small ORM",
   "type": "library",
   "license": "MIT",
@@ -13,7 +13,8 @@
   },
   "autoload": {
     "psr-4": {
-      "WScore\\DecaOrm\\": "src/"
+      "WScore\\DecaORM\\": "src/",
+      "WScore\\DecaORM\\Tests\\": "tests/"
     }
   }
 }

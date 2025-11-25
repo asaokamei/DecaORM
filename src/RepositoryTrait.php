@@ -34,7 +34,7 @@ trait RepositoryTrait
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function fetch(string $sql, array $data): array
+    public function fetch(string $sql, array $data): array|bool
     {
         $stmt = $this->execute($sql, $data);
         if (!$stmt) {
@@ -65,15 +65,6 @@ trait RepositoryTrait
     }
 
     /**
-     * エンティティの新規登録
-     */
-    private function insertEntity(EntityInterface $entity): bool|int
-    {
-        $data = $this->hydrator->dehydrate($entity);
-        return $this->insertData($data);
-    }
-
-    /**
      * エンティティの更新
      */
     private function updateEntity(EntityInterface $entity): void
@@ -81,18 +72,26 @@ trait RepositoryTrait
         $pKey = $this->hydrator->getPrimaryKey();
         $data = $this->hydrator->dehydrate($entity);
         $values = [];
-        foreach ($data as $item => $value) {
-            if ($item !== $pKey) {
-                $values[] = "{$item} = :{$item}";
-            }
+
+        // Remove PK!
+        unset($data[$pKey]);
+        // Remove CreatedAt!
+        $createdAt = $this->hydrator->getCreatedAt();
+        if ($createdAt) {
+            unset($data[$createdAt]);
         }
+        // Update UpdatedAt!
+        $updatedAt = $this->hydrator->getUpdatedAt();
+        if ($updatedAt !== null) {
+            $data[$updatedAt] = $this->now->format('Y-m-d H:i:s');
+        }
+        foreach ($data as $item => $value) {
+            $values[] = "{$item} = :{$item}";
+        }
+
         $values = implode(', ', $values);
 
-        // Populate UpdatedAt!
-        if ($this->hydrator->getUpdatedAt() !== null) {
-            $data[$this->hydrator->getUpdatedAt()] = $this->now->format('Y-m-d H:i:s');
-        }
-
+        $data[$pKey] = $entity->getId();
         $this->execute(
             "
             UPDATE {$this->hydrator->getTableName()} 
@@ -113,7 +112,7 @@ trait RepositoryTrait
             "
             DELETE FROM {$this->hydrator->getTableName()} 
                    WHERE {$pKey} = :id",
-            [':id' => $id]
+            ['id' => $id]
         );
     }
 
@@ -246,10 +245,9 @@ trait RepositoryTrait
     private function insertData(array $data): int|string|bool
     {
         $pKey = $this->hydrator->getPrimaryKey();
-        if (!$data[$pKey]) {
+        if ($this->hydrator->isPkAutoNumber()) {
             // AutoNumbering に対応。新規ならIDはNULLのはず。
             unset($data[$pKey]);
-            $autoNumbering = true;
         }
         $select = [];
         $values = [];
@@ -260,10 +258,14 @@ trait RepositoryTrait
         // Populate CreatedAt!
         if ($this->hydrator->getCreatedAt() !== null) {
             $data[$this->hydrator->getCreatedAt()] = $this->now->format('Y-m-d H:i:s');
+            $select[] = $this->hydrator->getCreatedAt();
+            $values[] = ':' . $this->hydrator->getCreatedAt();
         }
         // Populate UpdatedAt!
         if ($this->hydrator->getUpdatedAt() !== null) {
             $data[$this->hydrator->getUpdatedAt()] = $this->now->format('Y-m-d H:i:s');
+            $select[] = $this->hydrator->getUpdatedAt();
+            $values[] = ':' . $this->hydrator->getUpdatedAt();
         }
         $select = implode(', ', $select);
         $values = implode(', ', $values);
@@ -272,10 +274,10 @@ trait RepositoryTrait
         $stmt = $this->execute($sql, $data);
 
         if ($stmt) {
-            if (isset($autoNumbering) && $autoNumbering === true) {
+            if ($this->hydrator->isPkAutoNumber()) {
                 return $this->db->lastInsertId();
             }
-            return true;
+            return $data[$pKey] ?? true;
         }
         return false;
     }

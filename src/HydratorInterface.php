@@ -5,6 +5,10 @@ namespace WScore\DecaORM;
 interface HydratorInterface
 {
     /**
+     * プライマリキーが自動付与かどうか
+     */
+    public function isPkAutoNumber(): bool;
+    /**
      * エンティティのクラス名
      */
     public function getEntityClass(): string;
