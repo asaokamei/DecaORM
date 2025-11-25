@@ -28,7 +28,7 @@ class DecaOrmTest extends TestCase
         // Create table
         $this->pdo->exec(
             "CREATE TABLE users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             email TEXT NOT NULL,
             created_at TEXT,
@@ -83,7 +83,7 @@ class DecaOrmTest extends TestCase
         // For this test, we simulate fetching fresh data or rely on repository.
 
         // Directly check DB to ensure an update happened.
-        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE id = ?");
+        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE user_id = ?");
         $stmt->execute([$id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 

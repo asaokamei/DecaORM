@@ -10,7 +10,7 @@ class User implements EntityInterface
 {
     use EntityTrait;
 
-    private ?int $id = null;
+    private ?int $user_id = null;
     private string $name;
     private string $email;
     private ?DateTimeImmutable $created_at = null;
@@ -18,12 +18,12 @@ class User implements EntityInterface
 
     public function getId(): ?int
     {
-        return $this->id;
+        return $this->user_id;
     }
 
     public function setId(int|string $id): void
     {
-        $this->id = (int) $id;
+        $this->user_id = (int) $id;
     }
 
     public function setCreatedAt(string|DateTimeImmutable $created_at): void
