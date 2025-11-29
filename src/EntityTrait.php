@@ -2,49 +2,29 @@
 
 namespace WScore\DecaORM;
 
-use DateTimeImmutable;
-
 trait EntityTrait
 {
-
-    public function get(string $name): mixed
+    /**
+     * プロパティの値を取得（文字列として返す）
+     * DBからの読み書き専用。型変換が必要な場合はgetterメソッドを使用すること。
+     */
+    public function get(string $name): ?string
     {
-        $method = 'get' . ucfirst($name);
-        if (method_exists($this, $method)) {
-            return $this->$method();
-        }
-        $method = 'get' . ucfirst(str_replace('_', '', $name));
-        if (method_exists($this, $method)) {
-            return $this->$method();
-        }
         if (property_exists($this, $name)) {
-            return $this->$name;
+            $value = $this->$name;
+            return $value !== null ? (string) $value : null;
         }
         return null;
     }
 
+    /**
+     * プロパティの値を設定（文字列として設定）
+     * DBからの読み書き専用。型変換が必要な場合はsetterメソッドを使用すること。
+     */
     public function set(string $name, mixed $value): void
     {
-        $method = 'set' . ucfirst($name);
-        if (method_exists($this, $method)) {
-            $this->$method($value);
-            return;
-        }
-        $method = 'set' . ucfirst(str_replace('_', '', $name));
-        if (method_exists($this, $method)) {
-            $this->$method($value);
-            return;
-        }
         if (property_exists($this, $name)) {
-            $this->$name = $value;
+            $this->$name = $value !== null ? (string) $value : null;
         }
-    }
-
-    private function setDateTimeProperty(string $name, mixed $value): void
-    {
-        if (is_string($value)) {
-            $value = new DateTimeImmutable($value);
-        }
-        $this->$name = $value;
     }
 }

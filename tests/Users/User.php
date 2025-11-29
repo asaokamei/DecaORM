@@ -10,29 +10,30 @@ class User implements EntityInterface
 {
     use EntityTrait;
 
-    private ?int $user_id = null;
-    private string $name;
-    private string $email;
-    private ?DateTimeImmutable $created_at = null;
-    private ?DateTimeImmutable $updated_at = null;
+    // すべてのプロパティをstringとして定義（DBからの読み書き用）
+    public ?string $user_id = null;
+    public string $name = '';
+    public string $email = '';
+    public ?string $created_at = null;
+    public ?string $updated_at = null;
 
     public function getId(): ?int
     {
-        return $this->user_id;
+        return $this->user_id !== null ? (int) $this->user_id : null;
     }
 
     public function setId(int|string $id): void
     {
-        $this->user_id = (int) $id;
+        $this->user_id = (string) $id;
     }
 
-    public function setCreatedAt(string|DateTimeImmutable $created_at): void
+    public function getCreatedAt(): ?DateTimeImmutable
     {
-        $this->setDateTimeProperty('created_at', $created_at);
+        return $this->created_at !== null ? new DateTimeImmutable($this->created_at) : null;
     }
 
-    public function setUpdatedAt(string|DateTimeImmutable $updated_at): void
+    public function getUpdatedAt(): ?DateTimeImmutable
     {
-        $this->setDateTimeProperty('updated_at', $updated_at);
+        return $this->updated_at !== null ? new DateTimeImmutable($this->updated_at) : null;
     }
 }

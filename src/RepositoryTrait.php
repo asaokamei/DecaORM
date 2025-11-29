@@ -44,6 +44,50 @@ trait RepositoryTrait
     }
 
     /**
+     * PDO::FETCH_CLASSを使用してエンティティを取得
+     *
+     * @return ?EntityInterface
+     */
+    private function fetchEntityByClass(string $sql, array $data, string $entityClass): ?EntityInterface
+    {
+        $pKey = $this->hydrator->getPrimaryKey();
+        
+        // まずIDだけを取得してキャッシュをチェック（軽量なクエリ）
+        $idSql = preg_replace('/SELECT \*/i', "SELECT {$pKey}", $sql);
+        $idData = $this->fetch($idSql, $data);
+        if (!$idData) {
+            return null;
+        }
+        $id = $idData[$pKey] ?? null;
+        
+        // キャッシュがあればそれを使う
+        if ($id !== null && isset(HydratorTrait::$cached[$entityClass][$id])) {
+            return HydratorTrait::$cached[$entityClass][$id];
+        }
+
+        // キャッシュがなければPDO::FETCH_CLASSで取得
+        $stmt = $this->execute($sql, $data);
+        if (!$stmt) {
+            return null;
+        }
+        $stmt->setFetchMode(PDO::FETCH_CLASS, $entityClass);
+        $entity = $stmt->fetch();
+        if (!$entity) {
+            return null;
+        }
+
+        // キャッシュに登録
+        if ($id !== null) {
+            if (!isset(HydratorTrait::$cached[$entityClass])) {
+                HydratorTrait::$cached[$entityClass] = [];
+            }
+            HydratorTrait::$cached[$entityClass][$id] = $entity;
+        }
+
+        return $entity;
+    }
+
+    /**
      * PrimaryKeyからのエンティティの読込。
      *
      * @return ?EntityInterface
@@ -51,17 +95,13 @@ trait RepositoryTrait
     private function fetchEntityById(int|string $id): mixed
     {
         $pKey = $this->hydrator->getPrimaryKey();
-        $data = $this->fetch(
-            "
-            SELECT * FROM {$this->hydrator->getTableName()} 
-                     WHERE {$pKey} = :id",
-            [':id' => $id]
+        $entityClass = $this->hydrator->getEntityClass();
+        
+        return $this->fetchEntityByClass(
+            "SELECT * FROM {$this->hydrator->getTableName()} WHERE {$pKey} = :id",
+            [':id' => $id],
+            $entityClass
         );
-
-        if (!$data) {
-            return null;
-        }
-        return $this->hydrator->hydrate($data);
     }
 
     /**
@@ -141,15 +181,30 @@ trait RepositoryTrait
         string $orderDir = 'ASC',
     ): void {
         $orderBy = $orderBy ?? $this->hydrator->getPrimaryKey();
+        $entityClass = $this->hydrator->getEntityClass();
         $sql = "
             SELECT * 
                 FROM {$this->hydrator->getTableName()} 
                 WHERE {$foreignKey} = :id
                 ORDER BY {$orderBy} {$orderDir}";
-        $data = $this->fetchAll($sql, [':id' => $entity->getId()]);
+        $stmt = $this->execute($sql, [':id' => $entity->getId()]);
+        if (!$stmt) {
+            $entity->set($relationName, []);
+            return;
+        }
+        
+        $stmt->setFetchMode(PDO::FETCH_CLASS, $entityClass);
         $list = [];
-        foreach ($data as $row) {
-            $childEntity = $this->hydrator->hydrate($row);
+        while ($childEntity = $stmt->fetch()) {
+            // キャッシュに登録
+            $id = $childEntity->getId();
+            if ($id !== null) {
+                $class = get_class($childEntity);
+                if (!isset(HydratorTrait::$cached[$class])) {
+                    HydratorTrait::$cached[$class] = [];
+                }
+                HydratorTrait::$cached[$class][$id] = $childEntity;
+            }
 
             // 双方向リンクの設定（子 -> 親）
             if ($parentRelationName !== null) {
@@ -203,6 +258,7 @@ trait RepositoryTrait
         $ids = array_unique($ids);
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
         $orderBy = $orderBy ?? $this->hydrator->getPrimaryKey();
+        $entityClass = $this->hydrator->getEntityClass();
 
         $sql = "
                 SELECT * 
@@ -213,11 +269,20 @@ trait RepositoryTrait
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute(array_values($ids));
+        $stmt->setFetchMode(PDO::FETCH_CLASS, $entityClass);
 
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $childEntity = $this->hydrator->hydrate($row);
+        while ($childEntity = $stmt->fetch()) {
+            // キャッシュに登録
+            $id = $childEntity->getId();
+            if ($id !== null) {
+                $class = get_class($childEntity);
+                if (!isset(HydratorTrait::$cached[$class])) {
+                    HydratorTrait::$cached[$class] = [];
+                }
+                HydratorTrait::$cached[$class][$id] = $childEntity;
+            }
 
-            $parentId = $row[$foreignKey] ?? null;
+            $parentId = $childEntity->get($foreignKey);
             if ($parentId !== null && isset($entityMap[$parentId])) {
                 $parent = $entityMap[$parentId];
 
