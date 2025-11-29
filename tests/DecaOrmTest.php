@@ -37,7 +37,7 @@ class DecaOrmTest extends TestCase
         );
 
         // Clear cache before each test
-        \WScore\DecaORM\HydratorTrait::$cached = [];
+        \WScore\DecaORM\EntityCache::clear();
 
         $this->repo = new UserRepository($this->pdo);
     }

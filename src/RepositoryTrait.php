@@ -40,27 +40,10 @@ trait RepositoryTrait
         $list = $stmt->fetchAll();
 
         foreach ($list as $idx => $entity) {
-            $list[$idx] = $this->entityCache($entity);
+            $list[$idx] = EntityCache::cache($entity);
         }
 
         return $list;
-    }
-
-    private function entityCache(EntityInterface $entity): EntityInterface
-    {
-        $class = get_class($entity);
-        if (!isset(HydratorTrait::$cached[$class])) {
-            HydratorTrait::$cached[$class] = [];
-        }
-        $id = $entity->getId();
-        if ($id === null) {
-            return $entity;
-        }
-        if (isset(HydratorTrait::$cached[$class][$id])) {
-            return HydratorTrait::$cached[$class][$id];
-        }
-        HydratorTrait::$cached[$class][$id] = $entity;
-        return $entity;
     }
 
     public function fetch(string $sql, array $data): ?EntityInterface
@@ -94,9 +77,9 @@ trait RepositoryTrait
         $id = $this->insertData($data);
         if ($this->hydrator->isPkAutoNumber() && $id) {
             $entity->set($pKey, $id);
-            $this->entityCache($entity);
+            EntityCache::cache($entity);
         }
-        $this->entityCache($entity);
+        EntityCache::cache($entity);
     }
 
     /**
@@ -195,10 +178,7 @@ trait RepositoryTrait
             $id = $childEntity->getId();
             if ($id !== null) {
                 $class = get_class($childEntity);
-                if (!isset(HydratorTrait::$cached[$class])) {
-                    HydratorTrait::$cached[$class] = [];
-                }
-                HydratorTrait::$cached[$class][$id] = $childEntity;
+                EntityCache::set($class, $id, $childEntity);
             }
 
             // 双方向リンクの設定（子 -> 親）
@@ -271,10 +251,7 @@ trait RepositoryTrait
             $id = $childEntity->getId();
             if ($id !== null) {
                 $class = get_class($childEntity);
-                if (!isset(HydratorTrait::$cached[$class])) {
-                    HydratorTrait::$cached[$class] = [];
-                }
-                HydratorTrait::$cached[$class][$id] = $childEntity;
+                EntityCache::set($class, $id, $childEntity);
             }
 
             $parentId = $childEntity->get($foreignKey);
