@@ -5,7 +5,7 @@ namespace WScore\DecaORM\Attribute;
 use Attribute;
 
 /**
- * 作成日時を示すattribute
+ * Attribute indicating creation timestamp
  */
 #[Attribute(Attribute::TARGET_PROPERTY)]
 class CreatedAt

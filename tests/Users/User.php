@@ -10,7 +10,7 @@ class User implements EntityInterface
 {
     use EntityTrait;
 
-    // すべてのプロパティをstringとして定義（DBからの読み書き用）
+    // Define all properties as string for read/write from DB
     public ?string $user_id = null;
     public string $name = '';
     public string $email = '';

@@ -5,7 +5,7 @@ namespace WScore\DecaORM\Attribute;
 use Attribute;
 
 /**
- * カラム情報を指定するattribute
+ * Specify column information
  */
 #[Attribute(Attribute::TARGET_PROPERTY)]
 class Column

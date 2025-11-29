@@ -3,7 +3,7 @@
 namespace WScore\DecaORM;
 
 /**
- * エンティティのキャッシュを管理するクラス
+ * Class to manage entity caching
  */
 class EntityCache
 {
@@ -11,10 +11,10 @@ class EntityCache
     private static array $cached = [];
 
     /**
-     * キャッシュからエンティティを取得
+     * Get an entity from the cache
      * 
-     * @param string $class エンティティクラス名
-     * @param int|string $id エンティティのID
+     * @param string $class Entity class name
+     * @param int|string $id Entity ID
      * @return EntityInterface|null
      */
     public static function get(string $class, int|string $id): ?EntityInterface
@@ -23,11 +23,11 @@ class EntityCache
     }
 
     /**
-     * キャッシュにエンティティを保存
+     * Save an entity to the cache
      * 
-     * @param string $class エンティティクラス名
-     * @param int|string $id エンティティのID
-     * @param EntityInterface $entity エンティティ
+     * @param string $class Entity class name
+     * @param int|string $id Entity ID
+     * @param EntityInterface $entity Entity
      */
     public static function set(string $class, int|string $id, EntityInterface $entity): void
     {
@@ -38,10 +38,10 @@ class EntityCache
     }
 
     /**
-     * キャッシュにエンティティが存在するかチェック
+     * Check if an entity exists in the cache
      * 
-     * @param string $class エンティティクラス名
-     * @param int|string $id エンティティのID
+     * @param string $class Entity class name
+     * @param int|string $id Entity ID
      * @return bool
      */
     public static function has(string $class, int|string $id): bool
@@ -50,11 +50,11 @@ class EntityCache
     }
 
     /**
-     * エンティティをキャッシュに登録または取得
-     * IDがnullの場合はそのまま返す。IDがある場合はキャッシュがあればそれを返し、なければキャッシュに登録して返す
+     * Register or get an entity in the cache
+     * If the ID is null, return the original entity. If the ID is not null, return the cached entity if it exists, otherwise register it in the cache and return it.
      * 
-     * @param EntityInterface $entity エンティティ
-     * @return EntityInterface キャッシュ済みのエンティティまたは元のエンティティ
+     * @param EntityInterface $entity Entity
+     * @return EntityInterface Cached entity or original entity
      */
     public static function cache(EntityInterface $entity): EntityInterface
     {
@@ -71,9 +71,9 @@ class EntityCache
     }
 
     /**
-     * キャッシュをクリア
+     * Clear the cache
      * 
-     * @param string|null $class 指定したクラスのキャッシュのみクリア。nullの場合は全てクリア
+     * @param string|null $class Clear the cache for the specified class. If null, clear all.
      */
     public static function clear(?string $class = null): void
     {

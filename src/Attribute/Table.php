@@ -5,7 +5,7 @@ namespace WScore\DecaORM\Attribute;
 use Attribute;
 
 /**
- * テーブル名を指定するattribute
+ * Attribute to specify the table name
  */
 #[Attribute(Attribute::TARGET_CLASS)]
 class Table

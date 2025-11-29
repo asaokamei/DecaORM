@@ -5,7 +5,7 @@ namespace WScore\DecaORM\Attribute;
 use Attribute;
 
 /**
- * 自動生成される値（AUTO_INCREMENTなど）を示すattribute
+ * Attribute indicating a value that is automatically generated (AUTO_INCREMENT, etc.)
  */
 #[Attribute(Attribute::TARGET_PROPERTY)]
 class GeneratedValue

@@ -5,7 +5,7 @@ namespace WScore\DecaORM\Attribute;
 use Attribute;
 
 /**
- * プライマリキーを示すattribute
+ * Attribute indicating the primary key
  */
 #[Attribute(Attribute::TARGET_PROPERTY)]
 class Id

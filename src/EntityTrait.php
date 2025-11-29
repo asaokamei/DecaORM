@@ -5,8 +5,8 @@ namespace WScore\DecaORM;
 trait EntityTrait
 {
     /**
-     * プロパティの値を取得（文字列として返す）
-     * DBからの読み書き専用。型変換が必要な場合はgetterメソッドを使用すること。
+     * Get the value of a property (return as string)
+     * Read-only from DB. If type conversion is needed, use the getter method.
      */
     public function get(string $name): ?string
     {
@@ -18,8 +18,8 @@ trait EntityTrait
     }
 
     /**
-     * プロパティの値を設定（文字列として設定）
-     * DBからの読み書き専用。型変換が必要な場合はsetterメソッドを使用すること。
+     * Set the value of a property (set as string)
+     * Read-only from DB. If type conversion is needed, use the setter method.
      */
     public function set(string $name, mixed $value): void
     {

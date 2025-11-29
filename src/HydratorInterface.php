@@ -5,45 +5,45 @@ namespace WScore\DecaORM;
 interface HydratorInterface
 {
     /**
-     * プライマリキーが自動付与かどうか
+     * Whether the primary key is auto-generated
      */
     public function isPkAutoNumber(): bool;
     /**
-     * エンティティのクラス名
+     * Entity class name
      */
     public function getEntityClass(): string;
 
     /**
-     * DBテーブル名
+     * DB table name
      */
     public function getTableName(): string;
     /**
-     * DBのプライマリキー
+     * DB primary key
      */
     public function getPrimaryKey(): string;
 
     /**
-     * エンティティのプロパティ一覧
+     * List of entity properties
      */
     public function listProperties(): array;
 
     /**
-     * 登録日時のカラム名
+     * Column name for creation timestamp
      */
     public function getCreatedAt(): ?string;
 
     /**
-     * 更新日時のカラム名
+     * Column name for update timestamp
      */
     public function getUpdatedAt(): ?string;
 
     /**
-     * 連想配列（DB行）からエンティティに変換（ハイドレーション）
+     * Convert an associative array (DB row) to an entity (hydration)
      */
     public function hydrate(array $data): EntityInterface;
 
     /**
-     * エンティティから連想配列に変換（デハイドレーション）
+     * Convert an entity to an associative array (dehydration)
      */
     public function dehydrate(EntityInterface $entity): array;
 }

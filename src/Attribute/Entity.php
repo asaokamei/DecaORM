@@ -5,7 +5,7 @@ namespace WScore\DecaORM\Attribute;
 use Attribute;
 
 /**
- * エンティティクラスを示すattribute
+ * Attribute indicating the entity class
  */
 #[Attribute(Attribute::TARGET_CLASS)]
 class Entity

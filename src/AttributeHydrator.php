@@ -13,8 +13,8 @@ use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\Attribute\UpdatedAt;
 
 /**
- * AttributeベースのHydrator実装
- * Doctrineスタイルのattributeを使ってエンティティのメタデータを読み取る
+ * Attribute-based Hydrator implementation
+ * Use Doctrine-style attributes to read entity metadata
  */
 class AttributeHydrator implements HydratorInterface
 {
@@ -38,7 +38,7 @@ class AttributeHydrator implements HydratorInterface
     }
 
     /**
-     * メタデータを読み込む（キャッシュがあれば使用）
+     * Load metadata (use cached if available)
      */
     private function loadMetadata(): void
     {
@@ -52,7 +52,7 @@ class AttributeHydrator implements HydratorInterface
             $this->updatedAt = $cached['updatedAt'];
         } else {
             $this->parseAttributes();
-            // キャッシュに保存
+            // Save to cache
             self::$metadataCache[$this->entityClass] = [
                 'tableName' => $this->tableName,
                 'primaryKey' => $this->primaryKey,
@@ -65,21 +65,21 @@ class AttributeHydrator implements HydratorInterface
     }
 
     /**
-     * リフレクションを使ってattributeを解析
+     * Parse attributes using reflection
      */
     private function parseAttributes(): void
     {
         $reflection = new ReflectionClass($this->entityClass);
 
-        // クラスレベルのattributeを解析
+        // Parse class-level attributes
         $this->parseClassAttributes($reflection);
 
-        // プロパティレベルのattributeを解析
+        // Parse property-level attributes
         $this->parsePropertyAttributes($reflection);
     }
 
     /**
-     * クラスレベルのattributeを解析（Entity, Table）
+     * Parse class-level attributes (Entity, Table)
      */
     private function parseClassAttributes(ReflectionClass $reflection): void
     {
@@ -97,16 +97,16 @@ class AttributeHydrator implements HydratorInterface
             }
         }
 
-        // テーブル名が指定されていない場合は、クラス名から推測
+        // If the table name is not specified, infer it from the class name
         if ($this->tableName === null) {
             $shortName = $reflection->getShortName();
-            // クラス名をスネークケースに変換（例: UserProfile -> user_profile）
+            // Convert class name to snake_case (e.g. UserProfile -> user_profile)
             $this->tableName = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $shortName)) . 's';
         }
     }
 
     /**
-     * プロパティレベルのattributeを解析
+     * Parse property-level attributes
      */
     private function parsePropertyAttributes(ReflectionClass $reflection): void
     {
@@ -114,7 +114,7 @@ class AttributeHydrator implements HydratorInterface
 
         foreach ($properties as $property) {
             $propertyName = $property->getName();
-            $columnName = $propertyName; // デフォルトはプロパティ名
+            $columnName = $propertyName; // Default is property name
             $isId = false;
             $isGenerated = false;
             $isCreatedAt = false;
@@ -122,7 +122,7 @@ class AttributeHydrator implements HydratorInterface
 
             $attributes = $property->getAttributes();
 
-            // まず、すべての属性を確認してカラム名を決定
+            // First, check all attributes to determine the column name
             foreach ($attributes as $attribute) {
                 $instance = $attribute->newInstance();
 
@@ -143,7 +143,7 @@ class AttributeHydrator implements HydratorInterface
                 }
             }
 
-            // 次に、IdやGeneratedValueなどの属性を確認
+            // Next, check attributes for Id and GeneratedValue
             foreach ($attributes as $attribute) {
                 $instance = $attribute->newInstance();
 
@@ -155,7 +155,7 @@ class AttributeHydrator implements HydratorInterface
                 }
             }
 
-            // CreatedAt/UpdatedAtの設定
+            // Set CreatedAt/UpdatedAt
             if ($isCreatedAt) {
                 $this->createdAt = $columnName;
             }
@@ -163,12 +163,12 @@ class AttributeHydrator implements HydratorInterface
                 $this->updatedAt = $columnName;
             }
 
-            // プライマリキーがGeneratedValueを持っている場合は自動番号
+            // If the primary key has GeneratedValue, it is an auto-number
             if ($isId && $isGenerated) {
                 $this->pkAutoNumber = true;
             }
 
-            // プロパティリストに追加（プライマリキーも含む）
+            // Add to property list (including primary key)
             $this->properties[] = $columnName;
         }
     }

@@ -8,16 +8,14 @@ trait HydratorTrait
     abstract protected function listProperties(): array;
 
     /**
-     * 連想配列（DB行）からエンティティに変換（ハイドレーション）
+     * Converts an associative array (DB row) to an entity (hydration)
      * @return EntityInterface
      */
     protected function hydrateEntity(EntityInterface $entity, array $data): mixed
     {
-        $pKey = $this->getPrimaryKey(); // HydratorInterfaceの実装が必要だがTraitなので$thisで呼べる前提
-
         $targetEntity = EntityCache::cache($entity);
 
-        // 対象のエンティティにデータをセット（キャッシュ済みのものでも最新データで更新）
+        // Set data to the target entity (update with latest data even if cached)
         foreach ($this->listProperties() as $property) {
             if (isset($data[$property])) {
                 $targetEntity->set($property, $data[$property]);
@@ -28,7 +26,7 @@ trait HydratorTrait
     }
 
     /**
-     * エンティティから連想配列に変換（デハイドレーション）
+     * Converts an entity to an associative array (dehydration)
      */
     public function dehydrateEntity(EntityInterface $entity): array
     {

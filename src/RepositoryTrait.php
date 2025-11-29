@@ -53,7 +53,7 @@ trait RepositoryTrait
     }
 
     /**
-     * PrimaryKeyからのエンティティの読込。
+     * Fetch an entity by PrimaryKey
      *
      * @return ?EntityInterface
      */
@@ -67,6 +67,9 @@ trait RepositoryTrait
         );
     }
 
+    /**
+     * Insert an entity
+     */
     private function insertEntity(EntityInterface $entity): void
     {
         $pKey = $this->hydrator->getPrimaryKey();
@@ -83,7 +86,7 @@ trait RepositoryTrait
     }
 
     /**
-     * エンティティの更新
+     * Update an entity
      */
     private function updateEntity(EntityInterface $entity): void
     {
@@ -115,12 +118,12 @@ trait RepositoryTrait
             UPDATE {$this->hydrator->getTableName()} 
                 SET {$values} 
                 WHERE {$pKey} = :{$pKey}",
-            $data // $dataにはidも含まれている
+            $data // $data contains the id
         );
     }
 
     /**
-     * エンティティの削除
+     * Delete an entity
      */
     private function deleteEntity(EntityInterface $entity): void
     {
@@ -135,7 +138,7 @@ trait RepositoryTrait
     }
 
     /**
-     * Many-To-One：親エンティティを読み込む
+     * Many-To-One: Fetch a parent entity
      */
     private function fillParentEntity(
         EntityInterface $entity,
@@ -148,7 +151,7 @@ trait RepositoryTrait
     }
 
     /**
-     * One-To-Many：関連する複数のエンティティを読み込む
+     * One-To-Many: Fetch multiple child entities
      */
     private function fillChildEntities(
         EntityInterface $entity,
@@ -174,14 +177,14 @@ trait RepositoryTrait
         $stmt->setFetchMode(PDO::FETCH_CLASS, $entityClass);
         $list = [];
         while ($childEntity = $stmt->fetch()) {
-            // キャッシュに登録
+            // Register in cache
             $id = $childEntity->getId();
             if ($id !== null) {
                 $class = get_class($childEntity);
                 EntityCache::set($class, $id, $childEntity);
             }
 
-            // 双方向リンクの設定（子 -> 親）
+            // Set bidirectional link (child -> parent)
             if ($parentRelationName !== null) {
                 $childEntity->set($parentRelationName, $entity);
             }
@@ -192,14 +195,14 @@ trait RepositoryTrait
     }
 
     /**
-     * One-To-Many (Batch): 複数の親エンティティに対して関連する子エンティティを一括で読み込む
+     * One-To-Many (Batch): Fetch related child entities for multiple parent entities at once
      *
      * @param EntityInterface[] $entities
-     * @param string $relationName 親エンティティ側で子リストを保持するプロパティ名（例: 'posts'）
-     * @param string $foreignKey 子テーブル側の外部キーカラム名（例: 'user_id'）
+     * @param string $relationName Property name for the parent entity to hold the child list (e.g. 'posts')
+     * @param string $foreignKey Foreign key column name on the child table (e.g. 'user_id')
      * @param string|null $orderBy
      * @param string $orderDir
-     * @param string|null $parentRelationName 子エンティティ側から見た親のリレーション名（例: 'user'）。指定すると双方向リンクを設定する。
+     * @param string|null $parentRelationName Relation name of the parent from the child entity side (e.g. 'user'). If specified, set bidirectional link.
      */
     private function fillChildEntitiesBatch(
         array $entities,
@@ -215,13 +218,13 @@ trait RepositoryTrait
 
         $ids = [];
         $entityMap = [];
-        // キャッシュ済みのエンティティが渡されている前提で、$entityMapを作る
+        // Assume cached entities are passed, create $entityMap
         foreach ($entities as $entity) {
             $id = $entity->getId();
             if ($id !== null) {
                 $ids[] = $id;
                 $entityMap[$id] = $entity;
-                // リストを初期化
+                // Initialize list
                 $entity->set($relationName, []);
             }
         }
@@ -247,7 +250,7 @@ trait RepositoryTrait
         $stmt->setFetchMode(PDO::FETCH_CLASS, $entityClass);
 
         while ($childEntity = $stmt->fetch()) {
-            // キャッシュに登録
+            // Register in cache
             $id = $childEntity->getId();
             if ($id !== null) {
                 $class = get_class($childEntity);
@@ -258,7 +261,7 @@ trait RepositoryTrait
             if ($parentId !== null && isset($entityMap[$parentId])) {
                 $parent = $entityMap[$parentId];
 
-                // 親 -> 子 のセット
+                // Set parent -> child
                 $currentList = $parent->get($relationName);
                 if (!is_array($currentList)) {
                     $currentList = [];
@@ -266,10 +269,10 @@ trait RepositoryTrait
                 $currentList[] = $childEntity;
                 $parent->set($relationName, $currentList);
 
-                // 子 -> 親 のセット（双方向リンク）
+                // Set child -> parent (bidirectional link)
                 if ($parentRelationName !== null) {
-                    // 子エンティティに親をセットする。
-                    // EntityTrait::set を使うことで、setUser() メソッドの存在有無を気にせず透過的に扱える
+                    // Set parent to the child entity.
+                    // Use EntityTrait::set to handle the existence of the setUser() method transparently.
                     $childEntity->set($parentRelationName, $parent);
                 }
             }
@@ -277,13 +280,13 @@ trait RepositoryTrait
     }
 
     /**
-     * データを保存してプライマリキーを返す
+     * Save data and return the primary key
      */
     private function insertData(array $data): int|string|bool
     {
         $pKey = $this->hydrator->getPrimaryKey();
         if ($this->hydrator->isPkAutoNumber()) {
-            // AutoNumbering に対応。新規ならIDはNULLのはず。
+            // Supports AutoNumbering. The ID should be NULL for new records.
             unset($data[$pKey]);
         }
         $select = [];

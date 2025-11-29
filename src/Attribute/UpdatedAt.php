@@ -5,7 +5,7 @@ namespace WScore\DecaORM\Attribute;
 use Attribute;
 
 /**
- * 更新日時を示すattribute
+ * Attribute indicating update timestamp
  */
 #[Attribute(Attribute::TARGET_PROPERTY)]
 class UpdatedAt
