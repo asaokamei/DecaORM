@@ -7,13 +7,13 @@ trait HydratorTrait
     /** @var EntityInterface[][] */
     public static array $cached = [];
     public abstract function getPrimaryKey(): string;
-    abstract private function listProperties(): array;
+    abstract protected function listProperties(): array;
 
     /**
      * 連想配列（DB行）からエンティティに変換（ハイドレーション）
      * @return EntityInterface
      */
-    private function hydrateEntity(EntityInterface $entity, array $data): mixed
+    protected function hydrateEntity(EntityInterface $entity, array $data): mixed
     {
         $pKey = $this->getPrimaryKey(); // HydratorInterfaceの実装が必要だがTraitなので$thisで呼べる前提
         $id = $data[$pKey] ?? null;
