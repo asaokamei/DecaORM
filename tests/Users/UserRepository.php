@@ -4,16 +4,18 @@ namespace WScore\DecaORM\Tests\Users;
 
 use DateTimeImmutable;
 use PDO;
+use WScore\DecaORM\AttributeHydrator;
+use WScore\DecaORM\HydratorInterface;
 use WScore\DecaORM\RepositoryTrait;
 
 class UserRepository
 {
     use RepositoryTrait;
 
-    public function __construct(PDO $pdo)
+    public function __construct(PDO $pdo, HydratorInterface $hydrator = null)
     {
         $this->db = $pdo;
-        $this->hydrator = new UserHydrator();
+        $this->hydrator = $hydrator ?? new AttributeHydrator(User::class);
         $this->now = new DateTimeImmutable();
     }
 

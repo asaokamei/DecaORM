@@ -60,10 +60,11 @@ trait RepositoryTrait
     private function fetchEntityById(int|string $id): ?EntityInterface
     {
         $pKey = $this->hydrator->getPrimaryKey();
+        $table = $this->hydrator->getTableName();
 
         return $this->fetch(
-            "SELECT * FROM {$this->hydrator->getTableName()} WHERE {$pKey} = :id",
-            [':id' => $id]
+            "SELECT * FROM {$table} WHERE {$pKey} = :id",
+            ['id' => $id]
         );
     }
 

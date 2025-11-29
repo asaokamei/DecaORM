@@ -4,15 +4,15 @@ namespace WScore\DecaORM\Tests;
 
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\AttributeHydrator;
-use WScore\DecaORM\Tests\Users\UserWithAttribute;
+use WScore\DecaORM\Tests\Users\User;
 
 class AttributeHydratorTest extends TestCase
 {
     public function testAttributeHydrator(): void
     {
-        $hydrator = new AttributeHydrator(UserWithAttribute::class);
+        $hydrator = new AttributeHydrator(User::class);
 
-        $this->assertEquals(UserWithAttribute::class, $hydrator->getEntityClass());
+        $this->assertEquals(User::class, $hydrator->getEntityClass());
         $this->assertEquals('users', $hydrator->getTableName());
         $this->assertEquals('user_id', $hydrator->getPrimaryKey());
         $this->assertTrue($hydrator->isPkAutoNumber());
@@ -29,7 +29,7 @@ class AttributeHydratorTest extends TestCase
 
     public function testHydrate(): void
     {
-        $hydrator = new AttributeHydrator(UserWithAttribute::class);
+        $hydrator = new AttributeHydrator(User::class);
 
         $data = [
             'user_id' => 1,
@@ -41,7 +41,7 @@ class AttributeHydratorTest extends TestCase
 
         $entity = $hydrator->hydrate($data);
 
-        $this->assertInstanceOf(UserWithAttribute::class, $entity);
+        $this->assertInstanceOf(User::class, $entity);
         $this->assertEquals(1, $entity->getId());
         $this->assertEquals('Test User', $entity->get('name'));
         $this->assertEquals('test@example.com', $entity->get('email'));
@@ -49,9 +49,9 @@ class AttributeHydratorTest extends TestCase
 
     public function testDehydrate(): void
     {
-        $hydrator = new AttributeHydrator(UserWithAttribute::class);
+        $hydrator = new AttributeHydrator(User::class);
 
-        $entity = new UserWithAttribute();
+        $entity = new User();
         $entity->setId(1);
         $entity->set('name', 'Test User');
         $entity->set('email', 'test@example.com');

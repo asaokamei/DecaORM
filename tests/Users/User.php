@@ -3,18 +3,38 @@
 namespace WScore\DecaORM\Tests\Users;
 
 use DateTimeImmutable;
+use WScore\DecaORM\Attribute\Column;
+use WScore\DecaORM\Attribute\CreatedAt;
+use WScore\DecaORM\Attribute\GeneratedValue;
+use WScore\DecaORM\Attribute\Id;
+use WScore\DecaORM\Attribute\Table;
+use WScore\DecaORM\Attribute\UpdatedAt;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\EntityTrait;
 
+/**
+ * Attributeを使ったUserエンティティのサンプル
+ */
+#[Table(name: 'users')]
 class User implements EntityInterface
 {
     use EntityTrait;
 
-    // Define all properties as string for read/write from DB
+    #[Id]
+    #[GeneratedValue]
+    #[Column(name: 'user_id')]
     public ?string $user_id = null;
+
+    #[Column(name: 'name')]
     public string $name = '';
+
+    #[Column(name: 'email')]
     public string $email = '';
+
+    #[CreatedAt(name: 'created_at')]
     public ?string $created_at = null;
+
+    #[UpdatedAt(name: 'updated_at')]
     public ?string $updated_at = null;
 
     public function getId(): ?int
@@ -37,3 +57,5 @@ class User implements EntityInterface
         return $this->updated_at !== null ? new DateTimeImmutable($this->updated_at) : null;
     }
 }
+
+

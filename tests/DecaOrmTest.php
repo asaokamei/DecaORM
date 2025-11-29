@@ -4,7 +4,9 @@ namespace WScore\DecaORM\Tests;
 
 use PDO;
 use PHPUnit\Framework\TestCase;
+use WScore\DecaORM\AttributeHydrator;
 use WScore\DecaORM\Tests\Users\User;
+use WScore\DecaORM\Tests\Users\UserHydrator;
 use WScore\DecaORM\Tests\Users\UserRepository;
 
 // --- Mock Classes for Testing ---
@@ -39,7 +41,9 @@ class DecaOrmTest extends TestCase
         // Clear cache before each test
         \WScore\DecaORM\EntityCache::clear();
 
-        $this->repo = new UserRepository($this->pdo);
+        $this->repo = new UserRepository($this->pdo, new AttributeHydrator(User::class));
+        // $this->repo = new UserRepository($this->pdo, new UserHydrator());
+
     }
 
     public function testCreateAndSaveUser()
