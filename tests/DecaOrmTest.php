@@ -73,7 +73,9 @@ class DecaOrmTest extends TestCase
         $user = new User();
         $user->set('name', 'Test User');
         $user->set('email', 'test@example.com');
-        $user = $this->repo->save($user);
+        $this->assertNull($user->getId());
+        $this->repo->save($user);
+        $this->assertNotNull($user->getId());
         $id = $user->getId();
 
         // Update

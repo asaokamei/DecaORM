@@ -21,70 +21,52 @@ trait RepositoryTrait
     {
         $stmt = $this->db->prepare($sql);
         $stmt->execute($data);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
 
         return $stmt;
     }
 
+    /**
+     * @return EntityInterface[]
+     */
     public function fetchAll(string $sql, array $data): array
     {
         $stmt = $this->execute($sql, $data);
         if (!$stmt) {
             return [];
         }
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function fetch(string $sql, array $data): array|bool
-    {
-        $stmt = $this->execute($sql, $data);
-        if (!$stmt) {
-            return [];
-        }
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    /**
-     * PDO::FETCH_CLASSを使用してエンティティを取得
-     *
-     * @return ?EntityInterface
-     */
-    private function fetchEntityByClass(string $sql, array $data, string $entityClass): ?EntityInterface
-    {
-        $pKey = $this->hydrator->getPrimaryKey();
-        
-        // まずIDだけを取得してキャッシュをチェック（軽量なクエリ）
-        $idSql = preg_replace('/SELECT \*/i', "SELECT {$pKey}", $sql);
-        $idData = $this->fetch($idSql, $data);
-        if (!$idData) {
-            return null;
-        }
-        $id = $idData[$pKey] ?? null;
-        
-        // キャッシュがあればそれを使う
-        if ($id !== null && isset(HydratorTrait::$cached[$entityClass][$id])) {
-            return HydratorTrait::$cached[$entityClass][$id];
-        }
-
-        // キャッシュがなければPDO::FETCH_CLASSで取得
-        $stmt = $this->execute($sql, $data);
-        if (!$stmt) {
-            return null;
-        }
+        $entityClass = $this->hydrator->getEntityClass();
         $stmt->setFetchMode(PDO::FETCH_CLASS, $entityClass);
-        $entity = $stmt->fetch();
-        if (!$entity) {
-            return null;
+        $list = $stmt->fetchAll();
+
+        foreach ($list as $idx => $entity) {
+            $list[$idx] = $this->entityCache($entity);
         }
 
-        // キャッシュに登録
-        if ($id !== null) {
-            if (!isset(HydratorTrait::$cached[$entityClass])) {
-                HydratorTrait::$cached[$entityClass] = [];
-            }
-            HydratorTrait::$cached[$entityClass][$id] = $entity;
-        }
+        return $list;
+    }
 
+    private function entityCache(EntityInterface $entity): EntityInterface
+    {
+        $class = get_class($entity);
+        if (!isset(HydratorTrait::$cached[$class])) {
+            HydratorTrait::$cached[$class] = [];
+        }
+        $id = $entity->getId();
+        if ($id === null) {
+            return $entity;
+        }
+        if (isset(HydratorTrait::$cached[$class][$id])) {
+            return HydratorTrait::$cached[$class][$id];
+        }
+        HydratorTrait::$cached[$class][$id] = $entity;
         return $entity;
+    }
+
+    public function fetch(string $sql, array $data): ?EntityInterface
+    {
+        $list = $this->fetchAll($sql, $data);
+        return $list[0] ?? null;
     }
 
     /**
@@ -92,16 +74,29 @@ trait RepositoryTrait
      *
      * @return ?EntityInterface
      */
-    private function fetchEntityById(int|string $id): mixed
+    private function fetchEntityById(int|string $id): ?EntityInterface
     {
         $pKey = $this->hydrator->getPrimaryKey();
-        $entityClass = $this->hydrator->getEntityClass();
-        
-        return $this->fetchEntityByClass(
+
+        return $this->fetch(
             "SELECT * FROM {$this->hydrator->getTableName()} WHERE {$pKey} = :id",
-            [':id' => $id],
-            $entityClass
+            [':id' => $id]
         );
+    }
+
+    private function insertEntity(EntityInterface $entity): void
+    {
+        $pKey = $this->hydrator->getPrimaryKey();
+        $data = $this->hydrator->dehydrate($entity);
+        if ($this->hydrator->isPkAutoNumber()) {
+            unset($data[$pKey]);
+        }
+        $id = $this->insertData($data);
+        if ($this->hydrator->isPkAutoNumber() && $id) {
+            $entity->set($pKey, $id);
+            $this->entityCache($entity);
+        }
+        $this->entityCache($entity);
     }
 
     /**

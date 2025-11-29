@@ -19,7 +19,11 @@ class UserRepository
 
     public function find(int $id): ?User
     {
-        return $this->fetchEntityById($id);
+        $user = $this->fetchEntityById($id);
+        if (!$user instanceof User) {
+            return null;
+        }
+        return $user;
     }
 
     public function createAndSave(array $data): ?User
@@ -30,15 +34,13 @@ class UserRepository
             : null;
     }
 
-    public function save(User $user): User
+    public function save(User $user): void
     {
         if ($user->getId() === null) {
-            $data = $this->hydrator->dehydrate($user);
-            return $this->createAndSave($data);
+            $this->insertEntity($user);
         } else {
             $this->updateEntity($user);
         }
-        return $user;
     }
 
     public function delete(User $user): void
