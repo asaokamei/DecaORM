@@ -18,7 +18,8 @@ trait HydratorTrait
         // Set data to the target entity (update with latest data even if cached)
         foreach ($this->listProperties() as $property) {
             if (isset($data[$property])) {
-                $targetEntity->set($property, $data[$property]);
+                // set Column value as string; this is for compatibility with the EntityTrait
+                $targetEntity->set($property, (string) $data[$property]);
             }
         }
 
