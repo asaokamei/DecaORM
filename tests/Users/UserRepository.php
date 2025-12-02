@@ -49,4 +49,12 @@ class UserRepository
     {
         $this->deleteEntity($user);
     }
+
+    /**
+     * PostにUserを読み込む（ManyToOne）
+     */
+    public function loadUserForPost(Post $post): void
+    {
+        $this->fillParentEntity($post, 'user', 'user_id');
+    }
 }

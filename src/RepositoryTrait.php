@@ -141,7 +141,7 @@ trait RepositoryTrait
     /**
      * Many-To-One: Fetch a parent entity
      */
-    private function fillParentEntity(
+    protected function fillParentEntity(
         EntityInterface $entity,
         string $relationName,
         string $foreignKey
@@ -154,7 +154,7 @@ trait RepositoryTrait
     /**
      * One-To-Many: Fetch multiple child entities
      */
-    private function fillChildEntities(
+    protected function fillChildEntities(
         EntityInterface $entity,
         string $relationName,
         string $foreignKey,

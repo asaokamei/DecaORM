@@ -25,6 +25,7 @@ class AttributeHydratorTest extends TestCase
         $this->assertContains('email', $properties);
         $this->assertContains('created_at', $properties);
         $this->assertContains('updated_at', $properties);
+        $this->assertNotContains('posts', $properties);
     }
 
     public function testHydrate(): void

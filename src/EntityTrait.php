@@ -8,11 +8,11 @@ trait EntityTrait
      * Get the value of a property (return as string)
      * Read-only from DB. If type conversion is needed, use the getter method.
      */
-    public function get(string $name): ?string
+    public function get(string $name): mixed
     {
         if (property_exists($this, $name)) {
             $value = $this->$name;
-            return $value !== null ? (string) $value : null;
+            return $value;
         }
         return null;
     }
@@ -24,7 +24,7 @@ trait EntityTrait
     public function set(string $name, mixed $value): void
     {
         if (property_exists($this, $name)) {
-            $this->$name = $value !== null ? (string) $value : null;
+            $this->$name = $value;
         }
     }
 }

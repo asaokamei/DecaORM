@@ -119,24 +119,28 @@ class AttributeHydrator implements HydratorInterface
             $isGenerated = false;
             $isCreatedAt = false;
             $isUpdatedAt = false;
+            $hasColumn = false;
 
             $attributes = $property->getAttributes();
 
-            // First, check all attributes to determine the column name
+            // First, check all attributes to determine the column name and if it's a DB column
             foreach ($attributes as $attribute) {
                 $instance = $attribute->newInstance();
 
                 if ($instance instanceof Column) {
+                    $hasColumn = true;
                     if ($instance->name !== null) {
                         $columnName = $instance->name;
                     }
                 } elseif ($instance instanceof CreatedAt) {
                     $isCreatedAt = true;
+                    $hasColumn = true; // CreatedAt is a DB column
                     if ($instance->name !== null) {
                         $columnName = $instance->name;
                     }
                 } elseif ($instance instanceof UpdatedAt) {
                     $isUpdatedAt = true;
+                    $hasColumn = true; // UpdatedAt is a DB column
                     if ($instance->name !== null) {
                         $columnName = $instance->name;
                     }
@@ -149,6 +153,7 @@ class AttributeHydrator implements HydratorInterface
 
                 if ($instance instanceof Id) {
                     $isId = true;
+                    $hasColumn = true; // Id is always a DB column (primary key)
                     $this->primaryKey = $columnName;
                 } elseif ($instance instanceof GeneratedValue) {
                     $isGenerated = true;
@@ -168,8 +173,11 @@ class AttributeHydrator implements HydratorInterface
                 $this->pkAutoNumber = true;
             }
 
-            // Add to property list (including primary key)
-            $this->properties[] = $columnName;
+            // Add to property list only if it's a DB column
+            // (has Column attribute, or is CreatedAt/UpdatedAt, or is Id)
+            if ($hasColumn) {
+                $this->properties[] = $columnName;
+            }
         }
     }
 
