@@ -53,7 +53,7 @@ class AttributeHydratorTest extends TestCase
         $hydrator = new AttributeHydrator(User::class);
 
         $entity = new User();
-        $entity->setId(1);
+        $entity->set('user_id', 1);
         $entity->set('name', 'Test User');
         $entity->set('email', 'test@example.com');
 

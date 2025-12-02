@@ -48,11 +48,6 @@ class Post implements EntityInterface
         return $this->post_id !== null ? (int) $this->post_id : null;
     }
 
-    public function setId(int|string $id): void
-    {
-        $this->post_id = (string) $id;
-    }
-
     public function getCreatedAt(): ?DateTimeImmutable
     {
         return $this->created_at !== null ? new DateTimeImmutable($this->created_at) : null;

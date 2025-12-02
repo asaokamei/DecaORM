@@ -45,11 +45,6 @@ class User implements EntityInterface
         return $this->user_id !== null ? (int) $this->user_id : null;
     }
 
-    public function setId(int|string $id): void
-    {
-        $this->user_id = (string) $id;
-    }
-
     public function getCreatedAt(): ?DateTimeImmutable
     {
         return $this->created_at !== null ? new DateTimeImmutable($this->created_at) : null;
