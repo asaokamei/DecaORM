@@ -10,7 +10,7 @@ use WScore\DecaORM\RepositoryTrait;
 use WScore\DecaORM\AbstractRepository;
 
 /**
- * Class PostsRepository<Post>
+ * @extends AbstractRepository<Post>
  */
 class PostsRepository extends AbstractRepository
 {
