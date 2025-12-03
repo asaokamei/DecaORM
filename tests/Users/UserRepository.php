@@ -14,8 +14,6 @@ use WScore\DecaORM\AbstractRepository;
  */
 class UserRepository extends AbstractRepository
 {
-    use RepositoryTrait;
-
     public function __construct(PDO $pdo, HydratorInterface $hydrator = null)
     {
         $this->db = $pdo;
