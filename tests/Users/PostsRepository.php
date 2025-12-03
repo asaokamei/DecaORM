@@ -10,22 +10,24 @@ use WScore\DecaORM\RepositoryTrait;
 use WScore\DecaORM\AbstractRepository;
 
 /**
- * @extends AbstractRepository<User>
+ * @extends AbstractRepository<Post>
  */
-class UserRepository extends AbstractRepository
+class PostsRepository extends AbstractRepository
 {
     public function __construct(PDO $pdo, HydratorInterface $hydrator = null)
     {
         $this->db = $pdo;
-        $this->hydrator = $hydrator ?? new AttributeHydrator(User::class);
+        $this->hydrator = $hydrator ?? new AttributeHydrator(Post::class);
         $this->now = new DateTimeImmutable();
     }
 
     /**
-     * PostにUserを読み込む（ManyToOne）
+     * UserにPostsを読み込む（OneToMany）
+     * UserRepositoryから呼び出されることを想定
      */
-    public function loadUserForPost(Post $post): void
+    public function loadPostsForUser(User $user): void
     {
-        $this->fillParentEntity($post, 'user', 'user_id');
+        $this->fillChildEntities($user, 'posts', 'user_id', 'user');
     }
 }
+

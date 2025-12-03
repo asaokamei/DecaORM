@@ -2,49 +2,29 @@
 
 namespace WScore\DecaORM;
 
-use DateTimeImmutable;
-
 trait EntityTrait
 {
-
+    /**
+     * Get the value of a property (return as string)
+     * Read-only from DB. If type conversion is needed, use the getter method.
+     */
     public function get(string $name): mixed
     {
-        $method = 'get' . ucfirst($name);
-        if (method_exists($this, $method)) {
-            return $this->$method();
-        }
-        $method = 'get' . ucfirst(str_replace('_', '', $name));
-        if (method_exists($this, $method)) {
-            return $this->$method();
-        }
         if (property_exists($this, $name)) {
-            return $this->$name;
+            $value = $this->$name;
+            return $value;
         }
         return null;
     }
 
+    /**
+     * Set the value of a property (set as string)
+     * Read-only from DB. If type conversion is needed, use the setter method.
+     */
     public function set(string $name, mixed $value): void
     {
-        $method = 'set' . ucfirst($name);
-        if (method_exists($this, $method)) {
-            $this->$method($value);
-            return;
-        }
-        $method = 'set' . ucfirst(str_replace('_', '', $name));
-        if (method_exists($this, $method)) {
-            $this->$method($value);
-            return;
-        }
         if (property_exists($this, $name)) {
             $this->$name = $value;
         }
-    }
-
-    private function setDateTimeProperty(string $name, mixed $value): void
-    {
-        if (is_string($value)) {
-            $value = new DateTimeImmutable($value);
-        }
-        $this->$name = $value;
     }
 }
