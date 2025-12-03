@@ -7,12 +7,12 @@ use PDO;
 use WScore\DecaORM\AttributeHydrator;
 use WScore\DecaORM\HydratorInterface;
 use WScore\DecaORM\RepositoryTrait;
-use WScore\DecaORM\SampleRepository;
+use WScore\DecaORM\AbstractRepository;
 
 /**
- * @extends SampleRepository<User>
+ * @extends AbstractRepository<User>
  */
-class UserRepository extends SampleRepository
+class UserRepository extends AbstractRepository
 {
     use RepositoryTrait;
 

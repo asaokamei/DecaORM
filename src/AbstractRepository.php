@@ -5,7 +5,7 @@ namespace WScore\DecaORM;
 /**
  * @template T of EntityInterface
  */
-abstract class SampleRepository
+abstract class AbstractRepository
 {
     use RepositoryTrait;
 
