@@ -2,21 +2,32 @@
 
 namespace WScore\DecaORM;
 
-class SampleRepository
+/**
+ * @template T of EntityInterface
+ */
+abstract class SampleRepository
 {
     use RepositoryTrait;
 
     /**
      * IDに基づいてUserエンティティを取得
+     *
+     * @param int $id
+     * @return T|null
      */
     public function find(int $id): ?EntityInterface
     {
-        return $this->fetchEntityById($id);
+        /** @var T|null $entity */
+        $entity = $this->fetchEntityById($id);
+        return $entity;
     }
 
+    /**
+     * @param array $data
+     * @return T|null
+     */
     public function createAndSave(array $data): ?EntityInterface
     {
-        unset($data[$this->hydrator->getPrimaryKey()]);
         $id = $this->insertData($data);
         return $id
             ? $this->find($id)
@@ -25,20 +36,27 @@ class SampleRepository
 
     /**
      * UserエンティティをDBに保存（新規作成または更新）
+     *
+     * @param T $entity
+     * @return T
      */
-    public function save(EntityInterface $user): ?EntityInterface
+    public function save(EntityInterface $entity): ?EntityInterface
     {
-        if ($user->getId() === null) {
-            return $this->createAndSave($this->hydrator->dehydrate($user));
+        if ($entity->getId() === null) {
+            $this->insertEntity($entity);
         } else {
-            $this->updateEntity($user);
+            $this->updateEntity($entity);
         }
-        return $user;
+        /** @var T $entity */
+        return $entity;
     }
 
-    public function delete(EntityInterface $user): void
+    /**
+     * @param T $entity
+     */
+    public function delete(EntityInterface $entity): void
     {
-        $this->deleteEntity($user);
+        $this->deleteEntity($entity);
     }
 
 }
