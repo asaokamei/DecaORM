@@ -17,6 +17,17 @@ trait RepositoryTrait
         return $this->db;
     }
 
+    /**
+     * Get table name for the repository
+     * Override this method in subclasses to dynamically change table names
+     *
+     * @return string
+     */
+    protected function getTableName(): string
+    {
+        return $this->hydrator->getTableName();
+    }
+
     public function execute(string $sql, array $data): false|PDOStatement
     {
         $stmt = $this->db->prepare($sql);
@@ -60,7 +71,7 @@ trait RepositoryTrait
     private function fetchEntityById(int|string $id): ?EntityInterface
     {
         $pKey = $this->hydrator->getPrimaryKey();
-        $table = $this->hydrator->getTableName();
+        $table = $this->getTableName();
 
         return $this->fetch(
             "SELECT * FROM {$table} WHERE {$pKey} = :id",
@@ -116,7 +127,7 @@ trait RepositoryTrait
         $data[$pKey] = $entity->getId();
         $this->execute(
             "
-            UPDATE {$this->hydrator->getTableName()} 
+            UPDATE {$this->getTableName()} 
                 SET {$values} 
                 WHERE {$pKey} = :{$pKey}",
             $data // $data contains the id
@@ -132,7 +143,7 @@ trait RepositoryTrait
         $id = $entity->getId();
         $this->execute(
             "
-            DELETE FROM {$this->hydrator->getTableName()} 
+            DELETE FROM {$this->getTableName()} 
                    WHERE {$pKey} = :id",
             ['id' => $id]
         );
@@ -166,7 +177,7 @@ trait RepositoryTrait
         $entityClass = $this->hydrator->getEntityClass();
         $sql = "
             SELECT * 
-                FROM {$this->hydrator->getTableName()} 
+                FROM {$this->getTableName()} 
                 WHERE {$foreignKey} = :id
                 ORDER BY {$orderBy} {$orderDir}";
         $stmt = $this->execute($sql, [':id' => $entity->getId()]);
@@ -241,7 +252,7 @@ trait RepositoryTrait
 
         $sql = "
                 SELECT * 
-                FROM {$this->hydrator->getTableName()} 
+                FROM {$this->getTableName()} 
                 WHERE {$foreignKey} IN ({$placeholders})
                 ORDER BY {$orderBy} {$orderDir}
             ";
@@ -311,7 +322,7 @@ trait RepositoryTrait
         $select = implode(', ', $select);
         $values = implode(', ', $values);
 
-        $sql = "INSERT INTO {$this->hydrator->getTableName()} ({$select}) VALUES ({$values});";
+        $sql = "INSERT INTO {$this->getTableName()} ({$select}) VALUES ({$values});";
         $stmt = $this->execute($sql, $data);
 
         if ($stmt) {
