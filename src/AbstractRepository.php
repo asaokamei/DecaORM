@@ -49,15 +49,21 @@ abstract class AbstractRepository
      * @param T $entity
      * @return T
      */
-    public function save(EntityInterface $entity): ?EntityInterface
+    public function save(EntityInterface $entity): void
     {
-        if ($entity->getId() === null) {
-            $this->insertEntity($entity);
-        } else {
-            $this->updateEntity($entity);
+        if ($this->hydrator->isPkAutoNumber()) {
+            if ($entity->getId() === null) {
+                $this->insertEntity($entity);
+            } else {
+                $this->updateEntity($entity);
+            }
+            return;
         }
-        /** @var T $entity */
-        return $entity;
+        if (EntityCache::has($this->hydrator->getEntityClass(), $entity->getId())) {
+            $this->updateEntity($entity);
+        } else {
+            $this->insertEntity($entity);
+        }
     }
 
     /**
