@@ -246,47 +246,12 @@ class AttributeHydrator implements HydratorInterface
 
     public function hydrate(array $data): EntityInterface
     {
-        $entity = new ($this->entityClass)();
-        return $this->hydrateEntity($entity, $data);
+        return $this->hydrateEntity($data);
     }
 
     public function dehydrate(EntityInterface $entity): array
     {
         return $this->dehydrateEntity($entity);
-    }
-
-    /**
-     * Override hydrateEntity to use property-to-column mapping
-     */
-    protected function hydrateEntity(EntityInterface $entity, array $data): EntityInterface
-    {
-        $targetEntity = EntityCache::cache($entity);
-
-        // Set data to the target entity (update with latest data even if cached)
-        // Data comes from DB with column names, need to map to property names
-        foreach ($this->listProperties() as $propertyName) {
-            $columnName = $this->getColumnNameForProperty($propertyName);
-            if (isset($data[$columnName])) {
-                // set Column value as string; this is for compatibility with the EntityTrait
-                $targetEntity->set($propertyName, (string) $data[$columnName]);
-            }
-        }
-
-        return $targetEntity;
-    }
-
-    /**
-     * Override dehydrateEntity to use property-to-column mapping
-     */
-    public function dehydrateEntity(EntityInterface $entity): array
-    {
-        $data = [];
-        // Get column names from listProperties() and map to property names for entity access
-        foreach ($this->listProperties() as $propertyName) {
-            $columnName = $this->getColumnNameForProperty($propertyName);
-            $data[$columnName] = $entity->get($propertyName);
-        }
-        return $data;
     }
 
     /**

@@ -65,7 +65,8 @@ trait RepositoryTrait
         if ($row === false) {
             return null;
         }
-        return $this->hydrator->hydrate($row);
+        $entity = $this->hydrator->hydrate($row);
+        return EntityCache::cache($entity);
     }
 
     /**

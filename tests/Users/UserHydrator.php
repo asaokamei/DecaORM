@@ -47,7 +47,7 @@ class UserHydrator implements HydratorInterface
 
     public function hydrate(array $data): EntityInterface
     {
-        return $this->hydrateEntity(new User(), $data);
+        return $this->hydrateEntity($data);
     }
 
     public function dehydrate(EntityInterface $entity): array
