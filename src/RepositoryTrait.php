@@ -103,8 +103,25 @@ trait RepositoryTrait
                 throw new \RuntimeException('Entity does not have an ID:' . $this->hydrator->getEntityClass());
             }
         }
+        if ($this->hydrator->getCreatedAtColumn() !== null) {
+            $entity->set($this->hydrator->getCreatedAtColumn(), $this->now->format('Y-m-d H:i:s'));
+        }
+        if ($this->hydrator->getUpdatedAtColumn() !== null) {
+            $entity->set($this->hydrator->getUpdatedAtColumn(), $this->now->format('Y-m-d H:i:s'));
+        }
         $data = $this->hydrator->dehydrate($entity);
-        $stmt = $this->insertDehydratedData($data);
+
+        $select = [];
+        $values = [];
+        foreach ($data as $columnName => $value) {
+            $select[] = $columnName;
+            $values[] = ':' . $columnName;
+        }
+        $select = implode(', ', $select);
+        $values = implode(', ', $values);
+        $sql = "INSERT INTO {$this->getTableName()} ({$select}) VALUES ({$values});";
+        $stmt = $this->execute($sql, $data);
+
         if (!$stmt) {
             throw new \RuntimeException('Failed to insert an entity:' . $this->hydrator->getEntityClass());
         }
@@ -121,6 +138,10 @@ trait RepositoryTrait
     private function updateEntity(EntityInterface $entity): void
     {
         $data = $this->hydrator->dehydrate($entity);
+        // Update UpdatedAt!
+        if ($this->hydrator->getUpdatedAtColumn() !== null) {
+            $entity->set($this->hydrator->getUpdatedAtColumn(), $this->now->format('Y-m-d H:i:s'));
+        }
         $values = [];
 
         // Remove PK!
@@ -130,11 +151,6 @@ trait RepositoryTrait
         $createdAtColumn = $this->hydrator->getCreatedAtColumn();
         if ($createdAtColumn !== null) {
             unset($data[$createdAtColumn]);
-        }
-        // Update UpdatedAt!
-        $updatedAtColumn = $this->hydrator->getUpdatedAtColumn();
-        if ($updatedAtColumn !== null) {
-            $data[$updatedAtColumn] = $this->now->format('Y-m-d H:i:s');
         }
         foreach ($data as $item => $value) {
             $values[] = "{$item} = :{$item}";
@@ -300,63 +316,5 @@ trait RepositoryTrait
                 }
             }
         }
-    }
-
-    /**
-     * Save data and return the primary key
-     */
-    private function insertData(array $data): int|string|bool
-    {
-        $dbData = [];
-        foreach ($this->hydrator->listProperties() as $property) {
-            $columnName = $this->hydrator->getColumnNameForProperty($property);
-            if (isset($data[$property])) {  
-                $dbData[$columnName] = $data[$property];
-            }
-        }
-        $stmt = $this->insertDehydratedData($dbData);
-
-        if ($stmt) {
-            if ($this->hydrator->isPkAutoNumber()) {
-                return $this->db->lastInsertId();
-            }
-            $pKey = $this->hydrator->getPrimaryKey();
-            return $data[$pKey] ?? true;
-        }
-        return false;
-    }
-
-    private function insertDehydratedData(array $data): PDOStatement|false
-    {
-        if ($this->hydrator->isPkAutoNumber()) {
-            // Supports AutoNumbering. The ID should be NULL for new records.
-            $pKeyColumn = $this->hydrator->getPrimaryKeyColumn();
-            unset($data[$pKeyColumn]);
-        }
-
-        $select = [];
-        $values = [];
-        foreach ($data as $columnName => $value) {
-            $select[] = $columnName;
-            $values[] = ':' . $columnName; 
-        }
-        // Populate CreatedAt!
-        if ($this->hydrator->getCreatedAtColumn() !== null) {
-            $columnName = $this->hydrator->getCreatedAtColumn();
-            $data[$columnName] = $this->now->format('Y-m-d H:i:s');
-            $select[] = $columnName;
-            $values[] = ':' . $columnName;
-        }
-        // Populate UpdatedAt!
-        if ($this->hydrator->getUpdatedAtColumn() !== null) {
-            $columnName = $this->hydrator->getUpdatedAtColumn();
-            $data[$columnName] = $this->now->format('Y-m-d H:i:s');
-            $select[] = $columnName;
-            $values[] = ':' . $columnName;
-        }
-        $select = implode(', ', $select);
-        $values = implode(', ', $values);
-        $sql = "INSERT INTO {$this->getTableName()} ({$select}) VALUES ({$values});";
-        return $this->execute($sql, $data);
     }
 }

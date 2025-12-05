@@ -292,7 +292,7 @@ class AttributeHydrator implements HydratorInterface
     /**
      * Get property name for a given column name
      */
-    public function getPropertyNameForColumn(string $columnName): string
+    public function getPropertyNameForColumn(string $columnName): ?string
     {
         return $this->columnToPropertyMap[$columnName] ?? null;
     }

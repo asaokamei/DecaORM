@@ -22,16 +22,25 @@ abstract class AbstractRepository
         return $entity;
     }
 
+    public function createEntity(array $data): EntityInterface
+    {
+        $class = $this->hydrator->getEntityClass();
+        $entity = new $class();
+        foreach ($this->hydrator->listProperties() as $property) {
+            $entity->set($property, $data[$property] ?? null);
+        }
+        return $entity;
+    }
+
     /**
      * @param array $data
      * @return T|null
      */
     public function createAndSave(array $data): ?EntityInterface
     {
-        $id = $this->insertData($data);
-        return $id
-            ? $this->find($id)
-            : null;
+        $entity = $this->createEntity($data);
+        $this->insertEntity($entity);
+        return $entity;
     }
 
     /**
