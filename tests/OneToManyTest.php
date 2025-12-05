@@ -26,7 +26,7 @@ class OneToManyTest extends TestCase
         $this->pdo->exec(
             "CREATE TABLE users (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+            user_name TEXT NOT NULL,
             email TEXT NOT NULL,
             created_at TEXT,
             updated_at TEXT

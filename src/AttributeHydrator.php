@@ -20,7 +20,7 @@ class AttributeHydrator implements HydratorInterface
 {
     use HydratorTrait;
 
-    /** @var array<string, array{tableName: string, primaryKey: string, pkAutoNumber: bool, properties: array, createdAt: ?string, updatedAt: ?string}> */
+    /** @var array<string, array{tableName: string, primaryKey: string, pkAutoNumber: bool, properties: array, propertyToColumnMap: array, createdAt: ?string, updatedAt: ?string}> */
     private static array $metadataCache = [];
 
     private string $entityClass;
@@ -28,6 +28,10 @@ class AttributeHydrator implements HydratorInterface
     private ?string $primaryKey = null;
     private bool $pkAutoNumber = false;
     private array $properties = [];
+    /** @var array<string, string> propertyName => columnName */
+    private array $propertyToColumnMap = [];
+    /** @var array<string, string> columnName => propertyName */
+    private array $columnToPropertyMap = [];
     private ?string $createdAt = null;
     private ?string $updatedAt = null;
 
@@ -44,10 +48,30 @@ class AttributeHydrator implements HydratorInterface
     {
         if (isset(self::$metadataCache[$this->entityClass])) {
             $cached = self::$metadataCache[$this->entityClass];
+            // Check if cached entry has the required propertyToColumnMap key
+            // If not, invalidate cache and re-parse to ensure mappings are correct
+            if (!isset($cached['propertyToColumnMap'])) {
+                // Invalidate old cache entry and re-parse
+                unset(self::$metadataCache[$this->entityClass]);
+                $this->parseAttributes();
+                // Save to cache with new structure
+                self::$metadataCache[$this->entityClass] = [
+                    'tableName' => $this->tableName,
+                    'primaryKey' => $this->primaryKey,
+                    'pkAutoNumber' => $this->pkAutoNumber,
+                    'properties' => $this->properties,
+                    'propertyToColumnMap' => $this->propertyToColumnMap,
+                    'createdAt' => $this->createdAt,
+                    'updatedAt' => $this->updatedAt,
+                ];
+                return;
+            }
             $this->tableName = $cached['tableName'];
             $this->primaryKey = $cached['primaryKey'];
             $this->pkAutoNumber = $cached['pkAutoNumber'];
             $this->properties = $cached['properties'];
+            $this->propertyToColumnMap = $cached['propertyToColumnMap'];
+            $this->columnToPropertyMap = array_flip($this->propertyToColumnMap);
             $this->createdAt = $cached['createdAt'];
             $this->updatedAt = $cached['updatedAt'];
         } else {
@@ -58,6 +82,7 @@ class AttributeHydrator implements HydratorInterface
                 'primaryKey' => $this->primaryKey,
                 'pkAutoNumber' => $this->pkAutoNumber,
                 'properties' => $this->properties,
+                'propertyToColumnMap' => $this->propertyToColumnMap,
                 'createdAt' => $this->createdAt,
                 'updatedAt' => $this->updatedAt,
             ];
@@ -154,7 +179,7 @@ class AttributeHydrator implements HydratorInterface
                 if ($instance instanceof Id) {
                     $isId = true;
                     $hasColumn = true; // Id is always a DB column (primary key)
-                    $this->primaryKey = $columnName;
+                    $this->primaryKey = $propertyName;
                 } elseif ($instance instanceof GeneratedValue) {
                     $isGenerated = true;
                 }
@@ -162,10 +187,10 @@ class AttributeHydrator implements HydratorInterface
 
             // Set CreatedAt/UpdatedAt
             if ($isCreatedAt) {
-                $this->createdAt = $columnName;
+                $this->createdAt = $propertyName;
             }
             if ($isUpdatedAt) {
-                $this->updatedAt = $columnName;
+                $this->updatedAt = $propertyName;
             }
 
             // If the primary key has GeneratedValue, it is an auto-number
@@ -176,7 +201,10 @@ class AttributeHydrator implements HydratorInterface
             // Add to property list only if it's a DB column
             // (has Column attribute, or is CreatedAt/UpdatedAt, or is Id)
             if ($hasColumn) {
-                $this->properties[] = $columnName;
+                $this->properties[] = $propertyName;
+                // Store property name to column name mapping
+                $this->propertyToColumnMap[$propertyName] = $columnName;
+                $this->columnToPropertyMap[$columnName] = $propertyName;
             }
         }
     }
@@ -225,6 +253,71 @@ class AttributeHydrator implements HydratorInterface
     public function dehydrate(EntityInterface $entity): array
     {
         return $this->dehydrateEntity($entity);
+    }
+
+    /**
+     * Override hydrateEntity to use property-to-column mapping
+     */
+    protected function hydrateEntity(EntityInterface $entity, array $data): EntityInterface
+    {
+        $targetEntity = EntityCache::cache($entity);
+
+        // Set data to the target entity (update with latest data even if cached)
+        // Data comes from DB with column names, need to map to property names
+        foreach ($this->listProperties() as $propertyName) {
+            $columnName = $this->getColumnNameForProperty($propertyName);
+            if (isset($data[$columnName])) {
+                // set Column value as string; this is for compatibility with the EntityTrait
+                $targetEntity->set($propertyName, (string) $data[$columnName]);
+            }
+        }
+
+        return $targetEntity;
+    }
+
+    /**
+     * Override dehydrateEntity to use property-to-column mapping
+     */
+    public function dehydrateEntity(EntityInterface $entity): array
+    {
+        $data = [];
+        // Get column names from listProperties() and map to property names for entity access
+        foreach ($this->listProperties() as $propertyName) {
+            $columnName = $this->getColumnNameForProperty($propertyName);
+            $data[$columnName] = $entity->get($propertyName);
+        }
+        return $data;
+    }
+
+    /**
+     * Get property name for a given column name
+     */
+    public function getPropertyNameForColumn(string $columnName): string
+    {
+        return $this->columnToPropertyMap[$columnName] ?? null;
+    }
+
+    /**
+     * Get column name for a given property name
+     */
+    public function getColumnNameForProperty(string $propertyName): ?string
+    {
+        return $this->propertyToColumnMap[$propertyName] ?? null;
+    }
+
+    public function getPrimaryKeyColumn(): string
+    {
+        return $this->getColumnNameForProperty($this->getPrimaryKey());
+    }
+
+    public function getCreatedAtColumn(): string
+    {
+        return $this->getColumnNameForProperty($this->getCreatedAt());
+    }
+
+    public function getUpdatedAtColumn(): ?string
+    {
+        return $this->getColumnNameForProperty($this->getUpdatedAt());
     }
 }
 

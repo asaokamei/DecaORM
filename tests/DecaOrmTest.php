@@ -31,7 +31,7 @@ class DecaOrmTest extends TestCase
         $this->pdo->exec(
             "CREATE TABLE users (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+            user_name TEXT NOT NULL,
             email TEXT NOT NULL,
             created_at TEXT,
             updated_at TEXT
@@ -61,7 +61,7 @@ class DecaOrmTest extends TestCase
     public function testFindUser()
     {
         // Setup data
-        $this->pdo->exec("INSERT INTO users (name, email) VALUES ('Jane Doe', 'jane@example.com')");
+        $this->pdo->exec("INSERT INTO users (user_name, email) VALUES ('Jane Doe', 'jane@example.com')");
         $id = $this->pdo->lastInsertId();
 
         $user = $this->repo->find($id);
@@ -96,7 +96,7 @@ class DecaOrmTest extends TestCase
         $stmt->execute([$id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        $this->assertEquals('New Name', $row['name']);
+        $this->assertEquals('New Name', $row['user_name']);
         $this->assertNotNull($row['updated_at']);
     }
 
@@ -117,7 +117,7 @@ class DecaOrmTest extends TestCase
 
     public function testIdentityMapCache()
     {
-        $this->pdo->exec("INSERT INTO users (name, email) VALUES ('Cache Test', 'cache@example.com')");
+        $this->pdo->exec("INSERT INTO users (user_name, email) VALUES ('Cache Test', 'cache@example.com')");
         $id = $this->pdo->lastInsertId();
 
         $user1 = $this->repo->find($id);

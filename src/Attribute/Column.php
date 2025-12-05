@@ -11,8 +11,7 @@ use Attribute;
 class Column
 {
     public function __construct(
-        public ?string $name = null,
-        public ?string $type = null
+        public ?string $name = null
     ) {
     }
 }

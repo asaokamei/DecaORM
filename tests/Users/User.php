@@ -23,9 +23,9 @@ class User implements EntityInterface
     #[Id]
     #[GeneratedValue]
     #[Column(name: 'user_id')]
-    public ?string $user_id = null;
+    public ?string $id = null;
 
-    #[Column(name: 'name')]
+    #[Column(name: 'user_name')]
     public string $name = '';
 
     #[Column(name: 'email')]
@@ -42,7 +42,7 @@ class User implements EntityInterface
 
     public function getId(): ?int
     {
-        return $this->user_id !== null ? (int) $this->user_id : null;
+        return $this->id !== null ? (int) $this->id : null;
     }
 
     public function getCreatedAt(): ?DateTimeImmutable

@@ -14,13 +14,13 @@ class AttributeHydratorTest extends TestCase
 
         $this->assertEquals(User::class, $hydrator->getEntityClass());
         $this->assertEquals('users', $hydrator->getTableName());
-        $this->assertEquals('user_id', $hydrator->getPrimaryKey());
+        $this->assertEquals('id', $hydrator->getPrimaryKey());
         $this->assertTrue($hydrator->isPkAutoNumber());
         $this->assertEquals('created_at', $hydrator->getCreatedAt());
         $this->assertEquals('updated_at', $hydrator->getUpdatedAt());
 
         $properties = $hydrator->listProperties();
-        $this->assertContains('user_id', $properties);
+        $this->assertContains('id', $properties);
         $this->assertContains('name', $properties);
         $this->assertContains('email', $properties);
         $this->assertContains('created_at', $properties);
@@ -34,7 +34,7 @@ class AttributeHydratorTest extends TestCase
 
         $data = [
             'user_id' => 1,
-            'name' => 'Test User',
+            'user_name' => 'Test User',
             'email' => 'test@example.com',
             'created_at' => '2024-01-01 00:00:00',
             'updated_at' => '2024-01-01 00:00:00',
@@ -53,14 +53,14 @@ class AttributeHydratorTest extends TestCase
         $hydrator = new AttributeHydrator(User::class);
 
         $entity = new User();
-        $entity->set('user_id', 1);
+        $entity->set('id', 1);
         $entity->set('name', 'Test User');
         $entity->set('email', 'test@example.com');
 
         $data = $hydrator->dehydrate($entity);
 
         $this->assertEquals(1, $data['user_id']);
-        $this->assertEquals('Test User', $data['name']);
+        $this->assertEquals('Test User', $data['user_name']);
         $this->assertEquals('test@example.com', $data['email']);
     }
 }
