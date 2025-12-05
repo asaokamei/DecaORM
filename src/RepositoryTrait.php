@@ -48,8 +48,7 @@ trait RepositoryTrait
         }
         $list = $stmt->fetchAll();
         foreach ($list as $idx => $entity) {
-            $entity = $this->hydrator->hydrate($entity);
-            $list[$idx] = EntityCache::cache($entity);
+            $list[$idx] = $this->hydrator->hydrate($entity);
         }
 
         return $list;
@@ -65,8 +64,7 @@ trait RepositoryTrait
         if ($row === false) {
             return null;
         }
-        $entity = $this->hydrator->hydrate($row);
-        return EntityCache::cache($entity);
+        return $this->hydrator->hydrate($row);
     }
 
     /**
@@ -86,8 +84,7 @@ trait RepositoryTrait
         if (!$row) {
             return null;
         }
-        $entity = $this->hydrator->hydrate($row);
-        return EntityCache::cache($entity);
+        return $this->hydrator->hydrate($row);
     }
 
     /**

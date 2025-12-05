@@ -21,6 +21,12 @@ class PostsRepository extends AbstractRepository
         $this->now = new DateTimeImmutable();
     }
 
+    public function create(User $user, array $data): Post
+    {
+        $data['user_id'] = $user->getId();
+        return $this->createAndSave($data);
+    }
+
     /**
      * UserにPostsを読み込む（OneToMany）
      * UserRepositoryから呼び出されることを想定

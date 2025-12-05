@@ -11,7 +11,6 @@ trait HydratorTrait
 
     /**
      * Converts an associative array (DB row) to an entity (hydration)
-     * @return EntityInterface
      */
     protected function hydrateEntity(array $data): EntityInterface
     {
