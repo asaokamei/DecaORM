@@ -6,11 +6,11 @@ use DateTimeImmutable;
 use PDO;
 use WScore\DecaORM\AttributeHydrator;
 use WScore\DecaORM\HydratorInterface;
-use WScore\DecaORM\RepositoryTrait;
+use WScore\DecaORM\RepositoryInterface;
 use WScore\DecaORM\AbstractRepository;
 
 /**
- * @extends AbstractRepository<Post>
+ * @extends RepositoryInterface<Post>
  */
 class PostsRepository extends AbstractRepository
 {

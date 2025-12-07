@@ -14,26 +14,34 @@ interface RepositoryInterface
 
     public function getTableName(): string;
 
+    /**
+     * executes sql with data and returns results as PDOStatement.
+     *
+     * @param string $sql
+     * @param array $data
+     * @return false|PDOStatement
+     */
+
     public function execute(string $sql, array $data): false|PDOStatement;
 
     /**
-     * retrieve entities from sql and data.
+     * fetches entities from sql and data.
      * 
      * @param string $sql
      * @param array $data
      * @return T[]
      */
-    public function fetchClass(string $sql, array $data = []): array;
+    public function fetch(string $sql, array $data = []): array;
 
     /**
-     * a simple method for retrieving entities from sql and data.
+     * finds entities for a simple condition.
      *
      * @param int|string $id
      * @param string|null $column
      * @param string|null $orderBy
      * @return T[]
      */
-    public function fetch(int|string $id, string $column = null, string $orderBy = null): array;
+    public function find(int|string $id, string $column = null, string $orderBy = null): array;
 
     /**
      * get array of column and property names;

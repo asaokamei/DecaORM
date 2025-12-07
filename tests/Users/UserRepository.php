@@ -6,7 +6,6 @@ use DateTimeImmutable;
 use PDO;
 use WScore\DecaORM\AttributeHydrator;
 use WScore\DecaORM\HydratorInterface;
-use WScore\DecaORM\RepositoryTrait;
 use WScore\DecaORM\AbstractRepository;
 
 /**

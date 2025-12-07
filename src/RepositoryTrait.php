@@ -48,7 +48,7 @@ trait RepositoryTrait
     /**
      * @return T[]
      */
-    public function fetchClass(string $sql, array $data = []): array
+    public function fetch(string $sql, array $data = []): array
     {
         $stmt = $this->execute($sql, $data);
         if (!$stmt) {
@@ -63,14 +63,9 @@ trait RepositoryTrait
     }
 
     /**
-     * fetch entities from database.
-     *
-     * @param int|string $id       // primary key, or any column value
-     * @param string|null $column  // column name to find; or set null to use primaryKey.
-     * @param string|null $orderBy // orderBy (ex: "user_name DESC")
      * @return T[]
      */
-    public function fetch(int|string $id, string $column = null, string $orderBy = null): array
+    public function find(int|string $id, string $column = null, string $orderBy = null): array
     {
         $column = $column ?? $this->hydrator->getPrimaryKeyColumn();
         $orderBy = $orderBy ?? $column;
@@ -80,7 +75,7 @@ trait RepositoryTrait
             ->orderBy($orderBy);
         $sql = $query->getSql();
         $data = $query->getParameters();
-        return $this->fetchClass($sql, $data) ?? [];
+        return $this->fetch($sql, $data) ?? [];
     }
 
     public function listColumnsToProperties(): array
@@ -211,7 +206,7 @@ trait RepositoryTrait
         ?string $parentRelationName = null,
         string $orderBy = null,
     ): void {
-        $list = $this->fetch($entity->getId(), $foreignKey, $orderBy);
+        $list = $this->find($entity->getId(), $foreignKey, $orderBy);
         if (empty($list)) {
             $entity->set($relationName, []);
             return;
