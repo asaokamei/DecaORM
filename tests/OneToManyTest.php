@@ -272,7 +272,7 @@ class OneToManyTest extends TestCase
         $this->pdo->exec("INSERT INTO posts (user_id, title, content) VALUES (999, 'Test', 'Content')");
         $postId = $this->pdo->lastInsertId();
 
-        $post = $this->postsRepo->find($postId);
+        $post = $this->postsRepo->findById($postId);
         $this->assertNotNull($post);
 
         // Try to load user (should handle gracefully)

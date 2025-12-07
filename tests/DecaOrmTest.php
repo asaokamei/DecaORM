@@ -64,7 +64,7 @@ class DecaOrmTest extends TestCase
         $this->pdo->exec("INSERT INTO users (user_name, email) VALUES ('Jane Doe', 'jane@example.com')");
         $id = $this->pdo->lastInsertId();
 
-        $user = $this->repo->find($id);
+        $user = $this->repo->findById($id);
 
         $this->assertInstanceOf(User::class, $user);
         $this->assertEquals($id, $user->getId());
@@ -112,7 +112,7 @@ class DecaOrmTest extends TestCase
 
         $this->repo->delete($user);
 
-        $this->assertNull($this->repo->find($id));
+        $this->assertNull($this->repo->findById($id));
     }
 
     public function testIdentityMapCache()
@@ -120,8 +120,8 @@ class DecaOrmTest extends TestCase
         $this->pdo->exec("INSERT INTO users (user_name, email) VALUES ('Cache Test', 'cache@example.com')");
         $id = $this->pdo->lastInsertId();
 
-        $user1 = $this->repo->find($id);
-        $user2 = $this->repo->find($id);
+        $user1 = $this->repo->findById($id);
+        $user2 = $this->repo->findById($id);
 
         // HydratorTrait uses a static cache, so the same instance should be returned
         $this->assertSame($user1, $user2);

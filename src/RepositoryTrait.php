@@ -40,51 +40,57 @@ trait RepositoryTrait
     /**
      * @return EntityInterface[]
      */
-    public function fetchAll(string $sql, array $data): array
+    private function fetchClass(string $sql, array $data): array
     {
         $stmt = $this->execute($sql, $data);
         if (!$stmt) {
             return [];
         }
-        $list = $stmt->fetchAll();
+        $list = $stmt->fetchAll(PDO::FETCH_CLASS, $this->hydrator->getEntityClass());
         foreach ($list as $idx => $entity) {
-            $list[$idx] = $this->hydrator->hydrate($entity);
+            $list[$idx] = EntityCache::cache($entity);
         }
 
         return $list;
     }
 
-    public function fetch(string $sql, array $data): ?EntityInterface
+    /**
+     * fetch entities from database.
+     *
+     * @param int|string $id       // primary key, or any column value
+     * @param string|null $column  // column name to find; or set null to use primaryKey.
+     * @param string|null $orderBy // orderBy (ex: "user_name DESC")
+     * @return EntityInterface[]
+     */
+    public function fetch(int|string $id, string $column = null, string $orderBy = null): array
     {
-        $stmt = $this->execute($sql, $data);
-        if (!$stmt) {
-            return null;
+        $column = $column ?? $this->hydrator->getPrimaryKeyColumn();
+        $orderBy = $orderBy ?? $column;
+        $select = $this->makeSelectColumns();
+        $sql = "SELECT {$select} FROM {$this->getTableName()} WHERE {$column} = :id ORDER BY {$orderBy}";
+        $data = ['id' => $id];
+        return $this->fetchClass($sql, $data) ?? [];
+    }
+
+    private function makeSelectColumns(): string
+    {
+        $table = $this->getTableName();
+        $properties = $this->hydrator->listProperties();
+        $columns = [];
+        foreach ($properties as $property) {
+            $column = $this->hydrator->getColumnNameForProperty($property);
+            $columns[] = "{$table}.{$column} AS {$property}";
         }
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($row === false) {
-            return null;
-        }
-        return $this->hydrator->hydrate($row);
+        return implode(', ', $columns);
     }
 
     /**
      * Fetch an entity by PrimaryKey
-     *
-     * @return ?EntityInterface
      */
     private function fetchEntityById(int|string $id): ?EntityInterface
     {
-        $pKeyColumn = $this->hydrator->getPrimaryKeyColumn();
-        $table = $this->getTableName();
-
-        $row = $this->execute(
-            "SELECT * FROM {$table} WHERE {$pKeyColumn} = :id",
-            ['id' => $id]
-        )->fetch(PDO::FETCH_ASSOC);
-        if (!$row) {
-            return null;
-        }
-        return $this->hydrator->hydrate($row);
+        $list = $this->fetch($id);
+        return $list[0] ?? null;
     }
 
     /**
@@ -190,7 +196,7 @@ trait RepositoryTrait
         string $foreignKey
     ): void {
         $id = $entity->get($foreignKey);
-        $user = $this->find($id);
+        $user = $this->findById($id);
         $entity->set($relationName, $user);
     }
 
@@ -203,16 +209,9 @@ trait RepositoryTrait
         string $foreignKey,
         ?string $parentRelationName = null,
         string $orderBy = null,
-        string $orderDir = 'ASC',
     ): void {
-        $orderBy = $orderBy ?? $this->hydrator->getPrimaryKeyColumn();
-        $sql = "
-            SELECT * 
-                FROM {$this->getTableName()} 
-                WHERE {$foreignKey} = :id
-                ORDER BY {$orderBy} {$orderDir}";
-        $list = $this->fetchAll($sql, [':id' => $entity->getId()]);
-        if (!$list || empty($list) === 0) {
+        $list = $this->fetch($entity->getId(), $foreignKey, $orderBy);
+        if (empty($list)) {
             $entity->set($relationName, []);
             return;
         }

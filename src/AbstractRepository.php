@@ -15,7 +15,7 @@ abstract class AbstractRepository
      * @param int $id
      * @return T|null
      */
-    public function find(int $id): ?EntityInterface
+    public function findById(int $id): ?EntityInterface
     {
         /** @var T|null $entity */
         $entity = $this->fetchEntityById($id);
