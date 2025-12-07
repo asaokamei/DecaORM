@@ -2,6 +2,7 @@
 
 namespace WScore\DecaORM\Tests\Sql;
 
+use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\Sql\QueryBuilder;
 
@@ -10,7 +11,48 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 
 class QueryBuilderTest extends TestCase
 {
-    public function test()
+    private PDO $pdo;
+
+    protected function setUp(): void
+    {
+        // In-memory SQLite database for testing
+        $this->pdo = new PDO('sqlite::memory:');
+        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        // Create table
+        $this->pdo->exec(
+            "CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            created_at TEXT,
+            updated_at TEXT
+        )"
+        );
+    }
+
+    public function testSelectQueryWithParameters()
+    {
+        $this->pdo->exec("INSERT INTO users (name, email) VALUES ('Jane Doe', 'jane@example.com')");
+        $id = $this->pdo->lastInsertId();
+
+        $builder = new QueryBuilder();
+        $builder->select('u.id', 'u.name')
+            ->from('users u')
+            ->where('u.id', $id)
+            ->orderBy('u.id DESC')
+            ->limit(3)
+            ->offset(0);
+        $sql = $builder->getSql();
+        $params = $builder->getParameters();
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        $this->assertEquals('Jane Doe', $user['name']);
+        $this->assertEquals($id, $user['id']);
+    }
+
+    public function testBasicSelectQuery()
     {
         $builder = new QueryBuilder();
 
