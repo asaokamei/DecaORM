@@ -15,6 +15,8 @@ class QueryBuilder
     private string $orderBy;
     private int $offset;
     private int $limit;
+    private array $expanded_markers;
+    private array $expanded_params;
 
     public function select(string ...$columns): self
     {
@@ -77,7 +79,7 @@ class QueryBuilder
 
         // 展開が必要なことを示すマーカープレースホルダーを使用
         // このキーで値の配列を格納
-        $marker = $this->createPlaceholder('_EXTEND_' . $column);
+        $marker = $this->createPlaceholder('_EXPAND_' . $column);
 
         $this->wheres[] = "{$column} IN (:{$marker})" . PHP_EOL;
         $this->parameters[$marker] = $values;
@@ -111,7 +113,9 @@ class QueryBuilder
     public function getSql(): string
     {
         // ステップ1: IN句の展開処理（SQLとパラメーターの展開）
-        list($sql_template, $expanded_params) = $this->processExtends();
+        if (!isset($this->expanded_markers)) {
+            $this->processExtends();
+        }
 
         $sql = '';
 
@@ -122,7 +126,7 @@ class QueryBuilder
 
         // SELECT句
         $select = empty($this->selects) ? '*' : implode(', ', $this->selects);
-        $sql .= "SELECT {$select} " . PHP_EOL . "FROM {$this->fromTable}" . PHP_EOL;
+        $sql .= "{$this->queryType} {$select} " . PHP_EOL . "FROM {$this->fromTable}" . PHP_EOL;
 
         // JOIN句
         if (!empty($this->joins)) {
@@ -150,7 +154,7 @@ class QueryBuilder
         }
 
         // 最終的な SQL 文字列に対して置換処理を行う
-        foreach ($sql_template as $marker => $replacement) {
+        foreach ($this->expanded_markers as $marker => $replacement) {
             $sql = str_replace($marker, $replacement, $sql);
         }
 
@@ -163,8 +167,10 @@ class QueryBuilder
     public function getParameters(): array
     {
         // 最終的なSQL生成時に展開されたパラメーターを返す
-        list(, $expanded_params) = $this->processExtends();
-        return $expanded_params;
+        if (!isset($this->expanded_params)) {
+            $this->processExtends();
+        }
+        return $this->expanded_params;
     }
 
     // --- 内部ヘルパーメソッド ---
@@ -180,19 +186,18 @@ class QueryBuilder
 
     /**
      * IN句の展開マーカーを処理し、SQLテンプレートとパラメーターを展開する
-     * @return array [SQL置換テンプレート, 展開後のパラメーター]
      */
-    private function processExtends(): array
+    private function processExtends(): void
     {
-        $sql_template = []; // ['マーカー' => '置換後のプレースホルダーリスト']
+        $expanded_markers = []; // ['マーカー' => '置換後のプレースホルダーリスト']
         $expanded_params = $this->parameters;
 
         foreach ($expanded_params as $marker => $values) {
-            // '_EXTEND_' マーカーを持つ配列値のみを処理
+            // '_EXPAND_' マーカーを持つ配列値のみを処理
             if (is_array($values)) {
                 unset($expanded_params[$marker]);
-                if (!str_starts_with($marker, '_EXTEND_')) {
-                    $marker = '_EXTEND_' . $marker;
+                if (!str_starts_with($marker, '_EXPAND_')) {
+                    $marker = '_EXPAND_' . $marker;
                 }
 
                 $new_placeholders = [];
@@ -210,12 +215,13 @@ class QueryBuilder
                     $expanded_params[$new_placeholder] = $value;
                 }
 
-                // SQL置換テンプレートを生成 (例: ':_EXTEND_status' => ':ext_status_0, :ext_status_1')
-                $sql_template[':' . $original_marker_key] = implode(', ', $new_placeholders);
+                // SQL置換テンプレートを生成 (例: ':_EXPAND_status' => ':ext_status_0, :ext_status_1')
+                $expanded_markers[':' . $original_marker_key] = implode(', ', $new_placeholders);
             }
         }
 
-        return [$sql_template, $expanded_params];
+        $this->expanded_markers = $expanded_markers;
+        $this->expanded_params = $expanded_params;
     }
 
     public function setParameters(array $array): static

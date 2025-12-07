@@ -63,7 +63,7 @@ class QueryBuilderTest extends TestCase
             ->withRaw("recent_orders AS (SELECT user_id, amount FROM orders WHERE order_date > '2024-01-01')")
             ->select('u.id', 'u.name', 'COUNT(ro.user_id) AS order_count')
             ->from('users u')
-            ->joinRaw("LEFT JOIN recent_orders ro ON u.id = ro.user_id AND ro.user_id IN (:_EXTEND_user_id)")
+            ->joinRaw("LEFT JOIN recent_orders ro ON u.id = ro.user_id AND ro.user_id IN (:_EXPAND_user_id)")
             ->whereIn('u.id', $user_ids) // IN句
             ->where('u.status', 'active') // AND句
             ->whereRaw( // OR条件を含むRAW句
@@ -86,8 +86,8 @@ class QueryBuilderTest extends TestCase
 WITH recent_orders AS (SELECT user_id, amount FROM orders WHERE order_date > '2024-01-01')
 SELECT u.id, u.name, COUNT(ro.user_id) AS order_count 
 FROM users u
-  LEFT JOIN recent_orders ro ON u.id = ro.user_id AND ro.user_id IN (:_EXTEND_user_id_0, :_EXTEND_user_id_1, :_EXTEND_user_id_2)
-WHERE u.id IN (:_EXTEND_u_id_0_0, :_EXTEND_u_id_0_1, :_EXTEND_u_id_0_2)
+  LEFT JOIN recent_orders ro ON u.id = ro.user_id AND ro.user_id IN (:_EXPAND_user_id_0, :_EXPAND_user_id_1, :_EXPAND_user_id_2)
+WHERE u.id IN (:_EXPAND_u_id_0_0, :_EXPAND_u_id_0_1, :_EXPAND_u_id_0_2)
   AND u.status = :u_status_1
   AND (u.age > :min_age OR u.score > 90)
 
