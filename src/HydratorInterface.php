@@ -22,6 +22,10 @@ interface HydratorInterface
      */
     public function getPrimaryKey(): string;
 
+    public function getPrimaryKeyColumn(): string;
+    public function getCreatedAtColumn(): ?string;
+    public function getUpdatedAtColumn(): ?string;
+
     /**
      * List of entity properties
      */
@@ -46,4 +50,16 @@ interface HydratorInterface
      * Convert an entity to an associative array (dehydration)
      */
     public function dehydrate(EntityInterface $entity): array;
+
+    /**
+     * Get property name for a given column name
+     * If column name mapping is not available, returns the column name as-is
+     */
+    public function getPropertyNameForColumn(string $columnName): ?string;
+
+    /**
+     * Get column name for a given property name
+     * If property name mapping is not available, returns the property name as-is
+     */
+    public function getColumnNameForProperty(string $propertyName): ?string;
 }

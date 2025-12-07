@@ -17,6 +17,15 @@ trait RepositoryTrait
         return $this->db;
     }
 
+    /**
+     * Get table name for the repository
+     * Override this method in subclasses to dynamically change table names
+     */
+    public function getTableName(): string
+    {
+        return $this->hydrator->getTableName();
+    }
+
     public function execute(string $sql, array $data): false|PDOStatement
     {
         $stmt = $this->db->prepare($sql);
@@ -29,16 +38,13 @@ trait RepositoryTrait
     /**
      * @return EntityInterface[]
      */
-    public function fetchAll(string $sql, array $data): array
+    private function fetchClass(string $sql, array $data): array
     {
         $stmt = $this->execute($sql, $data);
         if (!$stmt) {
             return [];
         }
-        $entityClass = $this->hydrator->getEntityClass();
-        $stmt->setFetchMode(PDO::FETCH_CLASS, $entityClass);
-        $list = $stmt->fetchAll();
-
+        $list = $stmt->fetchAll(PDO::FETCH_CLASS, $this->hydrator->getEntityClass());
         foreach ($list as $idx => $entity) {
             $list[$idx] = EntityCache::cache($entity);
         }
@@ -46,26 +52,34 @@ trait RepositoryTrait
         return $list;
     }
 
-    public function fetch(string $sql, array $data): ?EntityInterface
+    /**
+     * fetch entities from database.
+     *
+     * @param int|string $id       // primary key, or any column value
+     * @param string|null $column  // column name to find; or set null to use primaryKey.
+     * @param string|null $orderBy // orderBy (ex: "user_name DESC")
+     * @return EntityInterface[]
+     */
+    public function fetch(int|string $id, string $column = null, string $orderBy = null): array
     {
-        $list = $this->fetchAll($sql, $data);
-        return $list[0] ?? null;
+        $column = $column ?? $this->hydrator->getPrimaryKeyColumn();
+        $orderBy = $orderBy ?? $column;
+        $select = $this->makeSelectColumns();
+        $sql = "SELECT {$select} FROM {$this->getTableName()} WHERE {$column} = :id ORDER BY {$orderBy}";
+        $data = ['id' => $id];
+        return $this->fetchClass($sql, $data) ?? [];
     }
 
-    /**
-     * Fetch an entity by PrimaryKey
-     *
-     * @return ?EntityInterface
-     */
-    private function fetchEntityById(int|string $id): ?EntityInterface
+    private function makeSelectColumns(): string
     {
-        $pKey = $this->hydrator->getPrimaryKey();
-        $table = $this->hydrator->getTableName();
-
-        return $this->fetch(
-            "SELECT * FROM {$table} WHERE {$pKey} = :id",
-            ['id' => $id]
-        );
+        $table = $this->getTableName();
+        $properties = $this->hydrator->listProperties();
+        $columns = [];
+        foreach ($properties as $property) {
+            $column = $this->hydrator->getColumnNameForProperty($property);
+            $columns[] = "{$table}.{$column} AS {$property}";
+        }
+        return implode(', ', $columns);
     }
 
     /**
@@ -73,39 +87,63 @@ trait RepositoryTrait
      */
     private function insertEntity(EntityInterface $entity): void
     {
-        $pKey = $this->hydrator->getPrimaryKey();
-        $data = $this->hydrator->dehydrate($entity);
         if ($this->hydrator->isPkAutoNumber()) {
-            unset($data[$pKey]);
+            if ($entity->getId() !== null) {
+                throw new \RuntimeException('Entity already has an ID:' . $this->hydrator->getEntityClass());
+            }
+        } else {
+            if ($entity->getId() === null) {
+                throw new \RuntimeException('Entity does not have an ID:' . $this->hydrator->getEntityClass());
+            }
         }
-        $id = $this->insertData($data);
-        if ($this->hydrator->isPkAutoNumber() && $id) {
-            $entity->set($pKey, $id);
-            EntityCache::cache($entity);
+        if ($this->hydrator->getCreatedAt() !== null) {
+            $entity->set($this->hydrator->getCreatedAt(), $this->now->format('Y-m-d H:i:s'));
+        }
+        if ($this->hydrator->getUpdatedAt() !== null) {
+            $entity->set($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
+        }
+        $data = $this->hydrator->dehydrate($entity);
+
+        $select = [];
+        $values = [];
+        foreach ($data as $columnName => $value) {
+            $select[] = $columnName;
+            $values[] = ':' . $columnName;
+        }
+        $select = implode(', ', $select);
+        $values = implode(', ', $values);
+        $sql = "INSERT INTO {$this->getTableName()} ({$select}) VALUES ({$values});";
+        $stmt = $this->execute($sql, $data);
+
+        if (!$stmt) {
+            throw new \RuntimeException('Failed to insert an entity:' . $this->hydrator->getEntityClass());
+        }
+        if ($this->hydrator->isPkAutoNumber()) {
+            $pKey = $this->hydrator->getPrimaryKey();
+            $entity->set($pKey, $this->db->lastInsertId());
         }
         EntityCache::cache($entity);
-    }
+}
 
     /**
      * Update an entity
      */
     private function updateEntity(EntityInterface $entity): void
     {
-        $pKey = $this->hydrator->getPrimaryKey();
         $data = $this->hydrator->dehydrate($entity);
+        // Update UpdatedAt!
+        if ($this->hydrator->getUpdatedAt() !== null) {
+            $entity->set($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
+        }
         $values = [];
 
         // Remove PK!
-        unset($data[$pKey]);
+        $pKeyColumn = $this->hydrator->getPrimaryKeyColumn();
+        unset($data[$pKeyColumn]);
         // Remove CreatedAt!
-        $createdAt = $this->hydrator->getCreatedAt();
-        if ($createdAt) {
-            unset($data[$createdAt]);
-        }
-        // Update UpdatedAt!
-        $updatedAt = $this->hydrator->getUpdatedAt();
-        if ($updatedAt !== null) {
-            $data[$updatedAt] = $this->now->format('Y-m-d H:i:s');
+        $createdAtColumn = $this->hydrator->getCreatedAtColumn();
+        if ($createdAtColumn !== null) {
+            unset($data[$createdAtColumn]);
         }
         foreach ($data as $item => $value) {
             $values[] = "{$item} = :{$item}";
@@ -113,12 +151,12 @@ trait RepositoryTrait
 
         $values = implode(', ', $values);
 
-        $data[$pKey] = $entity->getId();
+        $data[$pKeyColumn] = $entity->getId();
         $this->execute(
             "
-            UPDATE {$this->hydrator->getTableName()} 
+            UPDATE {$this->getTableName()} 
                 SET {$values} 
-                WHERE {$pKey} = :{$pKey}",
+                WHERE {$pKeyColumn} = :{$pKeyColumn}",
             $data // $data contains the id
         );
     }
@@ -128,12 +166,12 @@ trait RepositoryTrait
      */
     private function deleteEntity(EntityInterface $entity): void
     {
-        $pKey = $this->hydrator->getPrimaryKey();
+        $pKeyColumn = $this->hydrator->getPrimaryKeyColumn();
         $id = $entity->getId();
         $this->execute(
             "
-            DELETE FROM {$this->hydrator->getTableName()} 
-                   WHERE {$pKey} = :id",
+            DELETE FROM {$this->getTableName()} 
+                   WHERE {$pKeyColumn} = :id",
             ['id' => $id]
         );
     }
@@ -147,7 +185,7 @@ trait RepositoryTrait
         string $foreignKey
     ): void {
         $id = $entity->get($foreignKey);
-        $user = $this->find($id);
+        $user = $this->findById($id);
         $entity->set($relationName, $user);
     }
 
@@ -160,37 +198,18 @@ trait RepositoryTrait
         string $foreignKey,
         ?string $parentRelationName = null,
         string $orderBy = null,
-        string $orderDir = 'ASC',
     ): void {
-        $orderBy = $orderBy ?? $this->hydrator->getPrimaryKey();
-        $entityClass = $this->hydrator->getEntityClass();
-        $sql = "
-            SELECT * 
-                FROM {$this->hydrator->getTableName()} 
-                WHERE {$foreignKey} = :id
-                ORDER BY {$orderBy} {$orderDir}";
-        $stmt = $this->execute($sql, [':id' => $entity->getId()]);
-        if (!$stmt) {
+        $list = $this->fetch($entity->getId(), $foreignKey, $orderBy);
+        if (empty($list)) {
             $entity->set($relationName, []);
             return;
         }
         
-        $stmt->setFetchMode(PDO::FETCH_CLASS, $entityClass);
-        $list = [];
-        while ($childEntity = $stmt->fetch()) {
-            // Register in cache
-            $id = $childEntity->getId();
-            if ($id !== null) {
-                $class = get_class($childEntity);
-                EntityCache::set($class, $id, $childEntity);
-            }
-
+        foreach ($list as $childEntity) {
             // Set bidirectional link (child -> parent)
             if ($parentRelationName !== null) {
                 $childEntity->set($parentRelationName, $entity);
             }
-
-            $list[] = $childEntity;
         }
         $entity->set($relationName, $list);
     }
@@ -241,7 +260,7 @@ trait RepositoryTrait
 
         $sql = "
                 SELECT * 
-                FROM {$this->hydrator->getTableName()} 
+                FROM {$this->getTableName()} 
                 WHERE {$foreignKey} IN ({$placeholders})
                 ORDER BY {$orderBy} {$orderDir}
             ";
@@ -258,7 +277,9 @@ trait RepositoryTrait
                 EntityCache::set($class, $id, $childEntity);
             }
 
-            $parentId = $childEntity->get($foreignKey);
+            // foreignKey is a column name, convert to property name for entity access
+            $propertyName = $this->hydrator->getPropertyNameForColumn($foreignKey);
+            $parentId = $childEntity->get($propertyName);
             if ($parentId !== null && isset($entityMap[$parentId])) {
                 $parent = $entityMap[$parentId];
 
@@ -278,48 +299,5 @@ trait RepositoryTrait
                 }
             }
         }
-    }
-
-    /**
-     * Save data and return the primary key
-     */
-    private function insertData(array $data): int|string|bool
-    {
-        $pKey = $this->hydrator->getPrimaryKey();
-        if ($this->hydrator->isPkAutoNumber()) {
-            // Supports AutoNumbering. The ID should be NULL for new records.
-            unset($data[$pKey]);
-        }
-        $select = [];
-        $values = [];
-        foreach ($data as $key => $val) {
-            $select[] = $key;
-            $values[] = ':' . $key;
-        }
-        // Populate CreatedAt!
-        if ($this->hydrator->getCreatedAt() !== null) {
-            $data[$this->hydrator->getCreatedAt()] = $this->now->format('Y-m-d H:i:s');
-            $select[] = $this->hydrator->getCreatedAt();
-            $values[] = ':' . $this->hydrator->getCreatedAt();
-        }
-        // Populate UpdatedAt!
-        if ($this->hydrator->getUpdatedAt() !== null) {
-            $data[$this->hydrator->getUpdatedAt()] = $this->now->format('Y-m-d H:i:s');
-            $select[] = $this->hydrator->getUpdatedAt();
-            $values[] = ':' . $this->hydrator->getUpdatedAt();
-        }
-        $select = implode(', ', $select);
-        $values = implode(', ', $values);
-
-        $sql = "INSERT INTO {$this->hydrator->getTableName()} ({$select}) VALUES ({$values});";
-        $stmt = $this->execute($sql, $data);
-
-        if ($stmt) {
-            if ($this->hydrator->isPkAutoNumber()) {
-                return $this->db->lastInsertId();
-            }
-            return $data[$pKey] ?? true;
-        }
-        return false;
     }
 }

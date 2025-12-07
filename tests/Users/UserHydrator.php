@@ -47,11 +47,38 @@ class UserHydrator implements HydratorInterface
 
     public function hydrate(array $data): EntityInterface
     {
-        return $this->hydrateEntity(new User(), $data);
+        return $this->hydrateEntity($data);
     }
 
     public function dehydrate(EntityInterface $entity): array
     {
         return $this->dehydrateEntity($entity);
+    }
+
+    public function getPropertyNameForColumn(string $columnName): string
+    {
+        // For UserHydrator, column names and property names are the same
+        return $columnName;
+    }
+
+    public function getColumnNameForProperty(string $propertyName): string
+    {
+        // For UserHydrator, column names and property names are the same
+        return $propertyName;
+    }
+
+    public function getPrimaryKeyColumn(): string
+    {
+        return $this->getColumnNameForProperty($this->getPrimaryKey());
+    }
+
+    public function getCreatedAtColumn(): string
+    {
+        return $this->getColumnNameForProperty($this->getCreatedAt());
+    }
+
+    public function getUpdatedAtColumn(): string
+    {
+        return $this->getColumnNameForProperty($this->getUpdatedAt());
     }
 }

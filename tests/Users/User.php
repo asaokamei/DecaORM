@@ -23,16 +23,16 @@ class User implements EntityInterface
     #[Id]
     #[GeneratedValue]
     #[Column(name: 'user_id')]
-    public ?string $user_id = null;
+    public ?string $id = null;
 
-    #[Column(name: 'name')]
+    #[Column(name: 'user_name')]
     public string $name = '';
 
     #[Column(name: 'email')]
     public string $email = '';
 
     #[CreatedAt(name: 'created_at')]
-    public ?string $created_at = null;
+    public ?string $registered_at = null;
 
     #[UpdatedAt(name: 'updated_at')]
     public ?string $updated_at = null;
@@ -42,12 +42,12 @@ class User implements EntityInterface
 
     public function getId(): ?int
     {
-        return $this->user_id !== null ? (int) $this->user_id : null;
+        return $this->id !== null ? (int) $this->id : null;
     }
 
-    public function getCreatedAt(): ?DateTimeImmutable
+    public function getRegisteredAt(): ?DateTimeImmutable
     {
-        return $this->created_at !== null ? new DateTimeImmutable($this->created_at) : null;
+        return $this->registered_at !== null ? new DateTimeImmutable($this->registered_at) : null;
     }
 
     public function getUpdatedAt(): ?DateTimeImmutable

@@ -31,7 +31,7 @@ class DecaOrmTest extends TestCase
         $this->pdo->exec(
             "CREATE TABLE users (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+            user_name TEXT NOT NULL,
             email TEXT NOT NULL,
             created_at TEXT,
             updated_at TEXT
@@ -55,16 +55,17 @@ class DecaOrmTest extends TestCase
 
         $this->assertNotNull($savedUser->getId());
         $this->assertEquals('John Doe', $savedUser->get('name'));
-        $this->assertNotNull($savedUser->get('created_at'));
+        $this->assertNotNull($savedUser->get('registered_at'));
+        $this->assertNotNull($savedUser->get('updated_at'));
     }
 
     public function testFindUser()
     {
         // Setup data
-        $this->pdo->exec("INSERT INTO users (name, email) VALUES ('Jane Doe', 'jane@example.com')");
+        $this->pdo->exec("INSERT INTO users (user_name, email) VALUES ('Jane Doe', 'jane@example.com')");
         $id = $this->pdo->lastInsertId();
 
-        $user = $this->repo->find($id);
+        $user = $this->repo->findById($id);
 
         $this->assertInstanceOf(User::class, $user);
         $this->assertEquals($id, $user->getId());
@@ -96,7 +97,7 @@ class DecaOrmTest extends TestCase
         $stmt->execute([$id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        $this->assertEquals('New Name', $row['name']);
+        $this->assertEquals('New Name', $row['user_name']);
         $this->assertNotNull($row['updated_at']);
     }
 
@@ -112,16 +113,16 @@ class DecaOrmTest extends TestCase
 
         $this->repo->delete($user);
 
-        $this->assertNull($this->repo->find($id));
+        $this->assertNull($this->repo->findById($id));
     }
 
     public function testIdentityMapCache()
     {
-        $this->pdo->exec("INSERT INTO users (name, email) VALUES ('Cache Test', 'cache@example.com')");
+        $this->pdo->exec("INSERT INTO users (user_name, email) VALUES ('Cache Test', 'cache@example.com')");
         $id = $this->pdo->lastInsertId();
 
-        $user1 = $this->repo->find($id);
-        $user2 = $this->repo->find($id);
+        $user1 = $this->repo->findById($id);
+        $user2 = $this->repo->findById($id);
 
         // HydratorTrait uses a static cache, so the same instance should be returned
         $this->assertSame($user1, $user2);

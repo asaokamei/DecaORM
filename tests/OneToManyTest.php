@@ -26,7 +26,7 @@ class OneToManyTest extends TestCase
         $this->pdo->exec(
             "CREATE TABLE users (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+            user_name TEXT NOT NULL,
             email TEXT NOT NULL,
             created_at TEXT,
             updated_at TEXT
@@ -185,14 +185,12 @@ class OneToManyTest extends TestCase
         ]);
 
         // Create posts
-        $post1 = $this->postsRepo->createAndSave([
-            'user_id' => $user->getId(),
+        $post1 = $this->postsRepo->create($user, [
             'title' => 'Bidirectional Test 1',
             'content' => 'Content 1'
         ]);
 
-        $post2 = $this->postsRepo->createAndSave([
-            'user_id' => $user->getId(),
+        $post2 = $this->postsRepo->create($user, [
             'title' => 'Bidirectional Test 2',
             'content' => 'Content 2'
         ]);
@@ -225,14 +223,12 @@ class OneToManyTest extends TestCase
             'email' => 'user1@example.com'
         ]);
 
-        $post1 = $this->postsRepo->createAndSave([
-            'user_id' => $user1->getId(),
+        $post1 = $this->postsRepo->create($user1, [
             'title' => 'User 1 Post 1',
             'content' => 'Content'
         ]);
 
-        $post2 = $this->postsRepo->createAndSave([
-            'user_id' => $user1->getId(),
+        $post2 = $this->postsRepo->create($user1, [
             'title' => 'User 1 Post 2',
             'content' => 'Content'
         ]);
@@ -243,8 +239,7 @@ class OneToManyTest extends TestCase
             'email' => 'user2@example.com'
         ]);
 
-        $post3 = $this->postsRepo->createAndSave([
-            'user_id' => $user2->getId(),
+        $post3 = $this->postsRepo->create($user2, [
             'title' => 'User 2 Post 1',
             'content' => 'Content'
         ]);
@@ -277,7 +272,7 @@ class OneToManyTest extends TestCase
         $this->pdo->exec("INSERT INTO posts (user_id, title, content) VALUES (999, 'Test', 'Content')");
         $postId = $this->pdo->lastInsertId();
 
-        $post = $this->postsRepo->find($postId);
+        $post = $this->postsRepo->findById($postId);
         $this->assertNotNull($post);
 
         // Try to load user (should handle gracefully)

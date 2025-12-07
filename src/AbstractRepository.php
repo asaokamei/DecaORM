@@ -15,10 +15,19 @@ abstract class AbstractRepository
      * @param int $id
      * @return T|null
      */
-    public function find(int $id): ?EntityInterface
+    public function findById(int $id): ?EntityInterface
     {
-        /** @var T|null $entity */
-        $entity = $this->fetchEntityById($id);
+        $list = $this->fetch($id);
+        return $list[0] ?? null;
+    }
+
+    public function createEntity(array $data): EntityInterface
+    {
+        $class = $this->hydrator->getEntityClass();
+        $entity = new $class();
+        foreach ($this->hydrator->listProperties() as $property) {
+            $entity->set($property, $data[$property] ?? null);
+        }
         return $entity;
     }
 
@@ -28,27 +37,31 @@ abstract class AbstractRepository
      */
     public function createAndSave(array $data): ?EntityInterface
     {
-        $id = $this->insertData($data);
-        return $id
-            ? $this->find($id)
-            : null;
+        $entity = $this->createEntity($data);
+        $this->insertEntity($entity);
+        return $entity;
     }
 
     /**
      * UserエンティティをDBに保存（新規作成または更新）
      *
      * @param T $entity
-     * @return T
      */
-    public function save(EntityInterface $entity): ?EntityInterface
+    public function save(EntityInterface $entity): void
     {
-        if ($entity->getId() === null) {
-            $this->insertEntity($entity);
-        } else {
-            $this->updateEntity($entity);
+        if ($this->hydrator->isPkAutoNumber()) {
+            if ($entity->getId() === null) {
+                $this->insertEntity($entity);
+            } else {
+                $this->updateEntity($entity);
+            }
+            return;
         }
-        /** @var T $entity */
-        return $entity;
+        if (EntityCache::has($this->hydrator->getEntityClass(), $entity->getId())) {
+            $this->updateEntity($entity);
+        } else {
+            $this->insertEntity($entity);
+        }
     }
 
     /**
