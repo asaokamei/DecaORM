@@ -13,8 +13,8 @@ class QueryBuilder
     private string $withSql = '';
     private int $placeholder_counter = 0; // プレースホルダーの衝突を防ぐためのカウンター
     private string $orderBy;
-    private int $offset;
-    private int $limit;
+    private ?int $offset;
+    private ?int $limit;
     private array $expanded_markers;
     private array $expanded_params;
 
@@ -87,13 +87,13 @@ class QueryBuilder
         return $this;
     }
 
-    public function limit(int $limit): self
+    public function limit(?int $limit): self
     {
         $this->limit = $limit;
         return $this;
     }
 
-    public function offset(int $offset): self
+    public function offset(?int $offset): self
     {
         $this->offset = $offset;
         return $this;
@@ -146,10 +146,10 @@ class QueryBuilder
             $sql .= "ORDER BY {$this->orderBy}" . PHP_EOL;
         }
         // LIMIT, OFFSET句
-        if ($this->limit) {
+        if (isset($this->limit) && $this->limit > 0) {
             $sql .= "LIMIT {$this->limit}" . PHP_EOL;
         }
-        if ($this->offset) {
+        if (isset($this->offset) && $this->offset > 0) {
             $sql .= "OFFSET {$this->offset}" . PHP_EOL;
         }
 
