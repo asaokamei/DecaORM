@@ -45,9 +45,9 @@ class User implements EntityInterface
         return $this->id !== null ? (int) $this->id : null;
     }
 
-    public function getCreatedAt(): ?DateTimeImmutable
+    public function getRegisteredAt(): ?DateTimeImmutable
     {
-        return $this->created_at !== null ? new DateTimeImmutable($this->created_at) : null;
+        return $this->registered_at !== null ? new DateTimeImmutable($this->registered_at) : null;
     }
 
     public function getUpdatedAt(): ?DateTimeImmutable
