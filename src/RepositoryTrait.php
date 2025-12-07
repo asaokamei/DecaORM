@@ -5,7 +5,12 @@ namespace WScore\DecaORM;
 use DateTimeInterface;
 use PDO;
 use PDOStatement;
+use RuntimeException;
+use WScore\DecaORM\Sql\Query;
 
+/**
+ * @template T of EntityInterface
+ */
 trait RepositoryTrait
 {
     protected PDO $db;
@@ -17,8 +22,13 @@ trait RepositoryTrait
         return $this->db;
     }
 
+    public function query(): Query
+    {
+        return new Query($this);
+    }
+
     /**
-     * Get table name for the repository
+     * Get the table name for the repository
      * Override this method in subclasses to dynamically change table names
      */
     public function getTableName(): string
@@ -36,9 +46,9 @@ trait RepositoryTrait
     }
 
     /**
-     * @return EntityInterface[]
+     * @return T[]
      */
-    private function fetchClass(string $sql, array $data): array
+    public function fetchClass(string $sql, array $data = []): array
     {
         $stmt = $this->execute($sql, $data);
         if (!$stmt) {
@@ -58,28 +68,30 @@ trait RepositoryTrait
      * @param int|string $id       // primary key, or any column value
      * @param string|null $column  // column name to find; or set null to use primaryKey.
      * @param string|null $orderBy // orderBy (ex: "user_name DESC")
-     * @return EntityInterface[]
+     * @return T[]
      */
     public function fetch(int|string $id, string $column = null, string $orderBy = null): array
     {
         $column = $column ?? $this->hydrator->getPrimaryKeyColumn();
         $orderBy = $orderBy ?? $column;
-        $select = $this->makeSelectColumns();
-        $sql = "SELECT {$select} FROM {$this->getTableName()} WHERE {$column} = :id ORDER BY {$orderBy}";
-        $data = ['id' => $id];
+
+        $query = $this->query()
+            ->where($column, $id)
+            ->orderBy($orderBy);
+        $sql = $query->getSql();
+        $data = $query->getParameters();
         return $this->fetchClass($sql, $data) ?? [];
     }
 
-    private function makeSelectColumns(): string
+    public function listColumnsToProperties(): array
     {
-        $table = $this->getTableName();
-        $properties = $this->hydrator->listProperties();
-        $columns = [];
-        foreach ($properties as $property) {
+        $list = [];
+        foreach ($this->hydrator->listProperties() as $property) {
             $column = $this->hydrator->getColumnNameForProperty($property);
-            $columns[] = "{$table}.{$column} AS {$property}";
+            $list[$column] = $property;
         }
-        return implode(', ', $columns);
+
+        return $list;
     }
 
     /**
@@ -89,11 +101,11 @@ trait RepositoryTrait
     {
         if ($this->hydrator->isPkAutoNumber()) {
             if ($entity->getId() !== null) {
-                throw new \RuntimeException('Entity already has an ID:' . $this->hydrator->getEntityClass());
+                throw new RuntimeException('Entity already has an ID:' . $this->hydrator->getEntityClass());
             }
         } else {
             if ($entity->getId() === null) {
-                throw new \RuntimeException('Entity does not have an ID:' . $this->hydrator->getEntityClass());
+                throw new RuntimeException('Entity does not have an ID:' . $this->hydrator->getEntityClass());
             }
         }
         if ($this->hydrator->getCreatedAt() !== null) {
@@ -116,7 +128,7 @@ trait RepositoryTrait
         $stmt = $this->execute($sql, $data);
 
         if (!$stmt) {
-            throw new \RuntimeException('Failed to insert an entity:' . $this->hydrator->getEntityClass());
+            throw new RuntimeException('Failed to insert an entity:' . $this->hydrator->getEntityClass());
         }
         if ($this->hydrator->isPkAutoNumber()) {
             $pKey = $this->hydrator->getPrimaryKey();
