@@ -55,7 +55,8 @@ class DecaOrmTest extends TestCase
 
         $this->assertNotNull($savedUser->getId());
         $this->assertEquals('John Doe', $savedUser->get('name'));
-        $this->assertNotNull($savedUser->get('created_at'));
+        $this->assertNotNull($savedUser->get('registered_at'));
+        $this->assertNotNull($savedUser->get('updated_at'));
     }
 
     public function testFindUser()

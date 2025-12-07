@@ -16,16 +16,19 @@ class AttributeHydratorTest extends TestCase
         $this->assertEquals('users', $hydrator->getTableName());
         $this->assertEquals('id', $hydrator->getPrimaryKey());
         $this->assertTrue($hydrator->isPkAutoNumber());
-        $this->assertEquals('created_at', $hydrator->getCreatedAt());
+        $this->assertEquals('registered_at', $hydrator->getCreatedAt());
         $this->assertEquals('updated_at', $hydrator->getUpdatedAt());
 
         $properties = $hydrator->listProperties();
         $this->assertContains('id', $properties);
         $this->assertContains('name', $properties);
         $this->assertContains('email', $properties);
-        $this->assertContains('created_at', $properties);
+        $this->assertContains('registered_at', $properties);
         $this->assertContains('updated_at', $properties);
         $this->assertNotContains('posts', $properties);
+
+        $this->assertEquals('created_at', $hydrator->getCreatedAtColumn());
+        $this->assertEquals('updated_at', $hydrator->getUpdatedAtColumn());
     }
 
     public function testHydrate(): void

@@ -17,9 +17,8 @@ abstract class AbstractRepository
      */
     public function findById(int $id): ?EntityInterface
     {
-        /** @var T|null $entity */
-        $entity = $this->fetchEntityById($id);
-        return $entity;
+        $list = $this->fetch($id);
+        return $list[0] ?? null;
     }
 
     public function createEntity(array $data): EntityInterface
@@ -47,7 +46,6 @@ abstract class AbstractRepository
      * UserエンティティをDBに保存（新規作成または更新）
      *
      * @param T $entity
-     * @return T
      */
     public function save(EntityInterface $entity): void
     {

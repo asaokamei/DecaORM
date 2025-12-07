@@ -20,10 +20,8 @@ trait RepositoryTrait
     /**
      * Get table name for the repository
      * Override this method in subclasses to dynamically change table names
-     *
-     * @return string
      */
-    protected function getTableName(): string
+    public function getTableName(): string
     {
         return $this->hydrator->getTableName();
     }
@@ -85,15 +83,6 @@ trait RepositoryTrait
     }
 
     /**
-     * Fetch an entity by PrimaryKey
-     */
-    private function fetchEntityById(int|string $id): ?EntityInterface
-    {
-        $list = $this->fetch($id);
-        return $list[0] ?? null;
-    }
-
-    /**
      * Insert an entity
      */
     private function insertEntity(EntityInterface $entity): void
@@ -107,11 +96,11 @@ trait RepositoryTrait
                 throw new \RuntimeException('Entity does not have an ID:' . $this->hydrator->getEntityClass());
             }
         }
-        if ($this->hydrator->getCreatedAtColumn() !== null) {
-            $entity->set($this->hydrator->getCreatedAtColumn(), $this->now->format('Y-m-d H:i:s'));
+        if ($this->hydrator->getCreatedAt() !== null) {
+            $entity->set($this->hydrator->getCreatedAt(), $this->now->format('Y-m-d H:i:s'));
         }
-        if ($this->hydrator->getUpdatedAtColumn() !== null) {
-            $entity->set($this->hydrator->getUpdatedAtColumn(), $this->now->format('Y-m-d H:i:s'));
+        if ($this->hydrator->getUpdatedAt() !== null) {
+            $entity->set($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
         }
         $data = $this->hydrator->dehydrate($entity);
 
@@ -143,8 +132,8 @@ trait RepositoryTrait
     {
         $data = $this->hydrator->dehydrate($entity);
         // Update UpdatedAt!
-        if ($this->hydrator->getUpdatedAtColumn() !== null) {
-            $entity->set($this->hydrator->getUpdatedAtColumn(), $this->now->format('Y-m-d H:i:s'));
+        if ($this->hydrator->getUpdatedAt() !== null) {
+            $entity->set($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
         }
         $values = [];
 
@@ -217,9 +206,6 @@ trait RepositoryTrait
         }
         
         foreach ($list as $childEntity) {
-            // Register in cache
-            $childEntity = EntityCache::cache($childEntity);
-
             // Set bidirectional link (child -> parent)
             if ($parentRelationName !== null) {
                 $childEntity->set($parentRelationName, $entity);

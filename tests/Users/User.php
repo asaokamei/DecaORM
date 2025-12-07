@@ -32,7 +32,7 @@ class User implements EntityInterface
     public string $email = '';
 
     #[CreatedAt(name: 'created_at')]
-    public ?string $created_at = null;
+    public ?string $registered_at = null;
 
     #[UpdatedAt(name: 'updated_at')]
     public ?string $updated_at = null;
