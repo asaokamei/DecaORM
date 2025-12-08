@@ -1,6 +1,6 @@
 # リレーションアトリビュート設計案
 
-> **注意**: このドキュメントは設計時のものです。現在の実装については [`RELATION_ATTRIBUTES.md`](./RELATION_ATTRIBUTES.md) を参照してください。
+> **注意**: このドキュメントは設計時のものです。現在の実装については [`RELATION_ATTRIBUTES.md`](03_RELATION_ATTRIBUTES.md) を参照してください。
 
 ## 実装済みアトリビュート
 
