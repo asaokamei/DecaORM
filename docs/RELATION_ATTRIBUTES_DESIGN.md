@@ -1,56 +1,58 @@
 # リレーションアトリビュート設計案
 
-## 必要なアトリビュート
+> **注意**: このドキュメントは設計時のものです。現在の実装については [`RELATION_ATTRIBUTES.md`](./RELATION_ATTRIBUTES.md) を参照してください。
 
-### 1. ManyToOne
+## 実装済みアトリビュート
+
+### 1. BelongsTo (旧: ManyToOne)
 親エンティティへの参照（外部キーを持つ側）
 
 ```php
-#[ManyToOne(targetEntity: User::class, joinColumn: 'user_id')]
+#[BelongsTo(targetEntity: User::class, foreignKey: 'user_id', inversedBy: 'posts')]
 public ?User $user = null;
 ```
 
 **パラメータ:**
 - `targetEntity`: 関連先のエンティティクラス名（必須）
-- `joinColumn`: 外部キーカラム名（必須）
+- `foreignKey`: 外部キーカラム名（必須）
 - `inversedBy`: 逆側のプロパティ名（双方向リレーションの場合、オプション）
 - `fetch`: フェッチ戦略（LAZY/EAGER、デフォルト: LAZY）
 
-### 2. OneToMany
+### 2. HasMany (旧: OneToMany)
 子エンティティのコレクション（親側）
 
 ```php
-#[OneToMany(targetEntity: Post::class, mappedBy: 'user')]
+#[HasMany(targetEntity: Post::class, foreignKey: 'user_id', orderBy: 'created_at DESC')]
 public ?array $posts = null;
 ```
 
 **パラメータ:**
 - `targetEntity`: 関連先のエンティティクラス名（必須）
-- `mappedBy`: 子側のプロパティ名（外部キーを持つ側のプロパティ名、必須）
-- `fetch`: フェッチ戦略（LAZY/EAGER、デフォルト: LAZY）
+- `foreignKey`: 子側のテーブルの外部キーカラム名（必須）
 - `orderBy`: ソート順（オプション、例: 'created_at DESC'）
+- `fetch`: フェッチ戦略（LAZY/EAGER、デフォルト: LAZY）
 
-### 3. OneToOne
+### 3. HasOne (旧: OneToOne)
 1対1のリレーション
 
 ```php
-// 外部キーを持つ側
-#[OneToOne(targetEntity: Profile::class, joinColumn: 'profile_id')]
+// 外部キーが相手側にある場合（デフォルト）
+#[HasOne(targetEntity: Profile::class, foreignKey: 'user_id')]
 public ?Profile $profile = null;
 
-// 逆側
-#[OneToOne(targetEntity: User::class, mappedBy: 'profile')]
+// 外部キーがこの側にある場合
+#[HasOne(targetEntity: User::class, foreignKey: 'profile_id', onThisSide: true)]
 public ?User $user = null;
 ```
 
 **パラメータ:**
 - `targetEntity`: 関連先のエンティティクラス名（必須）
-- `joinColumn`: 外部キーカラム名（外部キーを持つ側、必須）
-- `mappedBy`: 逆側のプロパティ名（外部キーを持たない側、オプション）
+- `foreignKey`: 外部キーカラム名（必須）
+- `onThisSide`: 外部キーがこの側にある場合 `true`（デフォルト: `false`）
 - `inversedBy`: 逆側のプロパティ名（双方向リレーションの場合、オプション）
 - `fetch`: フェッチ戦略（LAZY/EAGER、デフォルト: LAZY）
 
-### 4. ManyToMany（将来の拡張）
+### 4. BelongsToMany（実装予定、旧: ManyToMany）
 多対多のリレーション（中間テーブルが必要）
 
 ## エンティティからリポジトリを取得する方法
@@ -190,7 +192,7 @@ class User implements EntityInterface
     #[Column(name: 'user_id')]
     public ?string $id = null;
     
-    #[OneToMany(targetEntity: Post::class, mappedBy: 'user', orderBy: 'created_at DESC')]
+    #[HasMany(targetEntity: Post::class, foreignKey: 'user_id', orderBy: 'created_at DESC')]
     public ?array $posts = null;
 }
 
@@ -201,17 +203,17 @@ class Post implements EntityInterface
     #[Column(name: 'post_id')]
     public ?string $id = null;
     
-    #[ManyToOne(targetEntity: User::class, joinColumn: 'user_id', inversedBy: 'posts')]
+    #[BelongsTo(targetEntity: User::class, foreignKey: 'user_id', inversedBy: 'posts')]
     public ?User $user = null;
 }
 ```
 
-## 実装の優先順位
+## 実装状況
 
-1. **ManyToOne** - 最もシンプルで頻繁に使用される
-2. **OneToMany** - ManyToOneの逆側
-3. **OneToOne** - 特殊なケース
-4. **ManyToMany** - 将来的な拡張
+- ✅ **BelongsTo** (旧: ManyToOne) - 実装済み・テスト済み
+- ✅ **HasMany** (旧: OneToMany) - 実装済み・テスト済み
+- ✅ **HasOne** (旧: OneToOne) - 実装済み（未テスト）
+- ⏳ **BelongsToMany** (旧: ManyToMany) - 実装予定
 
 ## 考慮事項
 
