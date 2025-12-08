@@ -8,6 +8,7 @@ use WScore\DecaORM\Attribute\CreatedAt;
 use WScore\DecaORM\Attribute\GeneratedValue;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\Id;
+use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\Attribute\UpdatedAt;
 use WScore\DecaORM\EntityInterface;
@@ -17,6 +18,7 @@ use WScore\DecaORM\EntityTrait;
  * Attributeを使ったUserエンティティのサンプル
  */
 #[Table(name: 'users')]
+#[Repository(UserRepository::class)]
 class User implements EntityInterface
 {
     use EntityTrait;

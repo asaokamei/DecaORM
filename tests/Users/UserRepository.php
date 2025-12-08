@@ -4,6 +4,7 @@ namespace WScore\DecaORM\Tests\Users;
 
 use DateTimeImmutable;
 use PDO;
+use Psr\Container\ContainerInterface;
 use WScore\DecaORM\AttributeHydrator;
 use WScore\DecaORM\HydratorInterface;
 use WScore\DecaORM\AbstractRepository;
@@ -13,19 +14,25 @@ use WScore\DecaORM\AbstractRepository;
  */
 class UserRepository extends AbstractRepository
 {
-    public function __construct(PDO $pdo, HydratorInterface $hydrator = null)
+    private ?ContainerInterface $container;
+
+    public function __construct(PDO $pdo, ContainerInterface $container = null, HydratorInterface $hydrator = null)
     {
         $this->db = $pdo;
         $this->hydrator = $hydrator ?? new AttributeHydrator(User::class);
         $this->now = new DateTimeImmutable();
+        $this->container = $container;
     }
 
     /**
      * PostにUserを読み込む（BelongsTo）
      * AttributeHydratorからリレーション情報を読み取って処理
      */
-    public function loadUserForPost(PostsRepository $postRepo, Post $post): void
+    public function loadUserForPost(Post $post): void
     {
+        $postRepo = $post::getRepositoryClass();
+        $postRepo = $this->container->get($postRepo);
+
         $postHydrator = $postRepo->getHydrator();
         $relation = $postHydrator->getRelation('user');
         

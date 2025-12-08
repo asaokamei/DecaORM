@@ -41,7 +41,7 @@ class DecaOrmTest extends TestCase
         // Clear cache before each test
         \WScore\DecaORM\EntityCache::clear();
 
-        $this->repo = new UserRepository($this->pdo, new AttributeHydrator(User::class));
+        $this->repo = new UserRepository($this->pdo);
         // $this->repo = new UserRepository($this->pdo, new UserHydrator());
 
     }
