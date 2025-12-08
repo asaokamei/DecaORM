@@ -22,6 +22,11 @@ trait RepositoryTrait
         return $this->db;
     }
 
+    public function getHydrator(): HydratorInterface
+    {
+        return $this->hydrator;
+    }
+
     public function query(): Query
     {
         return new Query($this);

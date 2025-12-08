@@ -3,6 +3,7 @@
 namespace WScore\DecaORM\Tests\Users;
 
 use DateTimeImmutable;
+use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\Attribute\Column;
 use WScore\DecaORM\Attribute\CreatedAt;
 use WScore\DecaORM\Attribute\GeneratedValue;
@@ -41,6 +42,7 @@ class Post implements EntityInterface
     public ?string $updated_at = null;
 
     /** @var User|null */
+    #[BelongsTo(targetEntity: User::class, foreignKey: 'user_id', inversedBy: 'posts')]
     public ?User $user = null;
 
     public function getId(): ?int

@@ -21,10 +21,28 @@ class UserRepository extends AbstractRepository
     }
 
     /**
-     * PostにUserを読み込む（ManyToOne）
+     * PostにUserを読み込む（BelongsTo）
+     * AttributeHydratorからリレーション情報を読み取って処理
      */
-    public function loadUserForPost(Post $post): void
+    public function loadUserForPost(PostsRepository $postRepo, Post $post): void
     {
-        $this->fillParentEntity($post, 'user', 'user_id');
+        $postHydrator = $postRepo->getHydrator();
+        $relation = $postHydrator->getRelation('user');
+        
+        if ($relation === null || $relation['type'] !== 'BelongsTo') {
+            throw new \RuntimeException('Post entity does not have a BelongsTo relation named "user"');
+        }
+        
+        // Get foreign key property name (convert column name to property name)
+        $foreignKeyProperty = $postHydrator->getPropertyNameForColumn($relation['foreignKey']);
+        $id = $post->get($foreignKeyProperty);
+        
+        if ($id === null) {
+            $post->set('user', null);
+            return;
+        }
+        
+        $user = $this->findById($id);
+        $post->set('user', $user);
     }
 }

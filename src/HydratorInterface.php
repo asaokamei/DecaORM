@@ -62,4 +62,19 @@ interface HydratorInterface
      * If property name mapping is not available, returns the property name as-is
      */
     public function getColumnNameForProperty(string $propertyName): ?string;
+
+    /**
+     * Get all relations for this entity
+     * 
+     * @return array<string, array{type: string, targetEntity: string, ...}>
+     */
+    public function getRelations(): array;
+
+    /**
+     * Get relation information for a specific property
+     * 
+     * @param string $propertyName The property name
+     * @return array{type: string, targetEntity: string, ...}|null
+     */
+    public function getRelation(string $propertyName): ?array;
 }

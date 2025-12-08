@@ -1,0 +1,36 @@
+<?php
+
+namespace WScore\DecaORM\Attribute;
+
+use Attribute;
+
+/**
+ * HasMany relationship attribute
+ * 
+ * Used on the side that does not hold the foreign key (the "one" side).
+ * This is equivalent to OneToMany in Doctrine.
+ * 
+ * Example:
+ * ```php
+ * #[HasMany(targetEntity: Post::class, foreignKey: 'user_id')]
+ * public ?array $posts = null;
+ * ```
+ */
+#[Attribute(Attribute::TARGET_PROPERTY)]
+class HasMany
+{
+    /**
+     * @param string $targetEntity The target entity class name (e.g., Post::class)
+     * @param string $foreignKey The foreign key column name on the target entity (e.g., 'user_id')
+     * @param string|null $orderBy Optional ORDER BY clause (e.g., 'created_at DESC')
+     * @param string $fetch Fetch strategy: 'LAZY' or 'EAGER' (default: 'LAZY')
+     */
+    public function __construct(
+        public string $targetEntity,
+        public string $foreignKey,
+        public ?string $orderBy = null,
+        public string $fetch = 'LAZY'
+    ) {
+    }
+}
+

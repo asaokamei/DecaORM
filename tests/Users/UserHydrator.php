@@ -81,4 +81,14 @@ class UserHydrator implements HydratorInterface
     {
         return $this->getColumnNameForProperty($this->getUpdatedAt());
     }
+
+    public function getRelations(): array
+    {
+        return [];
+    }
+
+    public function getRelation(string $propertyName): ?array
+    {
+        return null;
+    }
 }
