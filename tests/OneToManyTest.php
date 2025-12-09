@@ -4,6 +4,7 @@ namespace WScore\DecaORM\Tests;
 
 use PDO;
 use PHPUnit\Framework\TestCase;
+use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\Tests\Users\Container;
 use WScore\DecaORM\Tests\Users\Post;
 use WScore\DecaORM\Tests\Users\PostsRepository;
@@ -47,7 +48,7 @@ class OneToManyTest extends TestCase
         );
 
         // Clear cache before each test
-        \WScore\DecaORM\EntityCache::clear();
+        EntityCache::clear();
 
         $container = new Container();
         $this->userRepo = new UserRepository($this->pdo, $container);
@@ -102,7 +103,7 @@ class OneToManyTest extends TestCase
         ]);
 
         // Load user for the post (BelongsTo)
-        $this->userRepo->loadUserForPost($post);
+        $this->postsRepo->fillUser($post);
 
         // Verify the user is loaded
         $loadedUser = $post->get('user');
@@ -140,7 +141,7 @@ class OneToManyTest extends TestCase
         ]);
 
         // Load posts for the user (HasMany)
-        $this->postsRepo->loadPostsForUser($user);
+        $this->userRepo->fillPosts($user);
 
         // Verify posts are loaded
         $posts = $user->get('posts');
@@ -171,7 +172,7 @@ class OneToManyTest extends TestCase
         ]);
 
         // Load posts for the user
-        $this->postsRepo->loadPostsForUser($user);
+        $this->userRepo->fillPosts($user);
 
         // Verify empty array is set
         $posts = $user->get('posts');
@@ -199,7 +200,7 @@ class OneToManyTest extends TestCase
         ]);
 
         // Load posts for user (this should set bidirectional link)
-        $this->postsRepo->loadPostsForUser($user);
+        $this->userRepo->fillPosts($user);
 
         // Verify user -> posts
         $posts = $user->get('posts');
@@ -213,7 +214,7 @@ class OneToManyTest extends TestCase
         }
 
         // Also test loading user for individual post
-        $this->userRepo->loadUserForPost($post1);
+        $this->postsRepo->fillUser($post1);
         $loadedUser = $post1->get('user');
         $this->assertEquals($user->getId(), $loadedUser->getId());
     }
@@ -248,14 +249,14 @@ class OneToManyTest extends TestCase
         ]);
 
         // Load posts for user1
-        $this->postsRepo->loadPostsForUser($user1);
+        $this->userRepo->fillPosts($user1);
         $user1Posts = $user1->get('posts');
         $this->assertCount(2, $user1Posts);
         $this->assertEquals('User 1 Post 1', $user1Posts[0]->get('title'));
         $this->assertEquals('User 1 Post 2', $user1Posts[1]->get('title'));
 
         // Load posts for user2
-        $this->postsRepo->loadPostsForUser($user2);
+        $this->userRepo->fillPosts($user2);
         $user2Posts = $user2->get('posts');
         $this->assertCount(1, $user2Posts);
         $this->assertEquals('User 2 Post 1', $user2Posts[0]->get('title'));
@@ -279,7 +280,7 @@ class OneToManyTest extends TestCase
         $this->assertNotNull($post);
 
         // Try to load user (should handle gracefully)
-        $this->userRepo->loadUserForPost($post);
+        $this->postsRepo->fillUser($post);
 
         $loadedUser = $post->get('user');
         // Should be null if user doesn't exist
@@ -301,7 +302,7 @@ class OneToManyTest extends TestCase
         ]);
 
         // Load user for post
-        $this->userRepo->loadUserForPost($post);
+        $this->postsRepo->fillUser($post);
         $this->assertInstanceOf(User::class, $post->get('user'));
 
         // Update post
@@ -309,7 +310,7 @@ class OneToManyTest extends TestCase
         $this->postsRepo->save($post);
 
         // Reload user (should still work)
-        $this->userRepo->loadUserForPost($post);
+        $this->postsRepo->fillUser($post);
         $loadedUser = $post->get('user');
         $this->assertInstanceOf(User::class, $loadedUser);
         $this->assertEquals($user->getId(), $loadedUser->getId());

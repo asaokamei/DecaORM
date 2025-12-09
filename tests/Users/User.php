@@ -41,7 +41,7 @@ class User implements EntityInterface
     public ?string $updated_at = null;
 
     /** @var Post[]|null */
-    #[HasMany(targetEntity: Post::class, foreignKey: 'user_id', orderBy: 'created_at DESC')]
+    #[HasMany(targetEntity: Post::class, mappedBy: 'user', orderBy: 'created_at DESC')]
     public ?array $posts = null;
 
     public function getId(): ?int

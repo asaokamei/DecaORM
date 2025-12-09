@@ -29,16 +29,12 @@ class HasOne
     public string $propertyName = '';
     /**
      * @param string $targetEntity The target entity class name
-     * @param string $foreignKey The foreign key column name
-     * @param bool $onThisSide Whether the foreign key is on this side (default: false, meaning on target side)
-     * @param string|null $inversedBy The property name on the inverse side (for bidirectional relationships)
+     * @param string $mappedBy The property name on the inverse side (e.g., 'user')
      * @param string $fetch Fetch strategy: 'LAZY' or 'EAGER' (default: 'LAZY')
      */
     public function __construct(
         public string $targetEntity,
-        public string $foreignKey,
-        public bool $onThisSide = false,
-        public ?string $inversedBy = null,
+        public string $mappedBy,
         public string $fetch = 'LAZY'
     ) {
     }

@@ -5,7 +5,11 @@ namespace WScore\DecaORM;
 use DateTimeInterface;
 use PDO;
 use PDOStatement;
+use Psr\Container\ContainerInterface;
 use RuntimeException;
+use WScore\DecaORM\Attribute\BelongsTo;
+use WScore\DecaORM\Attribute\HasMany;
+use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Sql\Query;
 
 /**
@@ -13,6 +17,7 @@ use WScore\DecaORM\Sql\Query;
  */
 trait RepositoryTrait
 {
+    protected ?ContainerInterface $container;
     protected PDO $db;
     protected HydratorInterface $hydrator;
     protected DateTimeInterface $now;
@@ -189,127 +194,61 @@ trait RepositoryTrait
     }
 
     /**
-     * Many-To-One: Fetch a parent entity
+     * Fills the specified relation for the given entity.
      */
-    protected function fillParentEntity(
-        EntityInterface $entity,
-        string $relationName,
-        string $foreignKey
-    ): void {
-        $id = $entity->get($foreignKey);
-        $user = $this->findById($id);
-        $entity->set($relationName, $user);
+    protected function fill(EntityInterface $entity, string $relationName): void
+    {
+        $relation = $this->hydrator->getRelation($relationName);
+        $targetClass = $relation->targetEntity;
+        $targetRepo = $targetClass::getRepositoryClass();
+        $targetRepo = $this->container->get($targetRepo);
+        $targetRepo->load($entity, $relation);
     }
 
     /**
-     * One-To-Many: Fetch multiple child entities
-     */
-    protected function fillChildEntities(
-        EntityInterface $entity,
-        string $relationName,
-        string $foreignKey,
-        ?string $parentRelationName = null,
-        string $orderBy = null,
-    ): void {
-        $list = $this->find($entity->getId(), $foreignKey, $orderBy);
-        if (empty($list)) {
-            $entity->set($relationName, []);
-            return;
-        }
-        
-        foreach ($list as $childEntity) {
-            // Set bidirectional link (child -> parent)
-            if ($parentRelationName !== null) {
-                $childEntity->set($parentRelationName, $entity);
-            }
-        }
-        $entity->set($relationName, $list);
-    }
-
-    /**
-     * One-To-Many (Batch): Fetch related child entities for multiple parent entities at once
+     * Loads the specified relation for the given entity.
      *
-     * @param EntityInterface[] $entities
-     * @param string $relationName Property name for the parent entity to hold the child list (e.g. 'posts')
-     * @param string $foreignKey Foreign key column name on the child table (e.g. 'user_id')
-     * @param string|null $orderBy
-     * @param string $orderDir
-     * @param string|null $parentRelationName Relation name of the parent from the child entity side (e.g. 'user'). If specified, set bidirectional link.
+     * @param EntityInterface $entity The entity for which the relation is to be loaded.
+     * @param HasMany|HasOne|BelongsTo $relation The relation to be loaded; must be an instance of a supported relation type.
+     * @return void
      */
-    private function fillChildEntitiesBatch(
-        array $entities,
-        string $relationName,
-        string $foreignKey,
-        ?string $parentRelationName = null,
-        string $orderBy = null,
-        string $orderDir = 'ASC',
-    ): void {
-        if (empty($entities)) {
+    protected function load(EntityInterface $entity, mixed $relation): void
+    {
+        if ($relation instanceof HasMany) {
+            $this->loadHasMany($entity, $relation);
+        } elseif ($relation instanceof BelongsTo) {
+            $this->loadBelongsTo($entity, $relation);
+        } else {
+            throw new RuntimeException('unknown relation: ' . get_class($relation));
+        }
+    }
+
+    protected function loadHasMany(EntityInterface $parentEntity, HasMany $parentRelation): void
+    {
+        $parentProperty = $parentRelation->propertyName;
+        $childProperty = $parentRelation->mappedBy;
+        $childRelation = $this->hydrator->getRelation($parentRelation->mappedBy);
+
+        // Find posts by foreign key
+        $children = $this->find($parentEntity->getId(), $childRelation->foreignKey, $parentRelation->orderBy);
+
+        if (empty($children)) {
+            $parentEntity->set($parentProperty, []);
             return;
         }
 
-        $ids = [];
-        $entityMap = [];
-        // Assume cached entities are passed, create $entityMap
-        foreach ($entities as $entity) {
-            $id = $entity->getId();
-            if ($id !== null) {
-                $ids[] = $id;
-                $entityMap[$id] = $entity;
-                // Initialize list
-                $entity->set($relationName, []);
-            }
+        // Set bidirectional link (post -> user)
+        foreach ($children as $post) {
+            $post->set($childProperty, $parentEntity);
         }
 
-        if (empty($ids)) {
-            return;
-        }
+        $parentEntity->set($parentProperty, $children);
+    }
 
-        $ids = array_unique($ids);
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $orderBy = $orderBy ?? $this->hydrator->getPrimaryKey();
-        $entityClass = $this->hydrator->getEntityClass();
-
-        $sql = "
-                SELECT * 
-                FROM {$this->getTableName()} 
-                WHERE {$foreignKey} IN ({$placeholders})
-                ORDER BY {$orderBy} {$orderDir}
-            ";
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(array_values($ids));
-        $stmt->setFetchMode(PDO::FETCH_CLASS, $entityClass);
-
-        while ($childEntity = $stmt->fetch()) {
-            // Register in cache
-            $id = $childEntity->getId();
-            if ($id !== null) {
-                $class = get_class($childEntity);
-                EntityCache::set($class, $id, $childEntity);
-            }
-
-            // foreignKey is a column name, convert to property name for entity access
-            $propertyName = $this->hydrator->getPropertyNameForColumn($foreignKey);
-            $parentId = $childEntity->get($propertyName);
-            if ($parentId !== null && isset($entityMap[$parentId])) {
-                $parent = $entityMap[$parentId];
-
-                // Set parent -> child
-                $currentList = $parent->get($relationName);
-                if (!is_array($currentList)) {
-                    $currentList = [];
-                }
-                $currentList[] = $childEntity;
-                $parent->set($relationName, $currentList);
-
-                // Set child -> parent (bidirectional link)
-                if ($parentRelationName !== null) {
-                    // Set parent to the child entity.
-                    // Use EntityTrait::set to handle the existence of the setUser() method transparently.
-                    $childEntity->set($parentRelationName, $parent);
-                }
-            }
-        }
+    protected function loadBelongsTo(EntityInterface $childEntity, mixed $childRelation): void
+    {
+        $parentId = $childEntity->get($childRelation->foreignKey);
+        $parentEntity = $this->findById($parentId);
+        $childEntity->set($childRelation->propertyName, $parentEntity);
     }
 }

@@ -24,13 +24,13 @@ class HasMany
 
     /**
      * @param string $targetEntity The target entity class name (e.g., Post::class)
-     * @param string $foreignKey The foreign key column name on the target entity (e.g., 'user_id')
+     * @param string $mappedBy The property name on the inverse side (e.g., 'user')
      * @param string|null $orderBy Optional ORDER BY clause (e.g., 'created_at DESC')
      * @param string $fetch Fetch strategy: 'LAZY' or 'EAGER' (default: 'LAZY')
      */
     public function __construct(
         public string $targetEntity,
-        public string $foreignKey,
+        public string $mappedBy,
         public ?string $orderBy = null,
         public string $fetch = 'LAZY'
     ) {
