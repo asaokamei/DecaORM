@@ -89,5 +89,5 @@ interface HydratorInterface
      * @param string $propertyName The property name
      * @return array{type: string, targetEntity: string, ...}|null
      */
-    public function getRelation(string $propertyName): ?array;
+    public function getRelation(string $propertyName): mixed;
 }

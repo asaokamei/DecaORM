@@ -5,6 +5,7 @@ namespace WScore\DecaORM\Tests\Users;
 use DateTimeImmutable;
 use PDO;
 use Psr\Container\ContainerInterface;
+use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\AttributeHydrator;
 use WScore\DecaORM\HydratorInterface;
 use WScore\DecaORM\AbstractRepository;
@@ -42,13 +43,13 @@ class PostsRepository extends AbstractRepository
         $userHydrator = $userRepo->getHydrator();
         $relation = $userHydrator->getRelation('posts');
         
-        if ($relation === null || $relation['type'] !== 'HasMany') {
+        if (!$relation instanceof HasMany) {
             throw new \RuntimeException('User entity does not have a HasMany relation named "posts"');
         }
         
         // Get foreign key column name
-        $foreignKeyColumn = $relation['foreignKey'];
-        $orderBy = $relation['orderBy'];
+        $foreignKeyColumn = $relation->foreignKey;
+        $orderBy = $relation->orderBy;
         
         // Find posts by foreign key
         $posts = $this->find($user->getId(), $foreignKeyColumn, $orderBy);
@@ -61,7 +62,7 @@ class PostsRepository extends AbstractRepository
         // Set bidirectional link (post -> user)
         $postHydrator = $this->getHydrator();
         $postRelation = $postHydrator->getRelation('user');
-        if ($postRelation !== null && $postRelation['inversedBy'] === 'posts') {
+        if ($postRelation !== null && $postRelation->inversedBy === 'posts') {
             foreach ($posts as $post) {
                 $post->set('user', $user);
             }

@@ -232,30 +232,14 @@ class AttributeHydrator implements HydratorInterface
             $instance = $attribute->newInstance();
 
             if ($instance instanceof BelongsTo) {
-                $this->relations[$propertyName] = [
-                    'type' => 'BelongsTo',
-                    'targetEntity' => $instance->targetEntity,
-                    'foreignKey' => $instance->foreignKey,
-                    'inversedBy' => $instance->inversedBy,
-                    'fetch' => $instance->fetch,
-                ];
+                $this->relations[$propertyName] = $instance;
+                $instance->propertyName = $propertyName;
             } elseif ($instance instanceof HasMany) {
-                $this->relations[$propertyName] = [
-                    'type' => 'HasMany',
-                    'targetEntity' => $instance->targetEntity,
-                    'foreignKey' => $instance->foreignKey,
-                    'orderBy' => $instance->orderBy,
-                    'fetch' => $instance->fetch,
-                ];
+                $this->relations[$propertyName] = $instance;
+                $instance->propertyName = $propertyName;
             } elseif ($instance instanceof HasOne) {
-                $this->relations[$propertyName] = [
-                    'type' => 'HasOne',
-                    'targetEntity' => $instance->targetEntity,
-                    'foreignKey' => $instance->foreignKey,
-                    'onThisSide' => $instance->onThisSide,
-                    'inversedBy' => $instance->inversedBy,
-                    'fetch' => $instance->fetch,
-                ];
+                $this->relations[$propertyName] = $instance;
+                $instance->propertyName = $propertyName;
             }
         }
     }
@@ -350,9 +334,9 @@ class AttributeHydrator implements HydratorInterface
      * Get relation information for a specific property
      * 
      * @param string $propertyName The property name
-     * @return array{type: string, targetEntity: string, ...}|null
+     * @return mixed|null|HasMany|HasOne|BelongsTo
      */
-    public function getRelation(string $propertyName): ?array
+    public function getRelation(string $propertyName): mixed
     {
         return $this->relations[$propertyName] ?? null;
     }

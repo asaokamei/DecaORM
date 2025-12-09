@@ -19,6 +19,9 @@ use Attribute;
 #[Attribute(Attribute::TARGET_PROPERTY)]
 class BelongsTo
 {
+    /** @var string The property name on the attribute's entity */
+    public string $propertyName = '';
+
     /**
      * @param string $targetEntity The target entity class name (e.g., User::class)
      * @param string $foreignKey The foreign key column name (e.g., 'user_id')

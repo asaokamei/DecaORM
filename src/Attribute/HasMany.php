@@ -19,6 +19,9 @@ use Attribute;
 #[Attribute(Attribute::TARGET_PROPERTY)]
 class HasMany
 {
+    /** @var string The property name on the attribute's entity */
+    public string $propertyName = '';
+
     /**
      * @param string $targetEntity The target entity class name (e.g., Post::class)
      * @param string $foreignKey The foreign key column name on the target entity (e.g., 'user_id')

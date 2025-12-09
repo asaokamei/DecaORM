@@ -5,6 +5,7 @@ namespace WScore\DecaORM\Tests\Users;
 use DateTimeImmutable;
 use PDO;
 use Psr\Container\ContainerInterface;
+use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\AttributeHydrator;
 use WScore\DecaORM\HydratorInterface;
 use WScore\DecaORM\AbstractRepository;
@@ -36,12 +37,12 @@ class UserRepository extends AbstractRepository
         $postHydrator = $postRepo->getHydrator();
         $relation = $postHydrator->getRelation('user');
         
-        if ($relation === null || $relation['type'] !== 'BelongsTo') {
+        if (!$relation instanceof BelongsTo) {
             throw new \RuntimeException('Post entity does not have a BelongsTo relation named "user"');
         }
         
         // Get foreign key property name (convert column name to property name)
-        $foreignKeyProperty = $postHydrator->getPropertyNameForColumn($relation['foreignKey']);
+        $foreignKeyProperty = $postHydrator->getPropertyNameForColumn($relation->foreignKey);
         $id = $post->get($foreignKeyProperty);
         
         if ($id === null) {
