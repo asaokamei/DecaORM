@@ -170,11 +170,6 @@ trait RepositoryTrait
                 continue;
             }
 
-            $childRepo = $this->getRepository($relation->targetEntity);
-            $childRel = $childRepo->getRelation($relation->mappedBy);
-            $childBackRefProperty = $childRel->propertyName ?? $relation->mappedBy; // fallback to mappedBy
-            $childForeignKey = $childRel->foreignKey ?? null;
-
             $children = $entity->get($relation->propertyName);
             if ($children === null) {
                 continue;
@@ -193,6 +188,15 @@ trait RepositoryTrait
             if (empty($children)) {
                 continue;
             }
+
+            // retrieve property names to fill: $childBackRefProperty and $childForeignKey.
+            $childRepo = $this->getRepository($relation->targetEntity);
+            $childRel = $childRepo->getRelation($relation->mappedBy);
+            if (!$childRel instanceof BelongsTo && !$childRel instanceof BelongsToOne) {
+                continue;
+            }
+            $childBackRefProperty = $childRel->propertyName ?? $relation->mappedBy; // fallback to mappedBy
+            $childForeignKey = $childRel->foreignKey ?? null;
 
             foreach ($children as $child) {
                 if (!$child instanceof EntityInterface) {
