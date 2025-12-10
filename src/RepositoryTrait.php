@@ -8,6 +8,7 @@ use PDOStatement;
 use Psr\Container\ContainerInterface;
 use RuntimeException;
 use WScore\DecaORM\Attribute\BelongsTo;
+use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Sql\Query;
@@ -99,6 +100,22 @@ trait RepositoryTrait
         return $list;
     }
 
+    protected function getRepository(string|EntityInterface $entity): ?RepositoryInterface
+    {
+        $repoName = $entity::getRepositoryClass();
+        /** @var RepositoryInterface $childRepo */
+        return $this->container->get($repoName) ?? null;
+    }
+
+    /**
+     * @return HasMany|HasOne|BelongsTo|BelongsToOne|null
+     */
+    protected function getRelation(string $propertyName): mixed
+    {
+        $hydrator = $this->hydrator;
+        return $hydrator->getRelation($propertyName);
+    }
+
     /**
      * Insert an entity
      */
@@ -141,7 +158,9 @@ trait RepositoryTrait
         }
         EntityCache::cache($entity);
 
-        $this->fillAllForeignKeys($entity);
+        if ($this->hydrator->isPkAutoNumber()) {
+            $this->fillAllForeignKeys($entity);
+        }
     }
 
     protected function fillAllForeignKeys(EntityInterface $entity): void
@@ -151,10 +170,8 @@ trait RepositoryTrait
                 continue;
             }
 
-            // Determine child-side relation metadata without using container
-            $childClass = $relation->targetEntity;
-            $childHydrator = new AttributeHydrator($childClass);
-            $childRel = $childHydrator->getRelation($relation->mappedBy);
+            $childRepo = $this->getRepository($relation->targetEntity);
+            $childRel = $childRepo->getRelation($relation->mappedBy);
             $childBackRefProperty = $childRel->propertyName ?? $relation->mappedBy; // fallback to mappedBy
             $childForeignKey = $childRel->foreignKey ?? null;
 
@@ -181,13 +198,7 @@ trait RepositoryTrait
                 if (!$child instanceof EntityInterface) {
                     continue; // ignore invalid child
                 }
-                // Set back-reference on child to point to parent entity
-                $setter = 'set' . str_replace(' ', '', ucwords(str_replace(['_', '-'], ' ', $childBackRefProperty)));
-                if (method_exists($child, $setter)) {
-                    $child->{$setter}($entity);
-                } else {
-                    $child->set($childBackRefProperty, $entity);
-                }
+                $child->set($childBackRefProperty, $entity);
 
                 // Set child's foreign key to parent's id when known
                 if ($childForeignKey !== null) {
@@ -254,9 +265,7 @@ trait RepositoryTrait
     protected function fill(EntityInterface $entity, string $relationName): void
     {
         $relation = $this->hydrator->getRelation($relationName);
-        $targetClass = $relation->targetEntity;
-        $targetRepo = $targetClass::getRepositoryClass();
-        $targetRepo = $this->container->get($targetRepo);
+        $targetRepo = $this->getRepository($relation->targetEntity);
         $targetRepo->load($entity, $relation);
     }
 
@@ -284,7 +293,7 @@ trait RepositoryTrait
     {
         $parentProperty = $parentRelation->propertyName;
         $childProperty = $parentRelation->mappedBy;
-        $childRelation = $this->hydrator->getRelation($parentRelation->mappedBy);
+        $childRelation = $this->getRelation($parentRelation->mappedBy);
 
         // Find posts by foreign key
         $children = $this->find($parentEntity->getId(), $childRelation->foreignKey, $parentRelation->orderBy);
@@ -306,7 +315,7 @@ trait RepositoryTrait
     {
         $parentProperty = $parentRelation->propertyName;
         $childProperty = $parentRelation->mappedBy;
-        $childRelation = $this->hydrator->getRelation($parentRelation->mappedBy);
+        $childRelation = $this->getRelation($parentRelation->mappedBy);
 
         // Find posts by foreign key
         $children = $this->find($parentEntity->getId(), $childRelation->foreignKey);
