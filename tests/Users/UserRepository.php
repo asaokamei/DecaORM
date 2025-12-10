@@ -26,4 +26,9 @@ class UserRepository extends AbstractRepository
     {
         $this->fill($user, 'posts');
     }
+
+    public function fillProfile(User $user): void
+    {
+        $this->fill($user, 'profile');
+    }
 }

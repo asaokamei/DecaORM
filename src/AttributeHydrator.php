@@ -5,6 +5,7 @@ namespace WScore\DecaORM;
 use ReflectionClass;
 use ReflectionProperty;
 use WScore\DecaORM\Attribute\BelongsTo;
+use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\Column;
 use WScore\DecaORM\Attribute\CreatedAt;
 use WScore\DecaORM\Attribute\Entity;
@@ -235,6 +236,9 @@ class AttributeHydrator implements HydratorInterface
                 $this->relations[$propertyName] = $instance;
                 $instance->propertyName = $propertyName;
             } elseif ($instance instanceof HasMany) {
+                $this->relations[$propertyName] = $instance;
+                $instance->propertyName = $propertyName;
+            } elseif ($instance instanceof BelongsToOne) {
                 $this->relations[$propertyName] = $instance;
                 $instance->propertyName = $propertyName;
             } elseif ($instance instanceof HasOne) {

@@ -216,7 +216,9 @@ trait RepositoryTrait
     {
         if ($relation instanceof HasMany) {
             $this->loadHasMany($entity, $relation);
-        } elseif ($relation instanceof BelongsTo) {
+        } elseif ($relation instanceof HasOne) {
+            $this->loadHasOne($entity, $relation);
+        }elseif ($relation instanceof BelongsTo) {
             $this->loadBelongsTo($entity, $relation);
         } else {
             throw new RuntimeException('unknown relation: ' . get_class($relation));
@@ -238,11 +240,32 @@ trait RepositoryTrait
         }
 
         // Set bidirectional link (post -> user)
-        foreach ($children as $post) {
-            $post->set($childProperty, $parentEntity);
+        foreach ($children as $child) {
+            $child->set($childProperty, $parentEntity);
         }
 
         $parentEntity->set($parentProperty, $children);
+    }
+
+    protected function loadHasOne(EntityInterface $parentEntity, HasOne $parentRelation): void
+    {
+        $parentProperty = $parentRelation->propertyName;
+        $childProperty = $parentRelation->mappedBy;
+        $childRelation = $this->hydrator->getRelation($parentRelation->mappedBy);
+
+        // Find posts by foreign key
+        $children = $this->find($parentEntity->getId(), $childRelation->foreignKey);
+
+        if (empty($children)) {
+            $parentEntity->set($parentProperty, null);
+            return;
+        }
+        if (count($children) > 1) {
+            throw new RuntimeException('HasOne relation must have only one child.');
+        }
+        $child = $children[0];
+        $child->set($childProperty, $parentEntity);
+        $parentEntity->set($parentProperty, $child);
     }
 
     protected function loadBelongsTo(EntityInterface $childEntity, mixed $childRelation): void
