@@ -140,7 +140,62 @@ trait RepositoryTrait
             $entity->set($pKey, $this->db->lastInsertId());
         }
         EntityCache::cache($entity);
-}
+
+        $this->fillAllForeignKeys($entity);
+    }
+
+    protected function fillAllForeignKeys(EntityInterface $entity): void
+    {
+        foreach ($this->hydrator->getRelations() as $relation) {
+            if (!($relation instanceof HasMany || $relation instanceof HasOne)) {
+                continue;
+            }
+
+            // Determine child-side relation metadata without using container
+            $childClass = $relation->targetEntity;
+            $childHydrator = new AttributeHydrator($childClass);
+            $childRel = $childHydrator->getRelation($relation->mappedBy);
+            $childBackRefProperty = $childRel->propertyName ?? $relation->mappedBy; // fallback to mappedBy
+            $childForeignKey = $childRel->foreignKey ?? null;
+
+            $children = $entity->get($relation->propertyName);
+            if ($children === null) {
+                continue;
+            }
+            if ($relation instanceof HasOne) {
+                // Normalize single child to array
+                $children = $children ? [$children] : [];
+            } elseif (!is_array($children)) {
+                // Convert Traversable to array; ignore invalid types
+                if ($children instanceof \Traversable) {
+                    $children = iterator_to_array($children);
+                } else {
+                    $children = [];
+                }
+            }
+            if (empty($children)) {
+                continue;
+            }
+
+            foreach ($children as $child) {
+                if (!$child instanceof EntityInterface) {
+                    continue; // ignore invalid child
+                }
+                // Set back-reference on child to point to parent entity
+                $setter = 'set' . str_replace(' ', '', ucwords(str_replace(['_', '-'], ' ', $childBackRefProperty)));
+                if (method_exists($child, $setter)) {
+                    $child->{$setter}($entity);
+                } else {
+                    $child->set($childBackRefProperty, $entity);
+                }
+
+                // Set child's foreign key to parent's id when known
+                if ($childForeignKey !== null) {
+                    $child->set($childForeignKey, $entity->getId());
+                }
+            }
+        }
+    }
 
     /**
      * Update an entity

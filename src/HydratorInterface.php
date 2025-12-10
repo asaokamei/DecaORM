@@ -79,7 +79,7 @@ interface HydratorInterface
     /**
      * Get all relations for this entity
      * 
-     * @return array<string, array{type: string, targetEntity: string, ...}>
+     * @return array<>
      */
     public function getRelations(): array;
 
