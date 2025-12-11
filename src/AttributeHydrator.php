@@ -4,10 +4,14 @@ namespace WScore\DecaORM;
 
 use ReflectionClass;
 use ReflectionProperty;
+use WScore\DecaORM\Attribute\BelongsTo;
+use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\Column;
 use WScore\DecaORM\Attribute\CreatedAt;
 use WScore\DecaORM\Attribute\Entity;
 use WScore\DecaORM\Attribute\GeneratedValue;
+use WScore\DecaORM\Attribute\HasMany;
+use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\Attribute\UpdatedAt;
@@ -20,7 +24,7 @@ class AttributeHydrator implements HydratorInterface
 {
     use HydratorTrait;
 
-    /** @var array<string, array{tableName: string, primaryKey: string, pkAutoNumber: bool, properties: array, propertyToColumnMap: array, createdAt: ?string, updatedAt: ?string}> */
+    /** @var array<string, array{tableName: string, primaryKey: string, pkAutoNumber: bool, properties: array, propertyToColumnMap: array, relations: array, createdAt: ?string, updatedAt: ?string}> */
     private static array $metadataCache = [];
 
     private string $entityClass;
@@ -32,6 +36,8 @@ class AttributeHydrator implements HydratorInterface
     private array $propertyToColumnMap = [];
     /** @var array<string, string> columnName => propertyName */
     private array $columnToPropertyMap = [];
+    /** @var array<string, array{type: string, targetEntity: string, ...}> propertyName => relation info */
+    private array $relations = [];
     private ?string $createdAt = null;
     private ?string $updatedAt = null;
 
@@ -61,6 +67,7 @@ class AttributeHydrator implements HydratorInterface
                     'pkAutoNumber' => $this->pkAutoNumber,
                     'properties' => $this->properties,
                     'propertyToColumnMap' => $this->propertyToColumnMap,
+                    'relations' => $this->relations,
                     'createdAt' => $this->createdAt,
                     'updatedAt' => $this->updatedAt,
                 ];
@@ -72,6 +79,7 @@ class AttributeHydrator implements HydratorInterface
             $this->properties = $cached['properties'];
             $this->propertyToColumnMap = $cached['propertyToColumnMap'];
             $this->columnToPropertyMap = array_flip($this->propertyToColumnMap);
+            $this->relations = $cached['relations'] ?? [];
             $this->createdAt = $cached['createdAt'];
             $this->updatedAt = $cached['updatedAt'];
         } else {
@@ -83,6 +91,7 @@ class AttributeHydrator implements HydratorInterface
                 'pkAutoNumber' => $this->pkAutoNumber,
                 'properties' => $this->properties,
                 'propertyToColumnMap' => $this->propertyToColumnMap,
+                'relations' => $this->relations,
                 'createdAt' => $this->createdAt,
                 'updatedAt' => $this->updatedAt,
             ];
@@ -206,6 +215,36 @@ class AttributeHydrator implements HydratorInterface
                 $this->propertyToColumnMap[$propertyName] = $columnName;
                 $this->columnToPropertyMap[$columnName] = $propertyName;
             }
+
+            // Parse relation attributes (ManyToOne, OneToMany, OneToOne)
+            $this->parseRelationAttributes($property);
+        }
+    }
+
+    /**
+     * Parse relation attributes on a property
+     */
+    private function parseRelationAttributes(ReflectionProperty $property): void
+    {
+        $propertyName = $property->getName();
+        $attributes = $property->getAttributes();
+
+        foreach ($attributes as $attribute) {
+            $instance = $attribute->newInstance();
+
+            if ($instance instanceof BelongsTo) {
+                $this->relations[$propertyName] = $instance;
+                $instance->propertyName = $propertyName;
+            } elseif ($instance instanceof HasMany) {
+                $this->relations[$propertyName] = $instance;
+                $instance->propertyName = $propertyName;
+            } elseif ($instance instanceof BelongsToOne) {
+                $this->relations[$propertyName] = $instance;
+                $instance->propertyName = $propertyName;
+            } elseif ($instance instanceof HasOne) {
+                $this->relations[$propertyName] = $instance;
+                $instance->propertyName = $propertyName;
+            }
         }
     }
 
@@ -283,6 +322,27 @@ class AttributeHydrator implements HydratorInterface
     public function getUpdatedAtColumn(): ?string
     {
         return $this->getColumnNameForProperty($this->getUpdatedAt());
+    }
+
+    /**
+     * Get all relations for this entity
+     * 
+     * @return array<string, array{type: string, targetEntity: string, ...}>
+     */
+    public function getRelations(): array
+    {
+        return $this->relations;
+    }
+
+    /**
+     * Get relation information for a specific property
+     * 
+     * @param string $propertyName The property name
+     * @return mixed|null|HasMany|HasOne|BelongsTo
+     */
+    public function getRelation(string $propertyName): mixed
+    {
+        return $this->relations[$propertyName] ?? null;
     }
 }
 

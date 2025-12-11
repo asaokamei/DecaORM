@@ -2,12 +2,11 @@
 
 namespace WScore\DecaORM\Sql;
 
-use WScore\DecaORM\AbstractRepository;
-use WScore\DecaORM\Attribute\Entity;
+use Countable;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\RepositoryInterface;
 
-class Query extends QueryBuilder implements \Countable
+class Query extends QueryBuilder implements Countable
 {
     /**
      * @var EntityInterface[]
@@ -38,7 +37,7 @@ class Query extends QueryBuilder implements \Countable
         $sql = $this->getSql();
         $data = $this->getParameters();
 
-        $this->found = $this->repository->fetchClass($sql, $data);
+        $this->found = $this->repository->fetch($sql, $data);
 
         return $this->found;
     }

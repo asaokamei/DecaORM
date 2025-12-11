@@ -5,7 +5,7 @@ namespace WScore\DecaORM;
 /**
  * @template T of EntityInterface
  */
-abstract class AbstractRepository
+abstract class AbstractRepository implements RepositoryInterface
 {
     use RepositoryTrait;
 
@@ -17,7 +17,7 @@ abstract class AbstractRepository
      */
     public function findById(int $id): ?EntityInterface
     {
-        $list = $this->fetch($id);
+        $list = $this->find($id);
         return $list[0] ?? null;
     }
 

@@ -6,7 +6,10 @@ use DateTimeImmutable;
 use WScore\DecaORM\Attribute\Column;
 use WScore\DecaORM\Attribute\CreatedAt;
 use WScore\DecaORM\Attribute\GeneratedValue;
+use WScore\DecaORM\Attribute\HasMany;
+use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Attribute\Id;
+use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\Attribute\UpdatedAt;
 use WScore\DecaORM\EntityInterface;
@@ -16,6 +19,7 @@ use WScore\DecaORM\EntityTrait;
  * Attributeを使ったUserエンティティのサンプル
  */
 #[Table(name: 'users')]
+#[Repository(UserRepository::class)]
 class User implements EntityInterface
 {
     use EntityTrait;
@@ -38,7 +42,11 @@ class User implements EntityInterface
     public ?string $updated_at = null;
 
     /** @var Post[]|null */
+    #[HasMany(targetEntity: Post::class, mappedBy: 'user', orderBy: 'created_at DESC')]
     public ?array $posts = null;
+
+    #[HasOne(targetEntity: Profile::class, mappedBy: 'user')]
+    public ?Profile $profile = null;
 
     public function getId(): ?int
     {

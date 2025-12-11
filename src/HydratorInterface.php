@@ -18,12 +18,25 @@ interface HydratorInterface
      */
     public function getTableName(): string;
     /**
-     * DB primary key
+     * Name of the identifier property.
      */
     public function getPrimaryKey(): string;
 
+    /**
+     * Name of the DB's primary key column.
+     */
     public function getPrimaryKeyColumn(): string;
+
+    /**
+     * Name of the DB's column name for the createdAt.
+     * Returns null if not present.
+     */
     public function getCreatedAtColumn(): ?string;
+
+    /**
+     * Name of the DB's column name for the updatedAt.
+     * * returns null if not present.
+     */
     public function getUpdatedAtColumn(): ?string;
 
     /**
@@ -32,12 +45,12 @@ interface HydratorInterface
     public function listProperties(): array;
 
     /**
-     * Column name for creation timestamp
+     * Property name for creation timestamp
      */
     public function getCreatedAt(): ?string;
 
     /**
-     * Column name for update timestamp
+     * Property name for update timestamp
      */
     public function getUpdatedAt(): ?string;
 
@@ -52,7 +65,7 @@ interface HydratorInterface
     public function dehydrate(EntityInterface $entity): array;
 
     /**
-     * Get property name for a given column name
+     * Get a property name for a given column name
      * If column name mapping is not available, returns the column name as-is
      */
     public function getPropertyNameForColumn(string $columnName): ?string;
@@ -62,4 +75,19 @@ interface HydratorInterface
      * If property name mapping is not available, returns the property name as-is
      */
     public function getColumnNameForProperty(string $propertyName): ?string;
+
+    /**
+     * Get all relations for this entity
+     * 
+     * @return array<>
+     */
+    public function getRelations(): array;
+
+    /**
+     * Get relation information for a specific property
+     * 
+     * @param string $propertyName The property name
+     * @return array{type: string, targetEntity: string, ...}|null
+     */
+    public function getRelation(string $propertyName): mixed;
 }

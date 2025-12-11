@@ -97,7 +97,7 @@ OFFSET 2
 
 END_SQL;
 
-        $this->assertEquals(explode("\n",$expectedSql), explode(PHP_EOL, $sql));
+        $this->assertEquals($expectedSql, $sql);
         foreach ($params as $key => $value) {
             $this->assertStringContainsString($key, $sql);
         }
