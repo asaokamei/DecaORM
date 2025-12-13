@@ -81,15 +81,6 @@ interface RepositoryInterface
     public function getRelation(string $propertyName): mixed;
 
     /**
-     * Loads the specified relation for the given entity.
-     * 
-     * @param EntityInterface $entity The entity for which the relation is to be loaded.
-     * @param HasMany|HasOne|BelongsTo|BelongsToOne $relation The relation to be loaded; must be an instance of a supported relation type.
-     * @return void
-     */
-    public function load(EntityInterface $entity, mixed $relation): void;
-
-    /**
      * Fills the specified relation for the given entity.
      * 
      * @param EntityInterface $entity The entity for which the relation is to be filled.

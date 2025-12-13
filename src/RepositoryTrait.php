@@ -14,6 +14,9 @@ use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
+use WScore\DecaORM\Relation\LoadBelongsTo;
+use WScore\DecaORM\Relation\LoadHasMany;
+use WScore\DecaORM\Relation\LoadHasOne;
 use WScore\DecaORM\Sql\Insert;
 use WScore\DecaORM\Sql\Query;
 use WScore\DecaORM\Sql\Update;
@@ -276,78 +279,16 @@ trait RepositoryTrait
     {
         $relation = $this->hydrator->getRelation($relationName);
         $targetRepo = $this->getRepository($relation->targetEntity);
-        $targetRepo->load($entity, $relation);
-    }
-
-    /**
-     * Loads the specified relation for the given entity.
-     *
-     * @param EntityInterface $entity The entity for which the relation is to be loaded.
-     * @param HasMany|HasOne|BelongsTo|BelongsToOne $relation The relation to be loaded; must be an instance of a supported relation type.
-     * @return void
-     */
-    public function load(EntityInterface $entity, mixed $relation): void
-    {
         if ($relation instanceof HasMany) {
-            $this->loadHasMany($entity, $relation);
+            new LoadHasMany($entity, $relation, $targetRepo);;
         } elseif ($relation instanceof HasOne) {
-            $this->loadHasOne($entity, $relation);
+            new LoadHasOne($entity, $relation, $targetRepo);
         } elseif ($relation instanceof BelongsTo) {
-            $this->loadBelongsTo($entity, $relation);
+            new LoadBelongsTo($entity, $relation, $targetRepo);
         } elseif ($relation instanceof BelongsToOne) {
-            $this->loadBelongsTo($entity, $relation);
+            new LoadBelongsTo($entity, $relation, $targetRepo);
         } else {
             throw new RuntimeException('unknown relation: ' . get_class($relation));
         }
-    }
-
-    protected function loadHasMany(EntityInterface $parentEntity, HasMany $parentRelation): void
-    {
-        $parentProperty = $parentRelation->propertyName;
-        $childProperty = $parentRelation->mappedBy;
-        $childRelation = $this->getRelation($parentRelation->mappedBy);
-
-        // Find posts by foreign key
-        $children = $this->find($parentEntity->getId(), $childRelation->foreignKey, $parentRelation->orderBy);
-
-        if (empty($children)) {
-            $parentEntity->set($parentProperty, []);
-            return;
-        }
-
-        // Set the bidirectional link (post -> user)
-        foreach ($children as $child) {
-            $child->set($childProperty, $parentEntity);
-        }
-
-        $parentEntity->set($parentProperty, $children);
-    }
-
-    protected function loadHasOne(EntityInterface $parentEntity, HasOne $parentRelation): void
-    {
-        $parentProperty = $parentRelation->propertyName;
-        $childProperty = $parentRelation->mappedBy;
-        $childRelation = $this->getRelation($parentRelation->mappedBy);
-
-        // Find posts by foreign key
-        $children = $this->find($parentEntity->getId(), $childRelation->foreignKey);
-
-        if (empty($children)) {
-            $parentEntity->set($parentProperty, null);
-            return;
-        }
-        if (count($children) > 1) {
-            throw new RuntimeException('HasOne relation must have only one child.');
-        }
-        $child = $children[0];
-        $child->set($childProperty, $parentEntity);
-        $parentEntity->set($parentProperty, $child);
-    }
-
-    protected function loadBelongsTo(EntityInterface $childEntity, mixed $childRelation): void
-    {
-        $parentId = $childEntity->get($childRelation->foreignKey);
-        $parentEntity = $this->findById($parentId);
-        $childEntity->set($childRelation->propertyName, $parentEntity);
     }
 }
