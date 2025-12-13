@@ -5,8 +5,11 @@ namespace WScore\DecaORM;
 use DateTimeInterface;
 use PDO;
 use PDOStatement;
+use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use RuntimeException;
+use Traversable;
 use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\HasMany;
@@ -100,17 +103,26 @@ trait RepositoryTrait
         return $list;
     }
 
-    protected function getRepository(string|EntityInterface $entity): ?RepositoryInterface
+    public function getRepository(string|EntityInterface $entity): ?RepositoryInterface
     {
         $repoName = $entity::getRepositoryClass();
+        if (!$this->container->has($repoName)) {
+            throw new RuntimeException('no such repository: ' . $repoName);
+        }
         /** @var RepositoryInterface $childRepo */
-        return $this->container->get($repoName) ?? null;
+        try {
+            return $this->container->get($repoName);
+        } catch (NotFoundExceptionInterface) {
+            return null;
+        } catch (ContainerExceptionInterface $e) {
+            throw new RuntimeException('failed to get repository: ' . $repoName, 0, $e);
+        }
     }
 
     /**
      * @return HasMany|HasOne|BelongsTo|BelongsToOne|null
      */
-    protected function getRelation(string $propertyName): mixed
+    public function getRelation(string $propertyName): mixed
     {
         $hydrator = $this->hydrator;
         return $hydrator->getRelation($propertyName);
@@ -175,11 +187,11 @@ trait RepositoryTrait
                 continue;
             }
             if ($relation instanceof HasOne) {
-                // Normalize single child to array
+                // Normalize the single child to array
                 $children = $children ? [$children] : [];
             } elseif (!is_array($children)) {
                 // Convert Traversable to array; ignore invalid types
-                if ($children instanceof \Traversable) {
+                if ($children instanceof Traversable) {
                     $children = iterator_to_array($children);
                 } else {
                     $children = [];
@@ -266,7 +278,7 @@ trait RepositoryTrait
     /**
      * Fills the specified relation for the given entity.
      */
-    protected function fill(EntityInterface $entity, string $relationName): void
+    public function fill(EntityInterface $entity, string $relationName): void
     {
         $relation = $this->hydrator->getRelation($relationName);
         $targetRepo = $this->getRepository($relation->targetEntity);
@@ -277,16 +289,18 @@ trait RepositoryTrait
      * Loads the specified relation for the given entity.
      *
      * @param EntityInterface $entity The entity for which the relation is to be loaded.
-     * @param HasMany|HasOne|BelongsTo $relation The relation to be loaded; must be an instance of a supported relation type.
+     * @param HasMany|HasOne|BelongsTo|BelongsToOne $relation The relation to be loaded; must be an instance of a supported relation type.
      * @return void
      */
-    protected function load(EntityInterface $entity, mixed $relation): void
+    public function load(EntityInterface $entity, mixed $relation): void
     {
         if ($relation instanceof HasMany) {
             $this->loadHasMany($entity, $relation);
         } elseif ($relation instanceof HasOne) {
             $this->loadHasOne($entity, $relation);
-        }elseif ($relation instanceof BelongsTo) {
+        } elseif ($relation instanceof BelongsTo) {
+            $this->loadBelongsTo($entity, $relation);
+        } elseif ($relation instanceof BelongsToOne) {
             $this->loadBelongsTo($entity, $relation);
         } else {
             throw new RuntimeException('unknown relation: ' . get_class($relation));
@@ -307,7 +321,7 @@ trait RepositoryTrait
             return;
         }
 
-        // Set bidirectional link (post -> user)
+        // Set the bidirectional link (post -> user)
         foreach ($children as $child) {
             $child->set($childProperty, $parentEntity);
         }
