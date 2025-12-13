@@ -7,11 +7,11 @@ use WScore\DecaORM\RepositoryInterface;
 
 class Update
 {
+    use WhereTrait;
+
     private string $table;
     private array $data = [];
-    private array $parameters = [];
     private string $pkColumn;
-    private int|string $id;
 
     public function __construct(private RepositoryInterface $repository)
     {
@@ -26,10 +26,14 @@ class Update
         return $this->repository->execute($sql, $data);
     }
 
+    /**
+     * Set the primary key ID for simple update by ID.
+     * This is a convenience method for the common case of updating by ID.
+     * Can be combined with where() methods for more complex conditions.
+     */
     public function setId(int|string $id): static
     {
-        $this->id = $id;
-        $this->parameters[$this->pkColumn] = $id;
+        $this->where($this->pkColumn, $id);
         return $this;
     }
 
@@ -40,25 +44,44 @@ class Update
         return $this;
     }
 
+    // WHERE句関連のメソッド（where(), whereIn(), whereRaw()）はWhereTraitで提供される
+
     public function getSql(): string
     {
+        // IN句の展開処理（未処理の場合のみ実行）
+        if ($this->expanded_markers === null) {
+            $this->processExtends();
+        }
+
+        // SET句の構築
         $values = [];
         foreach ($this->data as $item => $value) {
             $values[] = "{$item} = :{$item}";
         }
-
         $values = implode(', ', $values);
 
-        if (isset($this->id)) {
-            return "
-            UPDATE {$this->table} 
-                SET {$values} 
-                WHERE {$this->pkColumn} = :{$this->pkColumn}";
+        // WHERE句の構築
+        $whereConditions = $this->buildWhereClause();
+
+        // WHERE句がない場合はエラー
+        if (empty($whereConditions)) {
+            throw new \RuntimeException('No WHERE condition specified. Use setId() or where() methods.');
         }
-        throw new \RuntimeException('id is not set when updating data: .');
+
+        // 最終的なSQL文字列を構築
+        $sql = "UPDATE {$this->table} " . PHP_EOL
+            . "SET {$values} " . PHP_EOL
+            . "WHERE {$whereConditions}";
+
+        // IN句の展開マーカーを適用
+        $sql = $this->applyExpandedMarkers($sql);
+
+        return $sql;
     }
+
     public function getParameters(): array
     {
-        return array_merge($this->data, $this->parameters);
+        // SET句のデータとWHERE句のパラメータを統合
+        return array_merge($this->data, $this->getWhereParameters());
     }
 }
