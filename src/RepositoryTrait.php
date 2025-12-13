@@ -17,6 +17,7 @@ use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Sql\Insert;
 use WScore\DecaORM\Sql\Query;
 use WScore\DecaORM\Sql\Update;
+use WScore\DecaORM\Sql\Delete;
 
 /**
  * @template T of EntityInterface
@@ -239,10 +240,10 @@ trait RepositoryTrait
         if ($this->hydrator->getUpdatedAt() !== null) {
             $entity->set($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
         }
-        $this->update($entity->getId(), $data)->execute();
+        $this->getUpdateQuery($entity->getId(), $data)->execute();
     }
 
-    public function update(int|string $id, array $data): Update
+    public function getUpdateQuery(int|string $id, array $data): Update
     {
         $update = new Update($this);
         $update->setId($id);
@@ -254,14 +255,18 @@ trait RepositoryTrait
      */
     private function deleteEntity(EntityInterface $entity): void
     {
-        $pKeyColumn = $this->hydrator->getPrimaryKeyColumn();
         $id = $entity->getId();
-        $this->execute(
-            "
-            DELETE FROM {$this->getTableName()} 
-                   WHERE {$pKeyColumn} = :id",
-            ['id' => $id]
-        );
+        if ($id === null) {
+            throw new RuntimeException('Entity does not have an ID:' . $this->hydrator->getEntityClass());
+        }
+        $this->getDeleteQuery($id)->execute();
+    }
+
+    public function getDeleteQuery(int|string $id): Delete
+    {
+        $delete = new Delete($this);
+        $delete->setId($id);
+        return $delete;
     }
 
     /**
