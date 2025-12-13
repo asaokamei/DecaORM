@@ -27,6 +27,13 @@ interface RepositoryInterface
     public function getTableName(): string;
 
     /**
+     * returns the primary key column name of this table.
+     *
+     * @return string
+     */
+    public function getPrimaryKeyColumn(): string;
+
+    /**
      * executes the SQL with data and returns results as PDOStatement.
      *
      * @param string $sql

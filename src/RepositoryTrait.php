@@ -14,7 +14,9 @@ use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
+use WScore\DecaORM\Sql\Insert;
 use WScore\DecaORM\Sql\Query;
+use WScore\DecaORM\Sql\Update;
 
 /**
  * @template T of EntityInterface
@@ -48,6 +50,11 @@ trait RepositoryTrait
     public function getTableName(): string
     {
         return $this->hydrator->getTableName();
+    }
+
+    public function getPrimaryKeyColumn(): string
+    {
+        return $this->hydrator->getPrimaryKeyColumn();
     }
 
     public function execute(string $sql, array $data): false|PDOStatement
@@ -149,17 +156,7 @@ trait RepositoryTrait
             $entity->set($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
         }
         $data = $this->hydrator->dehydrate($entity);
-
-        $select = [];
-        $values = [];
-        foreach ($data as $columnName => $value) {
-            $select[] = $columnName;
-            $values[] = ':' . $columnName;
-        }
-        $select = implode(', ', $select);
-        $values = implode(', ', $values);
-        $sql = "INSERT INTO {$this->getTableName()} ({$select}) VALUES ({$values});";
-        $stmt = $this->execute($sql, $data);
+        $stmt =$this->insert($data)->execute();
 
         if (!$stmt) {
             throw new RuntimeException('Failed to insert an entity:' . $this->hydrator->getEntityClass());
@@ -173,6 +170,14 @@ trait RepositoryTrait
         if ($this->hydrator->isPkAutoNumber()) {
             $this->fillAllForeignKeys($entity);
         }
+    }
+
+    public function insert(array $data): Insert
+    {
+        $insert = new Insert($this);
+        $insert->data($data);
+
+        return $insert;
     }
 
     protected function fillAllForeignKeys(EntityInterface $entity): void
@@ -234,30 +239,14 @@ trait RepositoryTrait
         if ($this->hydrator->getUpdatedAt() !== null) {
             $entity->set($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
         }
-        $values = [];
+        $this->update($entity->getId(), $data)->execute();
+    }
 
-        // Remove PK!
-        $pKeyColumn = $this->hydrator->getPrimaryKeyColumn();
-        unset($data[$pKeyColumn]);
-        // Remove CreatedAt!
-        $createdAtColumn = $this->hydrator->getCreatedAtColumn();
-        if ($createdAtColumn !== null) {
-            unset($data[$createdAtColumn]);
-        }
-        foreach ($data as $item => $value) {
-            $values[] = "{$item} = :{$item}";
-        }
-
-        $values = implode(', ', $values);
-
-        $data[$pKeyColumn] = $entity->getId();
-        $this->execute(
-            "
-            UPDATE {$this->getTableName()} 
-                SET {$values} 
-                WHERE {$pKeyColumn} = :{$pKeyColumn}",
-            $data // $data contains the id
-        );
+    public function update(int|string $id, array $data): Update
+    {
+        $update = new Update($this);
+        $update->setId($id);
+        return $update->data($data);
     }
 
     /**
