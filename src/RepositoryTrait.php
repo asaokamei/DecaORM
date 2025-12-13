@@ -157,7 +157,7 @@ trait RepositoryTrait
             $entity->set($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
         }
         $data = $this->hydrator->dehydrate($entity);
-        $stmt =$this->insert($data)->execute();
+        $stmt = $this->insert($data)->execute();
 
         if (!$stmt) {
             throw new RuntimeException('Failed to insert an entity:' . $this->hydrator->getEntityClass());
@@ -235,11 +235,11 @@ trait RepositoryTrait
      */
     private function updateEntity(EntityInterface $entity): void
     {
-        $data = $this->hydrator->dehydrate($entity);
         // Update UpdatedAt!
         if ($this->hydrator->getUpdatedAt() !== null) {
             $entity->set($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
         }
+        $data = $this->hydrator->dehydrate($entity);
         $this->getUpdateQuery($entity->getId(), $data)->execute();
     }
 
