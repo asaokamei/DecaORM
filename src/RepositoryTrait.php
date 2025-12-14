@@ -81,7 +81,11 @@ trait RepositoryTrait
         }
         $list = $stmt->fetchAll(PDO::FETCH_CLASS, $this->hydrator->getEntityClass());
         foreach ($list as $idx => $entity) {
-            $list[$idx] = EntityCache::cache($entity);
+            $entity = EntityCache::cache($entity);
+            $list[$idx] = $entity;
+
+            // DirtyTracking: DBから取得した直後の状態をスナップショットとして記録
+            DirtyTracker::takeEntity($this->hydrator, $entity);
         }
 
         return $list;
@@ -174,6 +178,9 @@ trait RepositoryTrait
         if ($this->hydrator->isPkAutoNumber()) {
             $this->fillAllForeignKeys($entity);
         }
+
+        // DirtyTracking: INSERT後の状態をスナップショットとして記録
+        DirtyTracker::takeEntity($this->hydrator, $entity);
     }
 
     public function insert(array $data): Insert
@@ -238,12 +245,35 @@ trait RepositoryTrait
      */
     private function updateEntity(EntityInterface $entity): void
     {
-        // Update UpdatedAt!
-        if ($this->hydrator->getUpdatedAt() !== null) {
-            $entity->set($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
+        $id = $entity->getId();
+        if ($id === null) {
+            throw new RuntimeException('Entity does not have an ID:' . $this->hydrator->getEntityClass());
         }
-        $data = $this->hydrator->dehydrate($entity);
-        $this->getUpdateQuery($entity->getId(), $data)->execute();
+
+        $original = DirtyTracker::get($entity);
+
+        // まず「更新対象データ」を決める（スナップショット無しなら全更新、あれば差分のみ）
+        $data = DirtyTracker::snapshotFromEntity($this->hydrator, $entity);
+        if ($original !== null) {
+            $data = DirtyTracker::diffColumns($data, $original);
+            if (empty($data)) {
+                return; // 差分ゼロ -> SQLを発行しない
+            }
+        }
+
+        // updated_at を更新（更新が発生する場合のみ）
+        $updatedAtProp = $this->hydrator->getUpdatedAt();
+        if ($updatedAtProp !== null) {
+            $updatedAtCol = $this->hydrator->getColumnNameForProperty($updatedAtProp);
+            $entity->set($updatedAtProp, $this->now->format('Y-m-d H:i:s'));
+            if ($updatedAtCol !== null && $updatedAtCol !== '') {
+                $data[$updatedAtCol] = $entity->get($updatedAtProp);
+            }
+        }
+
+        $this->getUpdateQuery($id, $data)->execute();
+        DirtyTracker::takeEntity($this->hydrator, $entity);
+
     }
 
     public function getUpdateQuery(int|string $id, array $data): Update
@@ -263,6 +293,9 @@ trait RepositoryTrait
             throw new RuntimeException('Entity does not have an ID:' . $this->hydrator->getEntityClass());
         }
         $this->getDeleteQuery($id)->execute();
+
+        // DirtyTracking: 削除後はスナップショットを破棄
+        DirtyTracker::forget($entity);
     }
 
     public function getDeleteQuery(int|string $id): Delete
@@ -280,7 +313,7 @@ trait RepositoryTrait
         $relation = $this->hydrator->getRelation($relationName);
         $targetRepo = $this->getRepository($relation->targetEntity);
         if ($relation instanceof HasMany) {
-            new LoadHasMany($entity, $relation, $targetRepo);;
+            new LoadHasMany($entity, $relation, $targetRepo);
         } elseif ($relation instanceof HasOne) {
             new LoadHasOne($entity, $relation, $targetRepo);
         } elseif ($relation instanceof BelongsTo) {
