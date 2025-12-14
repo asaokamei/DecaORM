@@ -61,7 +61,7 @@ trait RepositoryTrait
         return $this->hydrator->getPrimaryKeyColumn();
     }
 
-    public function execute(string $sql, array $data): false|PDOStatement
+    public function execute(string $sql, array $data): bool|PDOStatement
     {
         $stmt = $this->db->prepare($sql);
         $stmt->execute($data);

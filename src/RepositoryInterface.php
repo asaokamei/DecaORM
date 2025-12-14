@@ -41,7 +41,7 @@ interface RepositoryInterface
      * @return false|PDOStatement
      */
 
-    public function execute(string $sql, array $data): false|PDOStatement;
+    public function execute(string $sql, array $data): bool|PDOStatement;
 
     /**
      * executes the SQL with data and returns results as entities.

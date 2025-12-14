@@ -14,7 +14,7 @@ final class SpyUserRepository extends UserRepository
      */
     public array $executedSql = [];
 
-    public function execute(string $sql, array $data): false|PDOStatement
+    public function execute(string $sql, array $data): bool|PDOStatement
     {
         $this->executedSql[] = $sql;
         return parent::execute($sql, $data);
