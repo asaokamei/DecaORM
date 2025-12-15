@@ -8,6 +8,10 @@ use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
+use WScore\DecaORM\Sql\Delete;
+use WScore\DecaORM\Sql\Insert;
+use WScore\DecaORM\Sql\Query;
+use WScore\DecaORM\Sql\Update;
 
 /**
  * @template T of EntityInterface
@@ -33,6 +37,14 @@ interface RepositoryInterface
      */
     public function getPrimaryKeyColumn(): string;
 
+    public function sqlQuery(): Query;
+
+    public function sqlInsert(array $data): Insert;
+
+    public function sqlDelete(int|string $id = null): Delete;
+
+    public function sqlUpdate(int|string $id = null, array $data = []): Update;
+
     /**
      * executes the SQL with data and returns results as PDOStatement.
      *
@@ -40,7 +52,6 @@ interface RepositoryInterface
      * @param array $data
      * @return false|PDOStatement
      */
-
     public function execute(string $sql, array $data): bool|PDOStatement;
 
     /**

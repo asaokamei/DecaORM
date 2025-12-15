@@ -42,7 +42,7 @@ trait RepositoryTrait
         return $this->hydrator;
     }
 
-    public function query(): Query
+    public function sqlQuery(): Query
     {
         return new Query($this);
     }
@@ -99,7 +99,7 @@ trait RepositoryTrait
         $column = $column ?? $this->hydrator->getPrimaryKeyColumn();
         $orderBy = $orderBy ?? $column;
 
-        $query = $this->query()
+        $query = $this->sqlQuery()
             ->where($column, $id)
             ->orderBy($orderBy);
         $sql = $query->getSql();
@@ -164,7 +164,7 @@ trait RepositoryTrait
             $entity->set($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
         }
         $data = $this->hydrator->dehydrate($entity);
-        $stmt = $this->getInsertQuery($data)->execute();
+        $stmt = $this->sqlInsert($data)->execute();
 
         if (!$stmt) {
             throw new RuntimeException('Failed to insert an entity:' . $this->hydrator->getEntityClass());
@@ -183,7 +183,7 @@ trait RepositoryTrait
         DirtyTracker::takeEntity($this->hydrator, $entity);
     }
 
-    public function getInsertQuery(array $data): Insert
+    public function sqlInsert(array $data): Insert
     {
         $insert = new Insert($this);
         $insert->data($data);
@@ -271,15 +271,17 @@ trait RepositoryTrait
             }
         }
 
-        $this->getUpdateQuery($id, $data)->execute();
+        $this->sqlUpdate($id, $data)->execute();
         DirtyTracker::takeEntity($this->hydrator, $entity);
 
     }
 
-    public function getUpdateQuery(int|string $id, array $data): Update
+    public function sqlUpdate(int|string $id = null, array $data = []): Update
     {
         $update = new Update($this);
-        $update->setId($id);
+        if ($id !== null) {
+            $update->setId($id);
+        }
         return $update->data($data);
     }
 
@@ -292,16 +294,18 @@ trait RepositoryTrait
         if ($id === null) {
             throw new RuntimeException('Entity does not have an ID:' . $this->hydrator->getEntityClass());
         }
-        $this->getDeleteQuery($id)->execute();
+        $this->sqlDelete($id)->execute();
 
         // DirtyTracking: 削除後はスナップショットを破棄
         DirtyTracker::forget($entity);
     }
 
-    public function getDeleteQuery(int|string $id): Delete
+    public function sqlDelete(int|string $id = null): Delete
     {
         $delete = new Delete($this);
-        $delete->setId($id);
+        if ($id !== null) {
+            $delete->setId($id);
+        }
         return $delete;
     }
 

@@ -6,6 +6,9 @@ use PDOStatement;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\Sql\Delete;
+use WScore\DecaORM\Sql\Insert;
+use WScore\DecaORM\Sql\Query;
 use WScore\DecaORM\Sql\Update;
 
 class UpdateTest extends TestCase
@@ -46,6 +49,26 @@ class UpdateTest extends TestCase
             public function getUpdateQuery(int|string $id, array $data): \WScore\DecaORM\Sql\Update { throw new RuntimeException('not used'); }
             public function getDeleteQuery(int|string $id): \WScore\DecaORM\Sql\Delete { throw new RuntimeException('not used'); }
             public function fill(\WScore\DecaORM\EntityInterface $entity, string $relationName): void { throw new RuntimeException('not used'); }
+
+            public function sqlQuery(): Query
+            {
+                throw new RuntimeException('not used');
+            }
+
+            public function sqlInsert(array $data): Insert
+            {
+                throw new RuntimeException('not used');
+            }
+
+            public function sqlDelete(int|string $id = null): Delete
+            {
+                throw new RuntimeException('not used');
+            }
+
+            public function sqlUpdate(int|string $id = null, array $data = []): Update
+            {
+                throw new RuntimeException('not used');
+            }
         };
     }
 
