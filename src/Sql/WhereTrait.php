@@ -173,5 +173,22 @@ trait WhereTrait
         $this->parameters = array_merge($this->parameters, $array);
         return $this;
     }
+
+    public function hasWhere(): bool
+    {
+        return $this->buildWhereClause() !== '';
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function getParameters(): array
+    {
+        // SET/WHEREを含む全parametersを対象にIN展開する
+        if ($this->expanded_params === null) {
+            $this->processExtends();
+        }
+        return $this->expanded_params ?? $this->parameters;
+    }
 }
 
