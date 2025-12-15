@@ -164,7 +164,7 @@ trait RepositoryTrait
             $entity->set($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
         }
         $data = $this->hydrator->dehydrate($entity);
-        $stmt = $this->insert($data)->execute();
+        $stmt = $this->getInsertQuery($data)->execute();
 
         if (!$stmt) {
             throw new RuntimeException('Failed to insert an entity:' . $this->hydrator->getEntityClass());
@@ -183,7 +183,7 @@ trait RepositoryTrait
         DirtyTracker::takeEntity($this->hydrator, $entity);
     }
 
-    public function insert(array $data): Insert
+    public function getInsertQuery(array $data): Insert
     {
         $insert = new Insert($this);
         $insert->data($data);
