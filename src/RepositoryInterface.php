@@ -41,9 +41,9 @@ interface RepositoryInterface
 
     public function sqlInsert(array $data): Insert;
 
-    public function sqlDelete(int|string $id = null): Delete;
+    public function sqlDelete(int|string|null $id = null): Delete;
 
-    public function sqlUpdate(int|string $id = null, array $data = []): Update;
+    public function sqlUpdate(int|string|null $id = null, array $data = []): Update;
 
     /**
      * executes the SQL with data and returns results as PDOStatement.
@@ -71,7 +71,7 @@ interface RepositoryInterface
      * @param string|null $orderBy
      * @return T[]
      */
-    public function find(int|string $id, string $column = null, string $orderBy = null): array;
+    public function find(int|string $id, ?string $column = null, ?string $orderBy = null): array;
 
     /**
      * get an array of column and property names;

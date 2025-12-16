@@ -94,7 +94,7 @@ trait RepositoryTrait
     /**
      * @return T[]
      */
-    public function find(int|string $id, string $column = null, string $orderBy = null): array
+    public function find(int|string $id, string|null $column = null, string|null $orderBy = null): array
     {
         $column = $column ?? $this->hydrator->getPrimaryKeyColumn();
         $orderBy = $orderBy ?? $column;
@@ -276,7 +276,7 @@ trait RepositoryTrait
 
     }
 
-    public function sqlUpdate(int|string $id = null, array $data = []): Update
+    public function sqlUpdate(int|string|null $id = null, array $data = []): Update
     {
         $update = new Update($this);
         if ($id !== null) {
@@ -300,7 +300,7 @@ trait RepositoryTrait
         DirtyTracker::forget($entity);
     }
 
-    public function sqlDelete(int|string $id = null): Delete
+    public function sqlDelete(int|string|null $id = null): Delete
     {
         $delete = new Delete($this);
         if ($id !== null) {

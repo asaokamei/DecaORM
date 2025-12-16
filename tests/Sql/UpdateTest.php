@@ -41,7 +41,7 @@ class UpdateTest extends TestCase
             public function query(): \WScore\DecaORM\Sql\Query { throw new RuntimeException('not used'); }
             public function getPrimaryKeyColumnName(): string { throw new RuntimeException('not used'); }
             public function fetch(string $sql, array $data = []): array { throw new RuntimeException('not used'); }
-            public function find(int|string $id, string $column = null, string $orderBy = null): array { throw new RuntimeException('not used'); }
+            public function find(int|string|null $id, ?string $column = null, ?string $orderBy = null): array { throw new RuntimeException('not used'); }
             public function listColumnsToProperties(): array { throw new RuntimeException('not used'); }
             public function getRepository(string|\WScore\DecaORM\EntityInterface $entity): ?RepositoryInterface { throw new RuntimeException('not used'); }
             public function getRelation(string $propertyName): mixed { throw new RuntimeException('not used'); }
@@ -60,12 +60,12 @@ class UpdateTest extends TestCase
                 throw new RuntimeException('not used');
             }
 
-            public function sqlDelete(int|string $id = null): Delete
+            public function sqlDelete(int|string|null $id = null): Delete
             {
                 throw new RuntimeException('not used');
             }
 
-            public function sqlUpdate(int|string $id = null, array $data = []): Update
+            public function sqlUpdate(int|string|null $id = null, array $data = []): Update
             {
                 throw new RuntimeException('not used');
             }
