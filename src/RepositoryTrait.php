@@ -15,6 +15,7 @@ use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Relation\LoadBelongsTo;
+use WScore\DecaORM\Relation\LoadBelongsToOne;
 use WScore\DecaORM\Relation\LoadHasMany;
 use WScore\DecaORM\Relation\LoadHasOne;
 use WScore\DecaORM\Sql\Insert;
@@ -328,7 +329,7 @@ trait RepositoryTrait
         } elseif ($relation instanceof BelongsTo) {
             return LoadBelongsTo::load($entities, $relation, $targetRepo);
         } elseif ($relation instanceof BelongsToOne) {
-            return LoadBelongsTo::load($entities, $relation, $targetRepo);
+            return LoadBelongsToOne::load($entities, $relation, $targetRepo);
         } else {
             throw new RuntimeException('unknown relation: ' . get_class($relation));
         }

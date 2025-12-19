@@ -3,23 +3,24 @@
 namespace WScore\DecaORM\Relation;
 
 use RuntimeException;
-use WScore\DecaORM\Attribute\BelongsTo;
+use WScore\DecaORM\Attribute\BelongsToOne;
+use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\RepositoryInterface;
 
-class LoadBelongsTo
+class LoadBelongsToOne
 {
     /**
-     * Load BelongsTo relation for single entity or multiple entities.
+     * Load BelongsToOne relation for single entity or multiple entities.
      * 
      * @param EntityInterface|array<EntityInterface> $entities
-     * @param BelongsTo $childRelation
+     * @param BelongsToOne $childRelation
      * @param RepositoryInterface $targetRepository
      * @return EntityInterface[] All loaded parent entities (array with 0 or 1 element per child)
      */
     public static function load(
         EntityInterface|array $entities,
-        BelongsTo $childRelation,
+        BelongsToOne $childRelation,
         RepositoryInterface $targetRepository
     ): array {
         if (is_array($entities)) {
@@ -31,11 +32,11 @@ class LoadBelongsTo
     }
 
     /**
-     * Load BelongsTo relation for a single entity.
+     * Load BelongsToOne relation for a single entity.
      */
     private static function loadSingle(
         EntityInterface $childEntity,
-        BelongsTo $childRelation,
+        BelongsToOne $childRelation,
         RepositoryInterface $targetRepository
     ): array {
         $parentId = $childEntity->get($childRelation->foreignKey);
@@ -44,26 +45,31 @@ class LoadBelongsTo
             $childEntity->set($childRelation->propertyName, null);
             return [];
         } elseif (count($parentEntity) > 1) {
-            throw new RuntimeException('BelongsTo relation must have only one parent.');
+            throw new RuntimeException('BelongsToOne relation must have only one parent.');
         } else {
             $parentEntity = $parentEntity[0];
             $childEntity->set($childRelation->propertyName, $parentEntity);
-            // Note: BelongsTo does not set child on parent (parent may have HasMany, which is dangerous)
+            
+            // Set child on parent if inversedBy is specified and parent has HasOne
+            if ($childRelation->inversedBy !== null) {
+                self::setChildOnParent($parentEntity, $childRelation->inversedBy, $childEntity, $targetRepository);
+            }
+            
             return [$parentEntity];
         }
     }
 
     /**
-     * Batch load BelongsTo relations for multiple entities.
+     * Batch load BelongsToOne relations for multiple entities.
      * 
      * @param array<EntityInterface> $childEntities
-     * @param BelongsTo $childRelation
+     * @param BelongsToOne $childRelation
      * @param RepositoryInterface $targetRepository
      * @return EntityInterface[] All loaded parent entities (array with 0 or 1 element per child)
      */
     public static function loadBatch(
         array $childEntities,
-        BelongsTo $childRelation,
+        BelongsToOne $childRelation,
         RepositoryInterface $targetRepository
     ): array {
         if (empty($childEntities)) {
@@ -115,19 +121,27 @@ class LoadBelongsTo
             $parentId = $parent->getId();
             if ($parentId !== null) {
                 if (isset($parentMap[$parentId])) {
-                    throw new RuntimeException('BelongsTo relation must have only one parent for ID: ' . $parentId);
+                    throw new RuntimeException('BelongsToOne relation must have only one parent for ID: ' . $parentId);
                 }
                 $parentMap[$parentId] = $parent;
             }
         }
 
-        // Set parent for each child entity
-        // Note: BelongsTo does not set child on parent (parent may have HasMany, which is dangerous)
+        // Set parent for each child entity and optionally set child on parent
         foreach ($childrenByParentId as $parentId => $children) {
             $parent = $parentMap[$parentId] ?? null;
             
             foreach ($children as $childEntity) {
                 $childEntity->set($childProperty, $parent);
+            }
+
+            // Set child on parent if inversedBy is specified and parent has HasOne
+            if ($parent !== null && $childRelation->inversedBy !== null) {
+                // BelongsToOne should have only one child per parent
+                if (count($children) > 1) {
+                    throw new RuntimeException('BelongsToOne relation can only have one child per parent, but multiple children found for parent ID: ' . $parentId);
+                }
+                self::setChildOnParent($parent, $childRelation->inversedBy, $children[0], $targetRepository);
             }
 
             if ($parent !== null) {
@@ -137,4 +151,29 @@ class LoadBelongsTo
 
         return $allParents;
     }
+
+    /**
+     * Set child entity on parent entity if parent has HasOne relation.
+     * 
+     * - If parent has HasMany: Do not set (dangerous - assumes all children are loaded)
+     * - If parent has HasOne: Set as single entity (not array)
+     */
+    private static function setChildOnParent(
+        EntityInterface $parentEntity,
+        string $parentPropertyName,
+        EntityInterface $childEntity,
+        RepositoryInterface $targetRepository
+    ): void {
+        $parentRelation = $targetRepository->getRelation($parentPropertyName);
+        
+        if ($parentRelation instanceof HasOne) {
+            // Set as single entity (not array)
+            $parentEntity->set($parentPropertyName, $childEntity);
+            return;
+        }
+        
+        // If parent has HasMany or unknown relation type, do not set
+        // (HasMany is dangerous - assumes all children are loaded)
+    }
 }
+
