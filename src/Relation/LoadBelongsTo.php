@@ -9,6 +9,7 @@ use WScore\DecaORM\RepositoryInterface;
 
 class LoadBelongsTo
 {
+    use RelationTrait;
     /**
      * Load BelongsTo relation for single entity or multiple entities.
      * 
@@ -75,22 +76,7 @@ class LoadBelongsTo
         $primaryKey = $targetRepository->getPrimaryKeyColumn();
 
         // Collect parent IDs from child entities (skip null foreign keys)
-        $parentIds = [];
-        $childrenByParentId = []; // parentId => [child entities with this parentId]
-        $childrenWithoutParent = []; // child entities with null foreign key
-
-        foreach ($childEntities as $childEntity) {
-            $parentId = $childEntity->get($foreignKey);
-            if ($parentId === null) {
-                $childrenWithoutParent[] = $childEntity;
-                continue;
-            }
-            if (!isset($childrenByParentId[$parentId])) {
-                $childrenByParentId[$parentId] = [];
-                $parentIds[] = $parentId;
-            }
-            $childrenByParentId[$parentId][] = $childEntity;
-        }
+        [$parentIds, $childrenByParentId, $childrenWithoutParent] = self::collectParentIdsFromChildren($childEntities, $foreignKey);
 
         // Set null for children without parent ID
         foreach ($childrenWithoutParent as $childEntity) {
@@ -105,9 +91,7 @@ class LoadBelongsTo
         $allParents = [];
         $query = $targetRepository->sqlQuery()
             ->whereIn($primaryKey, $parentIds);
-        $sql = $query->getSql();
-        $data = $query->getParameters();
-        $parents = $targetRepository->fetch($sql, $data);
+        $parents = $query->getResult();
 
         // Create a map of parentId => parent entity
         $parentMap = [];

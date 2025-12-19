@@ -9,6 +9,7 @@ use WScore\DecaORM\RepositoryInterface;
 
 class LoadHasOne
 {
+    use RelationTrait;
     /**
      * Load HasOne relation for single entity or multiple entities.
      * 
@@ -80,19 +81,7 @@ class LoadHasOne
         $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
 
         // Collect parent IDs (skip null IDs)
-        $parentIds = [];
-        $parentMap = []; // parentId => [entities with this id]
-        foreach ($parentEntities as $parentEntity) {
-            $parentId = $parentEntity->getId();
-            if ($parentId === null) {
-                continue; // Skip entities without ID
-            }
-            if (!isset($parentMap[$parentId])) {
-                $parentMap[$parentId] = [];
-                $parentIds[] = $parentId;
-            }
-            $parentMap[$parentId][] = $parentEntity;
-        }
+        [$parentIds, $parentMap] = self::collectEntityIds($parentEntities);
 
         if (empty($parentIds)) {
             // Set null for all entities
@@ -106,21 +95,10 @@ class LoadHasOne
         $allChildren = [];
         $query = $targetRepository->sqlQuery()
             ->whereIn($childRelation->foreignKey, $parentIds);
-        $sql = $query->getSql();
-        $data = $query->getParameters();
-        $children = $targetRepository->fetch($sql, $data);
+        $children = $query->getResult();
 
         // Group children by parent ID
-        $childrenByParentId = [];
-        foreach ($children as $child) {
-            $foreignKeyValue = $child->get($childRelation->foreignKey);
-            if ($foreignKeyValue !== null) {
-                if (!isset($childrenByParentId[$foreignKeyValue])) {
-                    $childrenByParentId[$foreignKeyValue] = [];
-                }
-                $childrenByParentId[$foreignKeyValue][] = $child;
-            }
-        }
+        $childrenByParentId = self::groupEntitiesByForeignKey($children, $childRelation->foreignKey);
 
         // Set child for each parent entity and set bidirectional links
         foreach ($parentMap as $parentId => $entities) {
