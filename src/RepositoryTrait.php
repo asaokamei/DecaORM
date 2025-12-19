@@ -310,20 +310,25 @@ trait RepositoryTrait
     }
 
     /**
-     * Fills the specified relation for the given entity.
+     * Fills the specified relation for the given entity or entities.
+     * 
+     * @param EntityInterface|array<EntityInterface> $entities
+     * @param string $relationName
+     * @return EntityInterface[] The loaded relation entities as an array.
      */
-    public function fill(EntityInterface $entity, string $relationName): void
+    public function fill(EntityInterface|array $entities, string $relationName): array
     {
         $relation = $this->hydrator->getRelation($relationName);
         $targetRepo = $this->getRepository($relation->targetEntity);
+        
         if ($relation instanceof HasMany) {
-            new LoadHasMany($entity, $relation, $targetRepo);
+            return LoadHasMany::load($entities, $relation, $targetRepo);
         } elseif ($relation instanceof HasOne) {
-            new LoadHasOne($entity, $relation, $targetRepo);
+            return LoadHasOne::load($entities, $relation, $targetRepo);
         } elseif ($relation instanceof BelongsTo) {
-            new LoadBelongsTo($entity, $relation, $targetRepo);
+            return LoadBelongsTo::load($entities, $relation, $targetRepo);
         } elseif ($relation instanceof BelongsToOne) {
-            new LoadBelongsTo($entity, $relation, $targetRepo);
+            return LoadBelongsTo::load($entities, $relation, $targetRepo);
         } else {
             throw new RuntimeException('unknown relation: ' . get_class($relation));
         }

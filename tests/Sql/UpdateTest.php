@@ -48,7 +48,7 @@ class UpdateTest extends TestCase
             public function insert(array $data): \WScore\DecaORM\Sql\Insert { throw new RuntimeException('not used'); }
             public function getUpdateQuery(int|string $id, array $data): \WScore\DecaORM\Sql\Update { throw new RuntimeException('not used'); }
             public function getDeleteQuery(int|string $id): \WScore\DecaORM\Sql\Delete { throw new RuntimeException('not used'); }
-            public function fill(\WScore\DecaORM\EntityInterface $entity, string $relationName): void { throw new RuntimeException('not used'); }
+            public function fill(\WScore\DecaORM\EntityInterface|array $entities, string $relationName): array { throw new RuntimeException('not used'); }
 
             public function sqlQuery(): Query
             {

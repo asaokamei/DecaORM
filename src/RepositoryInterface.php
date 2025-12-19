@@ -92,11 +92,11 @@ interface RepositoryInterface
     public function getRelation(string $propertyName): mixed;
 
     /**
-     * Fills the specified relation for the given entity.
+     * Fills the specified relation for the given entity or entities.
      * 
-     * @param EntityInterface $entity The entity for which the relation is to be filled.
+     * @param EntityInterface|array<EntityInterface> $entities The entity or entities for which the relation is to be filled.
      * @param string $relationName The name of the relation property to fill.
-     * @return void
+     * @return EntityInterface[] The loaded relation entities as an array.
      */
-    public function fill(EntityInterface $entity, string $relationName): void;
+    public function fill(EntityInterface|array $entities, string $relationName): array;
 }

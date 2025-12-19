@@ -11,9 +11,9 @@ class QueryBuilder
     private string $fromTable = '';
     private array $joins = [];
     private string $withSql = '';
-    private string $orderBy;
-    private ?int $offset;
-    private ?int $limit;
+    private ?string $orderBy = null;
+    private ?int $offset = null;
+    private ?int $limit = null;
 
     public function select(string ...$columns): self
     {
