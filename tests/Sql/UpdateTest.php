@@ -15,61 +15,18 @@ class UpdateTest extends TestCase
 {
     private function repoStub(array &$captured): RepositoryInterface
     {
-        return new class($captured) implements RepositoryInterface {
-            public function __construct(private array &$captured) {}
-
-            public function getTableName(): string
-            {
-                return 'users';
-            }
-
-            public function getPrimaryKeyColumn(): string
-            {
-                return 'user_id';
-            }
-
-            public function execute(string $sql, array $data): bool|PDOStatement
-            {
-                $this->captured['sql'] = $sql;
-                $this->captured['data'] = $data;
-                return true;
-            }
-
-            // --- methods not used by these tests ---
-            public function getDb(): \PDO { throw new RuntimeException('not used'); }
-            public function getHydrator(): \WScore\DecaORM\HydratorInterface { throw new RuntimeException('not used'); }
-            public function query(): \WScore\DecaORM\Sql\Query { throw new RuntimeException('not used'); }
-            public function getPrimaryKeyColumnName(): string { throw new RuntimeException('not used'); }
-            public function fetch(string $sql, array $data = []): array { throw new RuntimeException('not used'); }
-            public function find(int|string|null $id, ?string $column = null, ?string $orderBy = null): array { throw new RuntimeException('not used'); }
-            public function listColumnsToProperties(): array { throw new RuntimeException('not used'); }
-            public function getRepository(string|\WScore\DecaORM\EntityInterface $entity): ?RepositoryInterface { throw new RuntimeException('not used'); }
-            public function getRelation(string $propertyName): mixed { throw new RuntimeException('not used'); }
-            public function insert(array $data): \WScore\DecaORM\Sql\Insert { throw new RuntimeException('not used'); }
-            public function getUpdateQuery(int|string $id, array $data): \WScore\DecaORM\Sql\Update { throw new RuntimeException('not used'); }
-            public function getDeleteQuery(int|string $id): \WScore\DecaORM\Sql\Delete { throw new RuntimeException('not used'); }
-            public function fill(\WScore\DecaORM\EntityInterface|array $entities, string $relationName): array { throw new RuntimeException('not used'); }
-
-            public function sqlQuery(): Query
-            {
-                throw new RuntimeException('not used');
-            }
-
-            public function sqlInsert(array $data): Insert
-            {
-                throw new RuntimeException('not used');
-            }
-
-            public function sqlDelete(int|string|null $id = null): Delete
-            {
-                throw new RuntimeException('not used');
-            }
-
-            public function sqlUpdate(int|string|null $id = null, array $data = []): Update
-            {
-                throw new RuntimeException('not used');
-            }
-        };
+        $repo = $this->createMock(RepositoryInterface::class);
+        
+        // Methods used by Update class
+        $repo->method('getTableName')->willReturn('users');
+        $repo->method('getPrimaryKeyColumn')->willReturn('user_id');
+        $repo->method('execute')->willReturnCallback(function (string $sql, array $data) use (&$captured) {
+            $captured['sql'] = $sql;
+            $captured['data'] = $data;
+            return true;
+        });
+        
+        return $repo;
     }
 
     public function testExecuteRequiresWhere(): void

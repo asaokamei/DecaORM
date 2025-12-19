@@ -147,7 +147,7 @@ trait RepositoryTrait
     /**
      * Insert an entity
      */
-    private function insertEntity(EntityInterface $entity): void
+    public function insertEntity(EntityInterface $entity): void
     {
         if ($this->hydrator->isPkAutoNumber()) {
             if ($entity->getId() !== null) {
@@ -244,7 +244,7 @@ trait RepositoryTrait
     /**
      * Update an entity
      */
-    private function updateEntity(EntityInterface $entity): void
+    public function updateEntity(EntityInterface $entity): void
     {
         $id = $entity->getId();
         if ($id === null) {
@@ -289,7 +289,7 @@ trait RepositoryTrait
     /**
      * Delete an entity
      */
-    private function deleteEntity(EntityInterface $entity): void
+    public function deleteEntity(EntityInterface $entity): void
     {
         $id = $entity->getId();
         if ($id === null) {

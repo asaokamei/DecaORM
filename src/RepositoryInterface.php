@@ -99,4 +99,57 @@ interface RepositoryInterface
      * @return EntityInterface[] The loaded relation entities as an array.
      */
     public function fill(EntityInterface|array $entities, string $relationName): array;
+
+    /**
+     * Finds a single entity by ID.
+     * 
+     * @param int|string $id
+     * @return T|null
+     */
+    public function findById(int|string $id): ?EntityInterface;
+
+    /**
+     * Creates a new entity from data (does not save to database).
+     * 
+     * Note: For more flexible entity creation (e.g., with additional parameters),
+     * implement a custom method in your repository class (e.g., PostRepository::create).
+     * 
+     * @param array $data
+     * @return EntityInterface
+     */
+    public function createEntity(array $data): EntityInterface;
+
+    /**
+     * Inserts an entity into the database.
+     * 
+     * @param EntityInterface $entity
+     * @return void
+     */
+    public function insertEntity(EntityInterface $entity): void;
+
+    /**
+     * Updates an entity in the database.
+     * 
+     * @param EntityInterface $entity
+     * @return void
+     */
+    public function updateEntity(EntityInterface $entity): void;
+
+    /**
+     * Deletes an entity from the database.
+     * 
+     * @param EntityInterface $entity
+     * @return void
+     */
+    public function deleteEntity(EntityInterface $entity): void;
+
+    /**
+     * Saves an entity (insert or update).
+     * 
+     * This is a convenience method that calls insertEntity() or updateEntity() based on the entity state.
+     * 
+     * @param EntityInterface $entity
+     * @return void
+     */
+    public function save(EntityInterface $entity): void;
 }

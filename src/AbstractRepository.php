@@ -15,7 +15,7 @@ abstract class AbstractRepository implements RepositoryInterface
      * @param int $id
      * @return T|null
      */
-    public function findById(int $id): ?EntityInterface
+    public function findById(int|string $id): ?EntityInterface
     {
         $list = $this->find($id);
         return $list[0] ?? null;
@@ -32,6 +32,12 @@ abstract class AbstractRepository implements RepositoryInterface
     }
 
     /**
+     * Creates and saves a new entity from data.
+     * 
+     * This is a convenience method that calls createEntity() and insertEntity().
+     * For more flexible entity creation (e.g., with additional parameters),
+     * implement a custom method in your repository class (e.g., PostRepository::create).
+     * 
      * @param array $data
      * @return T|null
      */
@@ -43,9 +49,10 @@ abstract class AbstractRepository implements RepositoryInterface
     }
 
     /**
-     * UserエンティティをDBに保存（新規作成または更新）
-     *
-     * @param T $entity
+     * Saves an entity (insert or update).
+     * 
+     * @param EntityInterface $entity
+     * @return void
      */
     public function save(EntityInterface $entity): void
     {
@@ -65,7 +72,11 @@ abstract class AbstractRepository implements RepositoryInterface
     }
 
     /**
-     * @param T $entity
+     * Deletes an entity (alias for deleteEntity for backward compatibility).
+     * 
+     * @param EntityInterface $entity
+     * @return void
+     * @deprecated Use deleteEntity() instead. This method is kept for backward compatibility.
      */
     public function delete(EntityInterface $entity): void
     {
