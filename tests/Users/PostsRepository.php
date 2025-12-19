@@ -14,7 +14,7 @@ use WScore\DecaORM\AbstractRepository;
  */
 class PostsRepository extends AbstractRepository
 {
-    public function __construct(PDO $pdo, ContainerInterface $container = null, HydratorInterface $hydrator = null)
+    public function __construct(PDO $pdo, ?ContainerInterface $container = null, ?HydratorInterface $hydrator = null)
     {
         $this->db = $pdo;
         $this->hydrator = $hydrator ?? new AttributeHydrator(Post::class);

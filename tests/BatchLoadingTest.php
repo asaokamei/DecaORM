@@ -1,0 +1,358 @@
+<?php
+
+namespace WScore\DecaORM\Tests;
+
+use PDO;
+use PHPUnit\Framework\TestCase;
+use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\Tests\Users\Container;
+use WScore\DecaORM\Tests\Users\Post;
+use WScore\DecaORM\Tests\Users\PostsRepository;
+use WScore\DecaORM\Tests\Users\Profile;
+use WScore\DecaORM\Tests\Users\ProfileRepository;
+use WScore\DecaORM\Tests\Users\User;
+use WScore\DecaORM\Tests\Users\UserRepository;
+
+class BatchLoadingTest extends TestCase
+{
+    private PDO $pdo;
+    private UserRepository $userRepo;
+    private PostsRepository $postsRepo;
+    private ProfileRepository $profileRepo;
+
+    protected function setUp(): void
+    {
+        // In-memory SQLite database for testing
+        $this->pdo = new PDO('sqlite::memory:');
+        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        // Create users table
+        $this->pdo->exec(
+            "CREATE TABLE users (
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            created_at TEXT,
+            updated_at TEXT
+        )"
+        );
+
+        // Create posts table
+        $this->pdo->exec(
+            "CREATE TABLE posts (
+            post_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT,
+            updated_at TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(user_id)
+        )"
+        );
+
+        // Create profiles table
+        $this->pdo->exec(
+            "CREATE TABLE profiles (
+            profile_id INTEGER PRIMARY KEY,
+            nickname TEXT NOT NULL,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP,
+            FOREIGN KEY (profile_id) REFERENCES users(user_id)
+        )"
+        );
+
+        // Clear cache before each test
+        EntityCache::clear();
+
+        $container = new Container();
+        $this->userRepo = new UserRepository($this->pdo, $container);
+        $this->postsRepo = new PostsRepository($this->pdo, $container);
+        $this->profileRepo = new ProfileRepository($this->pdo, $container);
+        $container->set(UserRepository::class, $this->userRepo);
+        $container->set(PostsRepository::class, $this->postsRepo);
+        $container->set(ProfileRepository::class, $this->profileRepo);
+    }
+
+    public function testBatchLoadHasMany(): void
+    {
+        // Create multiple users with posts
+        $user1 = $this->userRepo->createAndSave([
+            'name' => 'User One',
+            'email' => 'user1@example.com'
+        ]);
+
+        $user2 = $this->userRepo->createAndSave([
+            'name' => 'User Two',
+            'email' => 'user2@example.com'
+        ]);
+
+        // Create posts for user1
+        $post1 = $this->postsRepo->create($user1, [
+            'title' => 'User 1 Post 1',
+            'content' => 'Content 1'
+        ]);
+        $post2 = $this->postsRepo->create($user1, [
+            'title' => 'User 1 Post 2',
+            'content' => 'Content 2'
+        ]);
+
+        // Create posts for user2
+        $post3 = $this->postsRepo->create($user2, [
+            'title' => 'User 2 Post 1',
+            'content' => 'Content 3'
+        ]);
+
+        // Clear cache and reload
+        EntityCache::clear();
+        $users = [
+            $this->userRepo->findById($user1->getId()),
+            $this->userRepo->findById($user2->getId())
+        ];
+
+        // Batch load posts for all users
+        $posts = $this->userRepo->fill($users, 'posts');
+
+        // Verify return value
+        $this->assertIsArray($posts);
+        $this->assertCount(3, $posts);
+
+        // Verify posts are set on entities
+        $user1Posts = $users[0]->get('posts');
+        $this->assertIsArray($user1Posts);
+        $this->assertCount(2, $user1Posts);
+
+        $user2Posts = $users[1]->get('posts');
+        $this->assertIsArray($user2Posts);
+        $this->assertCount(1, $user2Posts);
+
+        // Verify bidirectional links
+        foreach ($user1Posts as $post) {
+            $this->assertInstanceOf(Post::class, $post);
+            $this->assertEquals($user1->getId(), $post->get('user_id'));
+        }
+    }
+
+    public function testBatchLoadHasOne(): void
+    {
+        // Create multiple users with profiles
+        $user1 = $this->userRepo->createAndSave([
+            'name' => 'User One',
+            'email' => 'user1@example.com'
+        ]);
+
+        $user2 = $this->userRepo->createAndSave([
+            'name' => 'User Two',
+            'email' => 'user2@example.com'
+        ]);
+
+        // Create profiles
+        $profile1 = $this->profileRepo->createAndSave([
+            'id' => $user1->getId(),
+            'nickname' => 'Nickname 1'
+        ]);
+
+        $profile2 = $this->profileRepo->createAndSave([
+            'id' => $user2->getId(),
+            'nickname' => 'Nickname 2'
+        ]);
+
+        // Clear cache and reload
+        EntityCache::clear();
+        $users = [
+            $this->userRepo->findById($user1->getId()),
+            $this->userRepo->findById($user2->getId())
+        ];
+
+        // Batch load profiles for all users
+        $profiles = $this->userRepo->fill($users, 'profile');
+
+        // Verify return value
+        $this->assertIsArray($profiles);
+        $this->assertCount(2, $profiles);
+
+        // Verify profiles are set on entities
+        $user1Profile = $users[0]->get('profile');
+        $this->assertInstanceOf(Profile::class, $user1Profile);
+        $this->assertEquals('Nickname 1', $user1Profile->get('nickname'));
+
+        $user2Profile = $users[1]->get('profile');
+        $this->assertInstanceOf(Profile::class, $user2Profile);
+        $this->assertEquals('Nickname 2', $user2Profile->get('nickname'));
+    }
+
+    public function testBatchLoadBelongsTo(): void
+    {
+        // Create users
+        $user1 = $this->userRepo->createAndSave([
+            'name' => 'User One',
+            'email' => 'user1@example.com'
+        ]);
+
+        $user2 = $this->userRepo->createAndSave([
+            'name' => 'User Two',
+            'email' => 'user2@example.com'
+        ]);
+
+        // Create posts
+        $post1 = $this->postsRepo->create($user1, [
+            'title' => 'Post 1',
+            'content' => 'Content 1'
+        ]);
+
+        $post2 = $this->postsRepo->create($user2, [
+            'title' => 'Post 2',
+            'content' => 'Content 2'
+        ]);
+
+        // Clear cache and reload
+        EntityCache::clear();
+        $posts = [
+            $this->postsRepo->findById($post1->getId()),
+            $this->postsRepo->findById($post2->getId())
+        ];
+
+        // Batch load users for all posts
+        $users = $this->postsRepo->fill($posts, 'user');
+
+        // Verify return value
+        $this->assertIsArray($users);
+        $this->assertCount(2, $users);
+
+        // Verify users are set on entities
+        $post1User = $posts[0]->get('user');
+        $this->assertInstanceOf(User::class, $post1User);
+        $this->assertEquals($user1->getId(), $post1User->getId());
+
+        $post2User = $posts[1]->get('user');
+        $this->assertInstanceOf(User::class, $post2User);
+        $this->assertEquals($user2->getId(), $post2User->getId());
+    }
+
+    public function testBatchLoadWithEmptyArray(): void
+    {
+        $result = $this->userRepo->fill([], 'posts');
+        $this->assertIsArray($result);
+        $this->assertCount(0, $result);
+    }
+
+    public function testBatchLoadWithNoRelations(): void
+    {
+        // Create users without posts
+        $user1 = $this->userRepo->createAndSave([
+            'name' => 'User One',
+            'email' => 'user1@example.com'
+        ]);
+
+        $user2 = $this->userRepo->createAndSave([
+            'name' => 'User Two',
+            'email' => 'user2@example.com'
+        ]);
+
+        // Clear cache and reload
+        EntityCache::clear();
+        $users = [
+            $this->userRepo->findById($user1->getId()),
+            $this->userRepo->findById($user2->getId())
+        ];
+
+        // Batch load posts (should return empty array)
+        $posts = $this->userRepo->fill($users, 'posts');
+
+        // Verify return value
+        $this->assertIsArray($posts);
+        $this->assertCount(0, $posts);
+
+        // Verify empty arrays are set on entities
+        $user1Posts = $users[0]->get('posts');
+        $this->assertIsArray($user1Posts);
+        $this->assertCount(0, $user1Posts);
+
+        $user2Posts = $users[1]->get('posts');
+        $this->assertIsArray($user2Posts);
+        $this->assertCount(0, $user2Posts);
+    }
+
+    public function testBatchLoadChaining(): void
+    {
+        // Create users with posts
+        $user1 = $this->userRepo->createAndSave([
+            'name' => 'User One',
+            'email' => 'user1@example.com'
+        ]);
+
+        $user2 = $this->userRepo->createAndSave([
+            'name' => 'User Two',
+            'email' => 'user2@example.com'
+        ]);
+
+        // Create posts
+        $post1 = $this->postsRepo->create($user1, [
+            'title' => 'Post 1',
+            'content' => 'Content 1'
+        ]);
+
+        $post2 = $this->postsRepo->create($user2, [
+            'title' => 'Post 2',
+            'content' => 'Content 2'
+        ]);
+
+        // Clear cache and reload
+        EntityCache::clear();
+        $users = [
+            $this->userRepo->findById($user1->getId()),
+            $this->userRepo->findById($user2->getId())
+        ];
+
+        // Chain: load posts, then load users for those posts
+        $posts = $this->userRepo->fill($users, 'posts');
+        $this->assertCount(2, $posts);
+
+        // Verify posts are set on users
+        $this->assertCount(1, $users[0]->get('posts'));
+        $this->assertCount(1, $users[1]->get('posts'));
+
+        // Now load users for posts (this is the chaining use case)
+        $loadedUsers = $this->postsRepo->fill($posts, 'user');
+        $this->assertCount(2, $loadedUsers);
+
+        // Verify users are set on posts
+        $this->assertInstanceOf(User::class, $posts[0]->get('user'));
+        $this->assertInstanceOf(User::class, $posts[1]->get('user'));
+    }
+
+    public function testSingleEntityStillWorks(): void
+    {
+        // Create user with posts
+        $user = $this->userRepo->createAndSave([
+            'name' => 'User One',
+            'email' => 'user1@example.com'
+        ]);
+
+        $post1 = $this->postsRepo->create($user, [
+            'title' => 'Post 1',
+            'content' => 'Content 1'
+        ]);
+
+        $post2 = $this->postsRepo->create($user, [
+            'title' => 'Post 2',
+            'content' => 'Content 2'
+        ]);
+
+        // Clear cache and reload
+        EntityCache::clear();
+        $user = $this->userRepo->findById($user->getId());
+
+        // Single entity fill (existing behavior)
+        $posts = $this->userRepo->fill($user, 'posts');
+
+        // Verify return value
+        $this->assertIsArray($posts);
+        $this->assertCount(2, $posts);
+
+        // Verify posts are set on entity
+        $userPosts = $user->get('posts');
+        $this->assertIsArray($userPosts);
+        $this->assertCount(2, $userPosts);
+    }
+}
+
