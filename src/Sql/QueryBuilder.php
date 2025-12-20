@@ -15,13 +15,13 @@ class QueryBuilder
     private ?int $offset = null;
     private ?int $limit = null;
 
-    public function select(string ...$columns): self
+    public function select(string ...$columns): static
     {
         $this->selects = $columns;
         return $this;
     }
 
-    public function from(string $table): self
+    public function from(string $table): static
     {
         $this->fromTable = $table;
         return $this;
@@ -29,13 +29,13 @@ class QueryBuilder
 
     // --- 複雑な句への対応（Raw） ---
 
-    public function withRaw(string $cte_sql): self
+    public function withRaw(string $cte_sql): static
     {
         $this->withSql = $cte_sql;
         return $this;
     }
 
-    public function joinRaw(string $raw_join_sql): self
+    public function joinRaw(string $raw_join_sql): static
     {
         $this->joins[] = '  ' . $raw_join_sql . PHP_EOL;
         return $this;
@@ -43,19 +43,19 @@ class QueryBuilder
 
     // WHERE句関連のメソッドはWhereTraitで提供される
 
-    public function limit(?int $limit): self
+    public function limit(?int $limit): static
     {
         $this->limit = $limit;
         return $this;
     }
 
-    public function offset(?int $offset): self
+    public function offset(?int $offset): static
     {
         $this->offset = $offset;
         return $this;
     }
 
-    public function orderBy(string $column): self
+    public function orderBy(string $column): static
     {
         $this->orderBy = $column;
         return $this;

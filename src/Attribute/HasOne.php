@@ -30,10 +30,12 @@ class HasOne
     /**
      * @param string $targetEntity The target entity class name
      * @param string $mappedBy The property name on the inverse side (e.g., 'user')
+     * @param string|null $loader Optional method name in the repository to load this relation (for complex queries)
      */
     public function __construct(
         public string $targetEntity,
-        public string $mappedBy
+        public string $mappedBy,
+        public ?string $loader = null
     ) {
     }
 }

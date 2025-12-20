@@ -2,6 +2,7 @@
 
 namespace WScore\DecaORM\Relation;
 
+use RuntimeException;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\RepositoryInterface;
@@ -15,19 +16,37 @@ class LoadHasMany
      * @param EntityInterface|array<EntityInterface> $entities
      * @param HasMany $parentRelation
      * @param RepositoryInterface $targetRepository
+     * @param RepositoryInterface|null $sourceRepository The repository for the source entities (needed for loader)
      * @return EntityInterface[] All loaded children entities
      */
     public static function load(
         EntityInterface|array $entities,
         HasMany $parentRelation,
-        RepositoryInterface $targetRepository
+        RepositoryInterface $targetRepository,
+        ?RepositoryInterface $sourceRepository = null
     ): array {
-        if (is_array($entities)) {
-            return self::loadBatch($entities, $parentRelation, $targetRepository);
+
+        // If loader is specified, use it instead of WHERE IN query
+        if ($parentRelation->loader !== null) {
+            if ($sourceRepository === null) {
+                throw new RuntimeException(
+                    'Source repository is required when using loader. ' .
+                    'Please pass the source repository to LoadHasMany::load()'
+                );
+            }
+            
+            if (!method_exists($sourceRepository, $parentRelation->loader)) {
+                throw new RuntimeException(
+                    'Loader method "' . $parentRelation->loader . '" not found in repository: ' . $sourceRepository::class
+                );
+            }
         }
-        
+
+        if (is_array($entities)) {
+            return self::loadBatch($entities, $parentRelation, $targetRepository, $sourceRepository);
+        }
         // Single entity
-        return self::loadSingle($entities, $parentRelation, $targetRepository);
+        return self::loadSingle($entities, $parentRelation, $targetRepository, $sourceRepository);
     }
 
     /**
@@ -36,15 +55,19 @@ class LoadHasMany
     private static function loadSingle(
         EntityInterface $parentEntity,
         HasMany $parentRelation,
-        RepositoryInterface $targetRepository
+        RepositoryInterface $targetRepository,
+        ?RepositoryInterface $sourceRepository = null
     ): array {
         $parentProperty = $parentRelation->propertyName;
         $childProperty = $parentRelation->mappedBy;
-        $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
 
-        // Find posts by foreign key
-        $children = $targetRepository->find($parentEntity->getId(), $childRelation->foreignKey, $parentRelation->orderBy);
-
+        if ($parentRelation->loader !== null) {
+            $children = $sourceRepository->{$parentRelation->loader}($parentEntity);
+        } else {
+            // Find posts by foreign key
+            $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
+            $children = $targetRepository->find($parentEntity->getId(), $childRelation->foreignKey, $parentRelation->orderBy);
+        }
         if (empty($children)) {
             $parentEntity->set($parentProperty, []);
             return [];
@@ -65,43 +88,72 @@ class LoadHasMany
      * @param array<EntityInterface> $parentEntities
      * @param HasMany $parentRelation
      * @param RepositoryInterface $targetRepository
+     * @param RepositoryInterface|null $sourceRepository The repository for the source entities (needed for loader)
      * @return EntityInterface[] All loaded children entities
      */
     public static function loadBatch(
         array $parentEntities,
         HasMany $parentRelation,
-        RepositoryInterface $targetRepository
+        RepositoryInterface $targetRepository,
+        ?RepositoryInterface $sourceRepository = null
     ): array {
         if (empty($parentEntities)) {
             return [];
         }
 
-        $parentProperty = $parentRelation->propertyName;
-        $childProperty = $parentRelation->mappedBy;
-        $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
+        // If loader is specified, use it instead of WHERE IN query
+        if ($parentRelation->loader !== null) {           
+            $children = $sourceRepository->{$parentRelation->loader}($parentEntities);
+        } else {
+            // Batch load all children using WHERE IN
+            $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
+            [$parentIds, $parentMap] = self::collectEntityIds($parentEntities);
+                $query = $targetRepository->sqlQuery()
+                ->whereIn($childRelation->foreignKey, $parentIds);
+            if ($parentRelation->orderBy !== null) {
+                $query->orderBy($parentRelation->orderBy);
+            }
+            $children = $query->getResult();
+        }
 
-        // Collect parent IDs (skip null IDs)
+        // Use applyLoaderResult to map children to parents
+        return self::applyLoaderResult($parentEntities, $children, $parentRelation, $targetRepository);
+    }
+
+    /**
+     * Apply loader result for HasMany relation.
+     * Groups loaded entities by parent ID using foreign key and sets them on parent entities.
+     * 
+     * @param EntityInterface|array<EntityInterface> $parentEntities
+     * @param array<EntityInterface> $loadedChildren
+     * @param HasMany $relation
+     * @param RepositoryInterface $targetRepository
+     * @return EntityInterface[] All loaded children entities
+     */
+    public static function applyLoaderResult(
+        EntityInterface|array $parentEntities,
+        array $loadedChildren,
+        HasMany $relation,
+        RepositoryInterface $targetRepository
+    ): array {
+        $parentEntities = is_array($parentEntities) ? $parentEntities : [$parentEntities];
+        $parentProperty = $relation->propertyName;
+        $childProperty = $relation->mappedBy;
+        $childRelation = $targetRepository->getRelation($relation->mappedBy);
+        
+        // Collect parent IDs
         [$parentIds, $parentMap] = self::collectEntityIds($parentEntities);
-
+        
         if (empty($parentIds)) {
-            // Set empty arrays for all entities
             foreach ($parentEntities as $parentEntity) {
                 $parentEntity->set($parentProperty, []);
             }
             return [];
         }
-
-        // Batch load all children using WHERE IN
-        $query = $targetRepository->sqlQuery()
-            ->whereIn($childRelation->foreignKey, $parentIds);
-        if ($parentRelation->orderBy !== null) {
-            $query->orderBy($parentRelation->orderBy);
-        }
-        $children = $query->getResult();
-
-        // Group children by parent ID
-        $childrenByParentId = self::groupEntitiesByForeignKey($children, $childRelation->foreignKey);
-
+        
+        // Group loaded children by parent ID using foreign key
+        $childrenByParentId = self::groupEntitiesByForeignKey($loadedChildren, $childRelation->foreignKey);
+        
         // Set children for each parent entity and set bidirectional links
         $allChildren = [];
         foreach ($parentMap as $parentId => $entities) {
@@ -109,24 +161,24 @@ class LoadHasMany
             
             // Set bidirectional link (child -> parent)
             foreach ($childrenForParent as $child) {
-                $child->set($childProperty, $entities[0]); // Use first entity as representative
+                $child->set($childProperty, $entities[0]);
             }
-
+            
             // Set children for all parent entities with this ID
             foreach ($entities as $parentEntity) {
                 $parentEntity->set($parentProperty, $childrenForParent);
             }
-
+            
             $allChildren = array_merge($allChildren, $childrenForParent);
         }
-
+        
         // Set empty arrays for entities that had no children
         foreach ($parentEntities as $parentEntity) {
             if (!$parentEntity->get($parentProperty)) {
                 $parentEntity->set($parentProperty, []);
             }
         }
-
+        
         return $allChildren;
     }
 }

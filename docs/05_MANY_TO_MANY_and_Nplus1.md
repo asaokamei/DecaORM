@@ -79,13 +79,114 @@ $studentRepo->syncManyToMany($student, 'courses');
 基本的なリレーションは Attribute で定義するが、複雑な条件（複合キー、定数フィルタ、特殊なSQL）に対応するための「逃げ道」を用意する。
 
 - 基本: foreignKey, localKey (配列による複合キー対応も可)。
-- 拡張 (fetcher): 自動解決できない場合、リポジトリのメソッドに委譲する。
+- 拡張 (loader): 自動解決できない場合、リポジトリのメソッドに委譲する。
+- カスタム (CustomLoader): 複合キーやmappedByが指定されていない場合など、標準のリレーション属性では対応できない複雑なケースに対応。
+
+**注意:** 
+- loaderは`HasMany`と`HasOne`のみでサポートされています。`WHERE IN`クエリの代替として機能し、マッピングはORM側で行います。
+- `BelongsTo`と`BelongsToOne`ではloaderは不要です（子エンティティに既に外部キーが設定されているため、親エンティティの取得は単純なWHERE句で十分）。
+- `CustomLoader`は完全にカスタムなローダーとして機能し、エンティティへのマッピングもユーザー側で行います。
 
 ```PHP
 class User {
 // 複雑な条件はメソッドに丸投げ
-#[HasMany(targetEntity: Order::class, fetcher: 'findRecentOrders')]
+#[HasMany(targetEntity: Order::class, loader: 'findRecentOrders')]
 public array $recentOrders;
+}
+
+// Repository側の実装例
+
+// 形式1: エンティティの配列を返す（単一の外部キーでマッピング可能な場合）
+class UserRepository extends AbstractRepository {
+    /**
+     * Custom loader method for recentOrders relation.
+     * 
+     * このメソッドは関連エンティティを返すだけで良い。
+     * ORM側でエンティティへの設定（リレーションのマッピング）を行う。
+     * 
+     * 注意: 返されるエンティティには外部キー（user_id）が設定されている必要がある。
+     * 複合キーやmappedByが指定されていない場合は、形式2を使用すること。
+     * 
+     * @param EntityInterface|array<EntityInterface> $entities
+     * @return EntityInterface[] Loaded Order entities (with foreign key set)
+     */
+    public function findRecentOrders(EntityInterface|array $entities): array
+    {
+        $entities = is_array($entities) ? $entities : [$entities];
+        $userIds = array_filter(array_map(fn($e) => $e->getId(), $entities));
+        
+        if (empty($userIds)) {
+            return [];
+        }
+        
+        $orderRepo = $this->getRepository(Order::class);
+        // 複雑な条件で取得（例: 最近30日以内の注文）
+        $orders = $orderRepo->sqlQuery()
+            ->whereIn('user_id', $userIds)
+            ->where('created_at', '>=', date('Y-m-d', strtotime('-30 days')))
+            ->orderBy('created_at DESC')
+            ->getResult();
+        
+        // ORM側でエンティティへの設定を行うため、ここでは返すだけ
+        return $orders;
+    }
+}
+
+// 形式2: CustomLoaderを使用（複合キーやmappedByが指定されていない場合）
+// エンティティ定義
+class Project {
+    #[CustomLoader(targetEntity: Task::class, method: 'findTasks')]
+    public array $tasks;
+}
+
+// Repository側の実装
+class ProjectRepository extends AbstractRepository {
+    /**
+     * Custom loader method for tasks relation with composite key.
+     * 
+     * 複合キー（例: user_id + project_id）や、mappedByが指定されていない場合、
+     * CustomLoaderを使用して、loaderメソッド内で直接エンティティにセットする。
+     * 
+     * @param EntityInterface|array<EntityInterface> $entities
+     * @return void|EntityInterface[] Loaded Task entities (optional, mapping is done internally)
+     */
+    public function findTasks(EntityInterface|array $entities): void
+    {
+        $entities = is_array($entities) ? $entities : [$entities];
+        $projectIds = array_filter(array_map(fn($e) => $e->getId(), $entities));
+        
+        if (empty($projectIds)) {
+            foreach ($entities as $entity) {
+                $entity->set('tasks', []);
+            }
+            return;
+        }
+        
+        $taskRepo = $this->getRepository(Task::class);
+        // 複合キーで取得（例: user_id + project_id）
+        $tasks = $taskRepo->sqlQuery()
+            ->whereIn('project_id', $projectIds)
+            ->where('user_id', $this->getCurrentUserId()) // 複合条件
+            ->getResult();
+        
+        // 親IDごとにグループ化してエンティティに直接セット
+        $tasksByProjectId = [];
+        foreach ($tasks as $task) {
+            $projectId = $task->get('project_id');
+            if ($projectId !== null) {
+                if (!isset($tasksByProjectId[$projectId])) {
+                    $tasksByProjectId[$projectId] = [];
+                }
+                $tasksByProjectId[$projectId][] = $task;
+            }
+        }
+        
+        // 各エンティティに直接セット
+        foreach ($entities as $entity) {
+            $projectId = $entity->getId();
+            $entity->set('tasks', $tasksByProjectId[$projectId] ?? []);
+        }
+    }
 }
 ```
 
@@ -127,7 +228,7 @@ $postRepo->fill($posts, 'comments');
 
   - CRUD (save, find, delete)。 
   - Batch Loading (fill)。 
-  - Escape Hatch (fetcher 委譲ロジック)。
+  - Escape Hatch (loader 委譲ロジック)。
 
 5. SpecificRepository:
 

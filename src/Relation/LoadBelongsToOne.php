@@ -94,42 +94,32 @@ class LoadBelongsToOne
         }
 
         // Batch load all parents using WHERE IN
-        $allParents = [];
         $query = $targetRepository->sqlQuery()
             ->whereIn($primaryKey, $parentIds);
         $parents = $query->getResult();
 
-        // Create a map of parentId => parent entity
-        $parentMap = [];
-        foreach ($parents as $parent) {
-            $parentId = $parent->getId();
-            if ($parentId !== null) {
-                if (isset($parentMap[$parentId])) {
-                    throw new RuntimeException('BelongsToOne relation must have only one parent for ID: ' . $parentId);
+        // Use applyLoaderResult to map parents to children
+        $allParents = self::applyLoaderResult($childEntities, $parents, $childRelation, $targetRepository);
+
+        // Set child on parent if inversedBy is specified and parent has HasOne
+        if ($childRelation->inversedBy !== null) {
+            foreach ($childrenByParentId as $parentId => $children) {
+                // Find parent entity
+                $parent = null;
+                foreach ($parents as $p) {
+                    if ($p->getId() === $parentId) {
+                        $parent = $p;
+                        break;
+                    }
                 }
-                $parentMap[$parentId] = $parent;
-            }
-        }
-
-        // Set parent for each child entity and optionally set child on parent
-        foreach ($childrenByParentId as $parentId => $children) {
-            $parent = $parentMap[$parentId] ?? null;
-            
-            foreach ($children as $childEntity) {
-                $childEntity->set($childProperty, $parent);
-            }
-
-            // Set child on parent if inversedBy is specified and parent has HasOne
-            if ($parent !== null && $childRelation->inversedBy !== null) {
-                // BelongsToOne should have only one child per parent
-                if (count($children) > 1) {
-                    throw new RuntimeException('BelongsToOne relation can only have one child per parent, but multiple children found for parent ID: ' . $parentId);
+                
+                if ($parent !== null) {
+                    // BelongsToOne should have only one child per parent
+                    if (count($children) > 1) {
+                        throw new RuntimeException('BelongsToOne relation can only have one child per parent, but multiple children found for parent ID: ' . $parentId);
+                    }
+                    self::setChildOnParent($parent, $childRelation->inversedBy, $children[0], $targetRepository);
                 }
-                self::setChildOnParent($parent, $childRelation->inversedBy, $children[0], $targetRepository);
-            }
-
-            if ($parent !== null) {
-                $allParents[] = $parent;
             }
         }
 
@@ -158,6 +148,53 @@ class LoadBelongsToOne
         
         // If parent has HasMany or unknown relation type, do not set
         // (HasMany is dangerous - assumes all children are loaded)
+    }
+
+    /**
+     * Apply loader result for BelongsToOne relation.
+     * Maps loaded parent entities to child entities using foreign key.
+     * 
+     * @param EntityInterface|array<EntityInterface> $childEntities
+     * @param array<EntityInterface> $loadedParents
+     * @param BelongsToOne $relation
+     * @param RepositoryInterface $targetRepository
+     * @return EntityInterface[] All loaded parent entities
+     */
+    public static function applyLoaderResult(
+        EntityInterface|array $childEntities,
+        array $loadedParents,
+        BelongsToOne $relation,
+        RepositoryInterface $targetRepository
+    ): array {
+        $childEntities = is_array($childEntities) ? $childEntities : [$childEntities];
+        $childProperty = $relation->propertyName;
+        $foreignKey = $relation->foreignKey;
+        
+        // Create a map of parent ID => parent entity
+        $parentMap = [];
+        foreach ($loadedParents as $parent) {
+            $parentId = $parent->getId();
+            if ($parentId !== null) {
+                if (isset($parentMap[$parentId])) {
+                    throw new RuntimeException('BelongsToOne relation must have only one parent for ID: ' . $parentId);
+                }
+                $parentMap[$parentId] = $parent;
+            }
+        }
+        
+        // Set parent for each child entity
+        $allParents = [];
+        foreach ($childEntities as $childEntity) {
+            $parentId = $childEntity->get($foreignKey);
+            if ($parentId !== null && isset($parentMap[$parentId])) {
+                $childEntity->set($childProperty, $parentMap[$parentId]);
+                $allParents[] = $parentMap[$parentId];
+            } else {
+                $childEntity->set($childProperty, null);
+            }
+        }
+        
+        return array_unique($allParents, SORT_REGULAR);
     }
 }
 

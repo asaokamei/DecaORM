@@ -12,14 +12,17 @@ use RuntimeException;
 use Traversable;
 use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\Attribute\BelongsToOne;
+use WScore\DecaORM\Attribute\CustomLoader;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Attribute\ManyToMany;
 use WScore\DecaORM\Relation\LoadBelongsTo;
 use WScore\DecaORM\Relation\LoadBelongsToOne;
+use WScore\DecaORM\Relation\LoadCustomLoader;
 use WScore\DecaORM\Relation\LoadHasMany;
 use WScore\DecaORM\Relation\LoadHasOne;
 use WScore\DecaORM\Relation\LoadManyToMany;
+use WScore\DecaORM\Relation\RelationTrait;
 use WScore\DecaORM\Sql\Insert;
 use WScore\DecaORM\Sql\Query;
 use WScore\DecaORM\Sql\Update;
@@ -30,6 +33,8 @@ use WScore\DecaORM\Sql\Delete;
  */
 trait RepositoryTrait
 {
+    use RelationTrait;
+    
     protected ?ContainerInterface $container;
     protected PDO $db;
     protected HydratorInterface $hydrator;
@@ -324,18 +329,22 @@ trait RepositoryTrait
         $relation = $this->hydrator->getRelation($relationName);
         $targetRepo = $this->getRepository($relation->targetEntity);
         
+        // Use standard loading (loader is handled inside LoadHasMany/LoadHasOne if specified)
         if ($relation instanceof HasMany) {
-            return LoadHasMany::load($entities, $relation, $targetRepo);
+            return LoadHasMany::load($entities, $relation, $targetRepo, $this);
         } elseif ($relation instanceof HasOne) {
-            return LoadHasOne::load($entities, $relation, $targetRepo);
+            return LoadHasOne::load($entities, $relation, $targetRepo, $this);
         } elseif ($relation instanceof BelongsTo) {
             return LoadBelongsTo::load($entities, $relation, $targetRepo);
         } elseif ($relation instanceof BelongsToOne) {
             return LoadBelongsToOne::load($entities, $relation, $targetRepo);
         } elseif ($relation instanceof ManyToMany) {
             return LoadManyToMany::load($entities, $relation, $this, $targetRepo);
+        } elseif ($relation instanceof CustomLoader) {
+            return LoadCustomLoader::load($entities, $relation, $this);
         } else {
             throw new RuntimeException('unknown relation: ' . get_class($relation));
         }
     }
+
 }
