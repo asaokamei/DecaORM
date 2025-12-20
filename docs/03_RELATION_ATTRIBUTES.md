@@ -10,7 +10,7 @@ DecaORMでは、エンティティ間のリレーションをアトリビュー�
 |------------|-----------|--------|
 |OneToMany  |HasMany     |BelongsTo|
 |OneToOne   |HasOne?     |BelongsToOne?|
-|ManyToMany |BelongsToMany?|BelongsToMany?|
+|ManyToMany |ManyToMany|ManyToMany|
 
 ### 実装済み
 
@@ -76,11 +76,11 @@ public ?User $user = null;
 
 ### 実装予定
 
-#### 4. `BelongsToMany` (多対多)
+#### 4. `ManyToMany` (多対多)
 多対多のリレーションで使用します。中間テーブルが必要です。
 
 ```php
-#[BelongsToMany(targetEntity: Tag::class, joinTable: 'post_tags', foreignKey: 'post_id', inverseForeignKey: 'tag_id')]
+#[ManyToMany(targetEntity: Tag::class, joinTable: 'post_tags', foreignKey: 'post_id', inverseForeignKey: 'tag_id')]
 public ?array $tags = null;
 ```
 
@@ -137,11 +137,11 @@ public ?User $user = null;
 **両側で同じアトリビュートを使用:**
 ```php
 // Post側
-#[BelongsToMany(targetEntity: Tag::class, joinTable: 'post_tags', foreignKey: 'post_id', inverseForeignKey: 'tag_id')]
+#[ManyToMany(targetEntity: Tag::class, joinTable: 'post_tags', foreignKey: 'post_id', inverseForeignKey: 'tag_id')]
 public ?array $tags = null;
 
 // Tag側
-#[BelongsToMany(targetEntity: Post::class, joinTable: 'post_tags', foreignKey: 'tag_id', inverseForeignKey: 'post_id')]
+#[ManyToMany(targetEntity: Post::class, joinTable: 'post_tags', foreignKey: 'tag_id', inverseForeignKey: 'post_id')]
 public ?array $posts = null;
 ```
 
@@ -206,5 +206,5 @@ $postRepo->loadPostsForUser($userRepo, $user);
 - ✅ `BelongsTo` - 実装済み
 - ✅ `HasMany` - 実装済み
 - ✅ `HasOne` - 実装済み（未テスト）
-- ⏳ `BelongsToMany` - 実装予定
+- ⏳ `ManyToMany` - 実装予定
 

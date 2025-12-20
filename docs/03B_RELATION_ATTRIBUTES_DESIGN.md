@@ -52,7 +52,7 @@ public ?User $user = null;
 - `inversedBy`: 逆側のプロパティ名（双方向リレーションの場合、オプション）
 - `fetch`: フェッチ戦略（LAZY/EAGER、デフォルト: LAZY）
 
-### 4. BelongsToMany（実装予定、旧: ManyToMany）
+### 4. ManyToMany（実装予定）
 多対多のリレーション（中間テーブルが必要）
 
 ## エンティティからリポジトリを取得する方法
@@ -213,7 +213,7 @@ class Post implements EntityInterface
 - ✅ **BelongsTo** (旧: ManyToOne) - 実装済み・テスト済み
 - ✅ **HasMany** (旧: OneToMany) - 実装済み・テスト済み
 - ✅ **HasOne** (旧: OneToOne) - 実装済み（未テスト）
-- ⏳ **BelongsToMany** (旧: ManyToMany) - 実装予定
+- ⏳ **ManyToMany** - 実装予定
 
 ## 考慮事項
 

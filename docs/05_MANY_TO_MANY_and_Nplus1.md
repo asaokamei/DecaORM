@@ -34,6 +34,15 @@ with Google Gemini 3 Pro
 
 UnitOfWorkを持たない環境下で、実用的な多対多の保存処理を実現する。
 
+### 命名規則の決定
+
+多対多リレーションには `ManyToMany` アトリビュートを使用する。
+
+**理由:**
+- `BelongsTo` は「外部キーを持つ側」を意味するが、多対多ではどちらのエンティティも自分のテーブルに外部キーを持たない（中間テーブルが両方のIDを持つ）
+- `ManyToMany` はリレーションの種類を直接表現し、既存の `BelongsTo`/`HasMany` との混同を避けられる
+- シンプルで直感的で、Doctrine ORMなどでも一般的な命名
+
 ### 保存・更新ロジック
 
 - IDリストによる同期 (sync):
@@ -43,8 +52,13 @@ UnitOfWorkを持たない環境下で、実用的な多対多の保存処理を�
   2. 差分（追加分・削除分）を計算。
   3. INSERT / DELETE を発行。
 
+**実装上の考慮事項:**
+- トランザクション: `sync` 操作は単一のトランザクション内で実行すべきか？（ユーザーが制御する方針に合わせる）
+- エラーハンドリング: 中間テーブルの制約違反（存在しないIDなど）の処理
+- パフォーマンス: 大量のIDを同期する場合のバッチ処理の必要性
+
 - Traitによる提供:
-  - すべてのリポジトリに機能を持たせず、HasManyToMany Trait を作成し、必要なリポジトリでのみ use する（Opt-in方式）。
+  - すべてのリポジトリに機能を持たせず、ManyToManyTrait を作成し、必要なリポジトリでのみ use する（Opt-in方式）。
 
 ```php
 // 利用イメージ
@@ -53,7 +67,7 @@ $studentRepo->sync($student, 'courses', [101, 103]);
 
 ### 中間テーブルの扱い
 
-単純な紐付け: 中間テーブル用のエンティティ・リポジトリは作成せず、Attribute定義のみで GenericRepository が処理する。
+単純な紐付け: 中間テーブル用のエンティティ・リポジトリは作成せず、`ManyToMany` Attribute定義のみで GenericRepository が処理する。中間テーブル名は `joinTable` パラメータで指定する。
 
 情報を持つ中間テーブル: 紐付け以外のカラム（成績、登録日など）を持つ場合は、多対多として扱わず、「1対多 - 1対多」のエンティティとして明示的に実装する。
 
@@ -78,28 +92,28 @@ public array $recentOrders;
 
 リポジトリ間の独立性を保つため、JOIN ではなく WHERE IN による一括取得を行う。
 
-- include メソッド:
+- fill メソッド:
   - エンティティのリスト（または単体）を受け取り、指定されたリレーションを一括ロードする。
   - 内部で WHERE foreign_key IN (...) を発行し、メモリ上でマッピングする。
 
 - 戻り値によるチェーン:
   - ドット記法（posts.comments）のような文字列解析は行わない。
-  - include は 「ロードした子エンティティの配列」 を返す。 
+  - fill は 「ロードした子エンティティの配列」 を返す。 
   - ネストしたロードは、その戻り値を使ってユーザーが記述する。
 
 ```PHP
 // 1. Author -> Post をロード (戻り値でPost一覧を受け取る)
-$posts = $authorRepo->include($authors, 'posts');
+$posts = $authorRepo->fill($authors, 'posts');
 
 // 2. Post -> Comment をロード (フィルタリングなども可能)
-$postRepo->include($posts, 'comments');
+$postRepo->fill($posts, 'comments');
 ```
 
 ## 4. 全体アーキテクチャ構成
 ### コンポーネント
 
 1. Entity (POPO):
-  - データ保持のみ。#[Table], #[Column], #[HasMany] 等のAttributes記述。
+  - データ保持のみ。#[Table], #[Column], #[HasMany], #[ManyToMany] 等のAttributes記述。
 
 2. MetadataManager:
   - Reflectionを用いてAttributesを解析・キャッシュする。
@@ -111,14 +125,14 @@ $postRepo->include($posts, 'comments');
 4. GenericRepository (Base Class):
 
   - CRUD (save, find, delete)。 
-  - Batch Loading (include)。 
+  - Batch Loading (fill)。 
   - Escape Hatch (fetcher 委譲ロジック)。
 
 5. SpecificRepository:
 
   - ユーザー定義のリポジトリ。 
   - GenericRepository を継承。 
-  - 必要に応じて use HasManyToMany。 
+  - 必要に応じて use ManyToManyTrait。 
   - 複雑なクエリメソッドの実装。
 
 ## 5. 決定されたAPI仕様 (コード例)
@@ -128,11 +142,15 @@ $postRepo->include($posts, 'comments');
 ```PHP
 #[Entity]
 class Student {
-#[Id] public int $id;
+    #[Id] public int $id;
 
     // 多対多定義
-    #[ManyToMany(targetEntity: Course::class)]
-    #[JoinTable(name: 'student_course')]
+    #[ManyToMany(
+        targetEntity: Course::class,
+        joinTable: 'student_course',
+        foreignKey: 'student_id',
+        inverseForeignKey: 'course_id'
+    )]
     public array $courses;
 }
 ```
@@ -149,5 +167,5 @@ $studentRepo->sync($student, 'courses', [$course->id]);
 
 // 読み込み (Batch Loading)
 $students = $studentRepo->findAll();
-$courses = $studentRepo->include($students, 'courses'); // 戻り値でロード
+$courses = $studentRepo->fill($students, 'courses'); // 戻り値でロード
 ```
