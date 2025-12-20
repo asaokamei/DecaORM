@@ -30,12 +30,10 @@ class HasOne
     /**
      * @param string $targetEntity The target entity class name
      * @param string $mappedBy The property name on the inverse side (e.g., 'user')
-     * @param string $fetch Fetch strategy: 'LAZY' or 'EAGER' (default: 'LAZY')
      */
     public function __construct(
         public string $targetEntity,
-        public string $mappedBy,
-        public string $fetch = 'LAZY'
+        public string $mappedBy
     ) {
     }
 }
