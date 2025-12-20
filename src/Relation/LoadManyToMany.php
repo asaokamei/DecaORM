@@ -151,7 +151,7 @@ class LoadManyToMany
 
         // Set target entities for each source entity
         $allTargetEntities = [];
-        foreach ($entityMap as $entityId => $entityList) {
+        foreach ($entityMap as $entityId => $entity) {
             $relatedIds = $relatedIdsByEntityId[$entityId] ?? [];
             $targetsForEntity = [];
             foreach ($relatedIds as $relatedId) {
@@ -167,32 +167,19 @@ class LoadManyToMany
             // Users should explicitly call fill() on the inverse side if needed.
 
             // Set targets for all entities with this ID
-            foreach ($entityList as $entity) {
-                $entity->set($propertyName, $targetsForEntity);
-            }
+            $entity->set($propertyName, $targetsForEntity);
 
             $allTargetEntities = array_merge($allTargetEntities, $targetsForEntity);
         }
 
         // Set empty arrays for entities that had no related entities
-        foreach ($entities as $entity) {
-            if (!$entity->get($propertyName)) {
-                $entity->set($propertyName, []);
-            }
+        if (!$entity->get($propertyName)) {
+            $entity->set($propertyName, []);
         }
 
         // Remove duplicates based on entity ID
-        $uniqueTargetEntities = [];
-        $seenIds = [];
-        foreach ($allTargetEntities as $targetEntity) {
-            $id = $targetEntity->getId();
-            if ($id !== null && !isset($seenIds[$id])) {
-                $uniqueTargetEntities[] = $targetEntity;
-                $seenIds[$id] = true;
-            }
-        }
-
-        return $uniqueTargetEntities;
+        $uniqueTargetEntities = self::createEntityMap($allTargetEntities);
+        return array_values($uniqueTargetEntities);
     }
 
     /**

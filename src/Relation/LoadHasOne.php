@@ -154,7 +154,7 @@ class LoadHasOne
         
         // Set child for each parent entity and set bidirectional links
         $allChildren = [];
-        foreach ($parentMap as $parentId => $entities) {
+        foreach ($parentMap as $parentId => $entity) {
             $childrenForParent = $childrenByParentId[$parentId] ?? [];
             
             // HasOne should have at most one child
@@ -166,13 +166,11 @@ class LoadHasOne
             
             if ($child !== null) {
                 // Set bidirectional link (child -> parent)
-                $child->set($childProperty, $entities[0]);
+                $child->set($childProperty, $entity);
             }
             
             // Set child for all parent entities with this ID
-            foreach ($entities as $parentEntity) {
-                $parentEntity->set($parentProperty, $child);
-            }
+            $entity->set($parentProperty, $child);
             
             if ($child !== null) {
                 $allChildren[] = $child;

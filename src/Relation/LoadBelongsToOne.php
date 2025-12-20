@@ -171,16 +171,7 @@ class LoadBelongsToOne
         $foreignKey = $relation->foreignKey;
         
         // Create a map of parent ID => parent entity
-        $parentMap = [];
-        foreach ($loadedParents as $parent) {
-            $parentId = $parent->getId();
-            if ($parentId !== null) {
-                if (isset($parentMap[$parentId])) {
-                    throw new RuntimeException('BelongsToOne relation must have only one parent for ID: ' . $parentId);
-                }
-                $parentMap[$parentId] = $parent;
-            }
-        }
+        $parentMap = self::createEntityMap($loadedParents);
         
         // Set parent for each child entity
         $allParents = [];

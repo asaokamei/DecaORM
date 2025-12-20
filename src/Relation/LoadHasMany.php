@@ -158,18 +158,16 @@ class LoadHasMany
         
         // Set children for each parent entity and set bidirectional links
         $allChildren = [];
-        foreach ($parentMap as $parentId => $entities) {
+        foreach ($parentMap as $parentId => $entity) {
             $childrenForParent = $childrenByParentId[$parentId] ?? [];
             
             // Set bidirectional link (child -> parent)
             foreach ($childrenForParent as $child) {
-                $child->set($childProperty, $entities[0]);
+                $child->set($childProperty, $entity);
             }
             
             // Set children for all parent entities with this ID
-            foreach ($entities as $parentEntity) {
-                $parentEntity->set($parentProperty, $childrenForParent);
-            }
+            $entity->set($parentProperty, $childrenForParent);
             
             $allChildren = array_merge($allChildren, $childrenForParent);
         }
