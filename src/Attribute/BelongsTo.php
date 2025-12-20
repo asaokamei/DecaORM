@@ -26,13 +26,11 @@ class BelongsTo
      * @param string $targetEntity The target entity class name (e.g., User::class)
      * @param string $foreignKey The foreign key column name (e.g., 'user_id')
      * @param string|null $inversedBy The property name on the inverse side (for bidirectional relationships)
-     * @param string $fetch Fetch strategy: 'LAZY' or 'EAGER' (default: 'LAZY')
      */
     public function __construct(
         public string $targetEntity,
         public string $foreignKey,
-        public ?string $inversedBy = null,
-        public string $fetch = 'LAZY'
+        public ?string $inversedBy = null
     ) {
     }
 }

@@ -7,7 +7,7 @@ DecaORMは、PHP 8のアトリビュート（Attribute）を活用した、シ�
 
 *   **Attribute Mapping**: PHP 8のアトリビュート（`#[Table]`, `#[Column]`, `#[Id]`など）を使用して、マッピング情報をエンティティクラスに直接記述できます。
 *   **Repository Pattern**: データアクセスロジックをリポジトリに分離し、保守性の高いコードを実現します。
-*   **Relations**: `#[HasOne]`, `#[HasMany]`, `#[BelongsTo]`, `#[BelongsToOne]` アトリビュートによるリレーションシップ（1対1、1対多）をサポートしています。
+*   **Relations**: `#[HasOne]`, `#[HasMany]`, `#[BelongsTo]`, `#[BelongsToOne]`, `#[ManyToMany]` アトリビュートによるリレーションシップ（1対1、1対多、多対多）をサポートしています。
 *   **Batch Loading**: N+1問題を解決するためのバッチローディング機能を提供します。
 *   **Identity Map**: 同じ主キーを持つエンティティインスタンスが複数存在しないことを保証し、メモリ上の一意性を管理します。
 *   **Dirty Tracking**: エンティティの変更を追跡し、変更されたフィールドのみを更新することで、不要なUPDATEクエリを削減します。
@@ -205,6 +205,93 @@ foreach ($users as $user) {
 }
 ```
 
+#### ManyToManyリレーションの利用
+
+多対多のリレーションでは、中間テーブルを使用して関連付けを管理します。
+
+```php
+// Studentエンティティ
+#[Table(name: 'students')]
+class Student implements EntityInterface
+{
+    use EntityTrait;
+
+    #[Id]
+    #[GeneratedValue]
+    #[Column(name: 'student_id')]
+    public ?int $id = null;
+
+    #[Column(name: 'name')]
+    public string $name = '';
+
+    // ManyToManyリレーションの定義
+    #[ManyToMany(
+        targetEntity: Course::class,
+        joinTable: 'student_course',
+        foreignKey: 'student_id',
+        inverseForeignKey: 'course_id'
+    )]
+    public ?array $courses = null;
+}
+
+// Courseエンティティ
+#[Table(name: 'courses')]
+class Course implements EntityInterface
+{
+    use EntityTrait;
+
+    #[Id]
+    #[GeneratedValue]
+    #[Column(name: 'course_id')]
+    public ?int $id = null;
+
+    #[Column(name: 'name')]
+    public string $name = '';
+
+    #[ManyToMany(
+        targetEntity: Student::class,
+        joinTable: 'student_course',
+        foreignKey: 'course_id',
+        inverseForeignKey: 'student_id'
+    )]
+    public ?array $students = null;
+}
+```
+
+**ManyToManyリレーションの読み込み:**
+
+```php
+// 単一エンティティのリレーション読み込み
+$student = $studentRepo->findById(1);
+$studentRepo->fill($student, 'courses');
+
+// バッチローディング
+$students = $studentRepo->sqlQuery()
+    ->whereIn('student_id', [1, 2, 3])
+    ->getResult();
+$studentRepo->fill($students, 'courses');
+```
+
+**ManyToManyリレーションの同期:**
+
+リポジトリに`ManyToManyTrait`を使用することで、`syncManyToMany()`メソッドが利用できます。
+
+```php
+use WScore\DecaORM\Trait\ManyToManyTrait;
+
+class StudentRepository extends AbstractRepository
+{
+    use ManyToManyTrait;
+    // ...
+}
+
+// エンティティのリレーションプロパティに設定してから同期
+$student->set('courses', [$course1, $course2]);
+$studentRepo->syncManyToMany($student, 'courses');
+```
+
+`syncManyToMany()`は、エンティティのリレーションプロパティに設定されたエンティティの状態をデータベースに反映します。現在のDBの状態と比較し、必要なINSERT/DELETEを自動的に実行します。
+
 ### 5. エンティティの保存と依存性の管理
 
 DecaORMには**Unit of Work (UoW)**が実装されていません。そのため、エンティティを保存する際は、**依存性を考慮して適切な順番で保存する必要があります**。
@@ -285,7 +372,6 @@ try {
 
 ### サポートされていない機能
 
-*   **Many-to-Many リレーション**: 多対多のリレーションは現在サポートされていません。中間テーブルをエンティティとして定義し、2つの1対多リレーションとして実装する必要があります。
 *   **Unit of Work (UoW)**: エンティティの保存順序の自動解決や、変更の遅延書き込み（flush）は実装されていません。依存性を考慮して手動で保存順序を制御する必要があります。
 *   **カスケード削除**: 親エンティティを削除した際に、関連する子エンティティを自動的に削除する機能はありません。手動で削除する必要があります。
 *   **自動リレーション読み込み**: リレーションデータは自動的には読み込まれません。`fill()` メソッドを明示的に呼び出す必要があります。

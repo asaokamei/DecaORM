@@ -14,10 +14,12 @@ use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
+use WScore\DecaORM\Attribute\ManyToMany;
 use WScore\DecaORM\Relation\LoadBelongsTo;
 use WScore\DecaORM\Relation\LoadBelongsToOne;
 use WScore\DecaORM\Relation\LoadHasMany;
 use WScore\DecaORM\Relation\LoadHasOne;
+use WScore\DecaORM\Relation\LoadManyToMany;
 use WScore\DecaORM\Sql\Insert;
 use WScore\DecaORM\Sql\Query;
 use WScore\DecaORM\Sql\Update;
@@ -136,7 +138,7 @@ trait RepositoryTrait
     }
 
     /**
-     * @return HasMany|HasOne|BelongsTo|BelongsToOne|null
+     * @return HasMany|HasOne|BelongsTo|BelongsToOne|ManyToMany|null
      */
     public function getRelation(string $propertyName): mixed
     {
@@ -330,6 +332,8 @@ trait RepositoryTrait
             return LoadBelongsTo::load($entities, $relation, $targetRepo);
         } elseif ($relation instanceof BelongsToOne) {
             return LoadBelongsToOne::load($entities, $relation, $targetRepo);
+        } elseif ($relation instanceof ManyToMany) {
+            return LoadManyToMany::load($entities, $relation, $this, $targetRepo);
         } else {
             throw new RuntimeException('unknown relation: ' . get_class($relation));
         }

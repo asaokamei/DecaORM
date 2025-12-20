@@ -13,6 +13,7 @@ use WScore\DecaORM\Attribute\GeneratedValue;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Attribute\Id;
+use WScore\DecaORM\Attribute\ManyToMany;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\Attribute\UpdatedAt;
 
@@ -242,6 +243,9 @@ class AttributeHydrator implements HydratorInterface
                 $this->relations[$propertyName] = $instance;
                 $instance->propertyName = $propertyName;
             } elseif ($instance instanceof HasOne) {
+                $this->relations[$propertyName] = $instance;
+                $instance->propertyName = $propertyName;
+            } elseif ($instance instanceof ManyToMany) {
                 $this->relations[$propertyName] = $instance;
                 $instance->propertyName = $propertyName;
             }
