@@ -84,13 +84,15 @@ public ?User $user = null;
 public ?array $tags = null;
 ```
 
-**パラメータ（予定）:**
+**パラメータ:**
 - `targetEntity` (必須): 関連先のエンティティクラス名
 - `joinTable` (必須): 中間テーブル名
 - `foreignKey` (必須): この側の外部キーカラム名（中間テーブル内）
 - `inverseForeignKey` (必須): 相手側の外部キーカラム名（中間テーブル内）
-- `inversedBy` (オプション): 逆側のプロパティ名
+- `orderBy` (オプション): ソート順（例: 'created_at DESC'）
 - `fetch` (オプション): フェッチ戦略（'LAZY' または 'EAGER'、デフォルト: 'LAZY'）
+
+**注意:** ManyToManyリレーションでは、双方向リンクは自動的に設定されません。部分的なデータを設定することは誤解を招くため、必要に応じて明示的に`fill()`を呼び出してください。
 
 **使用例:**
 - Post が複数の Tag を持つ場合

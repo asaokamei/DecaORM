@@ -8,6 +8,7 @@ use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
+use WScore\DecaORM\Attribute\ManyToMany;
 use WScore\DecaORM\Sql\Delete;
 use WScore\DecaORM\Sql\Insert;
 use WScore\DecaORM\Sql\Query;
@@ -87,7 +88,7 @@ interface RepositoryInterface
 
     /**
      * Gets the relation for the given property name.
-     * @return HasMany|HasOne|BelongsTo|BelongsToOne|null
+     * @return HasMany|HasOne|BelongsTo|BelongsToOne|ManyToMany|null
      */
     public function getRelation(string $propertyName): mixed;
 

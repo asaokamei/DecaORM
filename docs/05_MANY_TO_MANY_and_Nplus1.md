@@ -62,7 +62,8 @@ UnitOfWorkを持たない環境下で、実用的な多対多の保存処理を�
 
 ```php
 // 利用イメージ
-$studentRepo->sync($student, 'courses', [101, 103]);
+$student->set('courses', [$course1, $course2]);
+$studentRepo->syncManyToMany($student, 'courses');
 ```
 
 ### 中間テーブルの扱い
@@ -163,7 +164,8 @@ $studentRepo->save($student);
 $courseRepo->save($course);
 
 // 紐付け (Sync)
-$studentRepo->sync($student, 'courses', [$course->id]);
+$student->set('courses', [$course]);
+$studentRepo->syncManyToMany($student, 'courses');
 
 // 読み込み (Batch Loading)
 $students = $studentRepo->findAll();
