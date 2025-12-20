@@ -26,6 +26,7 @@ class LoadHasOne
         ?RepositoryInterface $sourceRepository = null
     ): array {
 
+        $loader = null;
         // If loader is specified, use it instead of WHERE IN query
         if ($parentRelation->loader !== null) {
             if ($sourceRepository === null) {
@@ -40,13 +41,14 @@ class LoadHasOne
                     'Loader method "' . $parentRelation->loader . '" not found in repository: ' . $sourceRepository::class
                 );
             }
+            $loader = [$sourceRepository, $parentRelation->loader];
         }
 
         if (is_array($entities)) {
-            return self::loadBatch($entities, $parentRelation, $targetRepository, $sourceRepository);
+            return self::loadBatch($entities, $parentRelation, $targetRepository, $loader);
         }        
         // Single entity
-        return self::loadSingle($entities, $parentRelation, $targetRepository, $sourceRepository);
+        return self::loadSingle($entities, $parentRelation, $targetRepository, $loader);
     }
 
     /**
@@ -56,14 +58,14 @@ class LoadHasOne
         EntityInterface $parentEntity,
         HasOne $parentRelation,
         RepositoryInterface $targetRepository,
-        ?RepositoryInterface $sourceRepository = null
+        ?callable $loader = null
     ): array {
         $parentProperty = $parentRelation->propertyName;
         $childProperty = $parentRelation->mappedBy;
         $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
 
-        if ($parentRelation->loader !== null) {
-            $children = $sourceRepository->{$parentRelation->loader}($parentEntity);
+        if ($loader !== null) {
+            $children = call_user_func($loader, $parentEntity);
         } else {
             $children = $targetRepository->find($parentEntity->getId(), $childRelation->foreignKey);
         }
@@ -94,7 +96,7 @@ class LoadHasOne
         array $parentEntities,
         HasOne $parentRelation,
         RepositoryInterface $targetRepository,
-        ?RepositoryInterface $sourceRepository = null
+        ?callable $loader = null
     ): array {
         if (empty($parentEntities)) {
             return [];
@@ -102,7 +104,7 @@ class LoadHasOne
 
         // If loader is specified, use it instead of WHERE IN query
         if ($parentRelation->loader !== null) {
-            $children = $sourceRepository->{$parentRelation->loader}($parentEntities);
+            $children = call_user_func($loader, $parentEntities);
         } else {
             // Batch load all children using WHERE IN
             $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
