@@ -321,29 +321,32 @@ trait RepositoryTrait
      * 
      * @param EntityInterface|array<EntityInterface> $entities
      * @param string $relationName
-     * @return EntityInterface[] The loaded relation entities as an array.
+     * @return EntityCollection The loaded relation entities as a collection.
      */
-    public function fill(EntityInterface|array $entities, string $relationName): array
+    public function fill(EntityInterface|array $entities, string $relationName): EntityCollection
     {
         $relation = $this->hydrator->getRelation($relationName);
         $targetRepo = $this->getRepository($relation->targetEntity);
-        
+
+        $results = [];
         // Use standard loading (loader is handled inside LoadHasMany/LoadHasOne if specified)
         if ($relation instanceof HasMany) {
-            return LoadHasMany::load($entities, $relation, $targetRepo, $this);
+            $results = LoadHasMany::load($entities, $relation, $targetRepo, $this);
         } elseif ($relation instanceof HasOne) {
-            return LoadHasOne::load($entities, $relation, $targetRepo, $this);
+            $results = LoadHasOne::load($entities, $relation, $targetRepo, $this);
         } elseif ($relation instanceof BelongsTo) {
-            return LoadBelongsTo::load($entities, $relation, $targetRepo);
+            $results = LoadBelongsTo::load($entities, $relation, $targetRepo);
         } elseif ($relation instanceof BelongsToOne) {
-            return LoadBelongsToOne::load($entities, $relation, $targetRepo);
+            $results = LoadBelongsToOne::load($entities, $relation, $targetRepo);
         } elseif ($relation instanceof ManyToMany) {
-            return LoadManyToMany::load($entities, $relation, $this, $targetRepo);
+            $results = LoadManyToMany::load($entities, $relation, $this, $targetRepo);
         } elseif ($relation instanceof CustomLoader) {
-            return LoadCustomLoader::load($entities, $relation, $this);
+            $results = LoadCustomLoader::load($entities, $relation, $this);
         } else {
             throw new RuntimeException('unknown relation: ' . get_class($relation));
         }
+
+        return new EntityCollection($targetRepo, $results);
     }
 
 }

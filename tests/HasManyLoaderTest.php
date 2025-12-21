@@ -199,7 +199,6 @@ class HasManyLoaderTest extends TestCase
         $tasks = $this->projectRepo->fill($project, 'recentTasks');
 
         // Verify return value
-        $this->assertIsArray($tasks);
         $this->assertCount(1, $tasks);
         $this->assertInstanceOf(TaskWithDate::class, $tasks[0]);
         $this->assertEquals('Recent Task', $tasks[0]->get('title'));
@@ -263,7 +262,6 @@ class HasManyLoaderTest extends TestCase
         $tasks = $this->projectRepo->fill($projects, 'recentTasks');
 
         // Verify return value
-        $this->assertIsArray($tasks);
         $this->assertCount(3, $tasks); // 2 from project1, 1 from project2
 
         // Verify recentTasks are set on entities
@@ -315,7 +313,6 @@ class HasManyLoaderTest extends TestCase
         $tasks = $this->projectRepo->fill($project, 'recentTasks');
 
         // Verify return value
-        $this->assertIsArray($tasks);
         $this->assertCount(0, $tasks);
 
         // Verify empty array is set on entity
@@ -339,7 +336,6 @@ class HasManyLoaderTest extends TestCase
         $tasks = $this->projectRepo->fill($project, 'recentTasks');
 
         // Verify return value
-        $this->assertIsArray($tasks);
         $this->assertCount(0, $tasks);
 
         // Verify empty array is set on entity
@@ -390,7 +386,7 @@ class HasManyLoaderTest extends TestCase
         // Verify only recent tasks (within 7 days) are returned
         $this->assertCount(2, $tasks);
         
-        $titles = array_map(fn($t) => $t->get('title'), $tasks);
+        $titles = $tasks->getValues('title');
         $this->assertContains('Very Recent', $titles);
         $this->assertContains('Recent', $titles);
         $this->assertNotContains('Just Old', $titles);

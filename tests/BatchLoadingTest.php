@@ -5,6 +5,7 @@ namespace WScore\DecaORM\Tests;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Tests\Users\Container;
 use WScore\DecaORM\Tests\Users\Post;
 use WScore\DecaORM\Tests\Users\PostsRepository;
@@ -113,8 +114,8 @@ class BatchLoadingTest extends TestCase
         $posts = $this->userRepo->fill($users, 'posts');
 
         // Verify return value
-        $this->assertIsArray($posts);
-        $this->assertCount(3, $posts);
+        $this->assertIsArray($posts->getEntities());
+        $this->assertEquals(3, $posts->count());
 
         // Verify posts are set on entities
         $user1Posts = $users[0]->get('posts');
@@ -167,8 +168,8 @@ class BatchLoadingTest extends TestCase
         $profiles = $this->userRepo->fill($users, 'profile');
 
         // Verify return value
-        $this->assertIsArray($profiles);
-        $this->assertCount(2, $profiles);
+        $this->assertIsArray($profiles->getEntities());
+        $this->assertCount(2, $profiles->getEntities());
 
         // Verify profiles are set on entities
         $user1Profile = $users[0]->get('profile');
@@ -215,8 +216,8 @@ class BatchLoadingTest extends TestCase
         $users = $this->postsRepo->fill($posts, 'user');
 
         // Verify return value
-        $this->assertIsArray($users);
-        $this->assertCount(2, $users);
+        $this->assertIsArray($users->getEntities());
+        $this->assertCount(2, $users->getEntities());
 
         // Verify users are set on entities
         $post1User = $posts[0]->get('user');
@@ -231,8 +232,8 @@ class BatchLoadingTest extends TestCase
     public function testBatchLoadWithEmptyArray(): void
     {
         $result = $this->userRepo->fill([], 'posts');
-        $this->assertIsArray($result);
-        $this->assertCount(0, $result);
+        $this->assertIsArray($result->getEntities());
+        $this->assertCount(0, $result->getEntities());
     }
 
     public function testBatchLoadWithNoRelations(): void
@@ -259,8 +260,8 @@ class BatchLoadingTest extends TestCase
         $posts = $this->userRepo->fill($users, 'posts');
 
         // Verify return value
-        $this->assertIsArray($posts);
-        $this->assertCount(0, $posts);
+        $this->assertIsArray($posts->getEntities());
+        $this->assertCount(0, $posts->getEntities());
 
         // Verify empty arrays are set on entities
         $user1Posts = $users[0]->get('posts');
@@ -312,7 +313,7 @@ class BatchLoadingTest extends TestCase
         $this->assertCount(1, $users[1]->get('posts'));
 
         // Now load users for posts (this is the chaining use case)
-        $loadedUsers = $this->postsRepo->fill($posts, 'user');
+        $loadedUsers = $posts->fill('user');
         $this->assertCount(2, $loadedUsers);
 
         // Verify users are set on posts
@@ -346,8 +347,8 @@ class BatchLoadingTest extends TestCase
         $posts = $this->userRepo->fill($user, 'posts');
 
         // Verify return value
-        $this->assertIsArray($posts);
-        $this->assertCount(2, $posts);
+        $this->assertIsArray($posts->getEntities());
+        $this->assertCount(2, $posts->getEntities());
 
         // Verify posts are set on entity
         $userPosts = $user->get('posts');

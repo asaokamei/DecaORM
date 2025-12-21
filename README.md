@@ -205,6 +205,18 @@ foreach ($users as $user) {
 }
 ```
 
+#### Collectionオブジェクトの利用
+
+複雑な条件で複数のエンティティを取得するためにCollectionオブジェクトが用意されている。また、Collectionオブジェクトからは、バッチローディングを簡単に行う機能が用意されている。
+
+```php
+// Collectionオブジェクト
+$users = $userRepo->sqlQuery()->...->getCollection();
+// リレーションを読み込む
+$posts = $users->fill('posts');
+$comments = $posts->fill('comments');
+```
+
 #### ManyToManyリレーションの利用
 
 多対多のリレーションでは、中間テーブルを使用して関連付けを管理します。

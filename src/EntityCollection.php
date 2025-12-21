@@ -27,8 +27,10 @@ class EntityCollection implements IteratorAggregate, Countable, ArrayAccess
     {
         $relatedEntities = [];
         foreach (array_chunk($this->entities, $chunkSize) as $chunk) {
-            $relatedEntities = array_merge($relatedEntities, $this->repository->fill($chunk, $propertyName));
+            $collection = $this->repository->fill($chunk, $propertyName);
+            $relatedEntities = array_merge($relatedEntities, $collection->getEntities());
         }
+
 
         $uniqueEntity = [];
         foreach ($relatedEntities as $entity) {

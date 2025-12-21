@@ -83,9 +83,6 @@ class CustomLoaderTest extends TestCase
         // Load tasks using CustomLoader
         $tasks = $this->projectRepo->fill($project, 'tasks');
 
-        // Verify return value (may be empty if mapping is done internally)
-        $this->assertIsArray($tasks);
-
         // Verify tasks are set on entity
         $projectTasks = $project->get('tasks');
         $this->assertIsArray($projectTasks);
@@ -137,9 +134,6 @@ class CustomLoaderTest extends TestCase
         // Batch load tasks using CustomLoader
         $tasks = $this->projectRepo->fill($projects, 'tasks');
 
-        // Verify return value
-        $this->assertIsArray($tasks);
-
         // Verify tasks are set on entities
         $project1Tasks = $projects[0]->get('tasks');
         $this->assertIsArray($project1Tasks);
@@ -167,9 +161,6 @@ class CustomLoaderTest extends TestCase
         // Load tasks using CustomLoader
         $tasks = $this->projectRepo->fill($project, 'tasks');
 
-        // Verify return value
-        $this->assertIsArray($tasks);
-
         // Verify empty array is set on entity
         $projectTasks = $project->get('tasks');
         $this->assertIsArray($projectTasks);
@@ -180,8 +171,7 @@ class CustomLoaderTest extends TestCase
     {
         // Test with empty array - should return empty array without error
         $result = $this->projectRepo->fill([], 'tasks');
-        $this->assertIsArray($result);
-        $this->assertCount(0, $result);
+        $this->assertCount(0, $result->getEntities());
     }
 
     public function testCustomLoaderWithInvalidMethod(): void
@@ -237,7 +227,6 @@ class CustomLoaderTest extends TestCase
         $tasks = $repo->fill($project, 'tasks');
 
         // Verify return value
-        $this->assertIsArray($tasks);
         $this->assertCount(1, $tasks);
         $this->assertInstanceOf(Task::class, $tasks[0]);
 
