@@ -19,7 +19,7 @@ use WScore\DecaORM\Attribute\ManyToMany;
 use WScore\DecaORM\DirtyTracker;
 use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
-use WScore\DecaORM\EntityInterface as T;
+use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\HydratorInterface;
 use WScore\DecaORM\Relation\LoadBelongsTo;
 use WScore\DecaORM\Relation\LoadBelongsToOne;
@@ -35,7 +35,7 @@ use WScore\DecaORM\Sql\Update;
 use WScore\DecaORM\Sql\Delete;
 
 /**
- * @template T of T
+ * @template T of EntityInterface
  */
 trait RepositoryTrait
 {
@@ -132,7 +132,7 @@ trait RepositoryTrait
         return $list;
     }
 
-    public function getRepository(string|T $entity): ?RepositoryInterface
+    public function getRepository(string|EntityInterface $entity): ?RepositoryInterface
     {
         if (!method_exists($entity, 'getRepositoryClass')) {
             throw new RuntimeException('no repository class defined for entity: ' . $entity);
@@ -159,7 +159,7 @@ trait RepositoryTrait
     /**
      * Insert an entity
      */
-    public function insertEntity(T $entity): void
+    public function insertEntity(EntityInterface $entity): void
     {
         if ($this->hydrator->isPkAutoNumber()) {
             if ($entity->getId() !== null) {
@@ -204,7 +204,7 @@ trait RepositoryTrait
         return $insert;
     }
 
-    protected function fillAllForeignKeys(T $entity): void
+    protected function fillAllForeignKeys(EntityInterface $entity): void
     {
         foreach ($this->hydrator->getRelations() as $relation) {
             if (!($relation instanceof HasMany || $relation instanceof HasOne)) {
@@ -240,7 +240,7 @@ trait RepositoryTrait
             $childForeignKey = $childRel->foreignKey ?? null;
 
             foreach ($children as $child) {
-                if (!$child instanceof T) {
+                if (!$child instanceof EntityInterface) {
                     continue; // ignore invalid child
                 }
                 $child->set($childBackRefProperty, $entity);
@@ -256,7 +256,7 @@ trait RepositoryTrait
     /**
      * Update an entity
      */
-    public function updateEntity(T $entity): void
+    public function updateEntity(EntityInterface $entity): void
     {
         $id = $entity->getId();
         if ($id === null) {
@@ -301,7 +301,7 @@ trait RepositoryTrait
     /**
      * Delete an entity
      */
-    public function deleteEntity(T $entity): void
+    public function deleteEntity(EntityInterface $entity): void
     {
         $id = $entity->getId();
         if ($id === null) {
@@ -325,11 +325,11 @@ trait RepositoryTrait
     /**
      * Fills the specified relation for the given entity or entities.
      * 
-     * @param T|T $entities
+     * @param T|T[] $entities
      * @param string $relationName
      * @return EntityCollection The loaded relation entities as a collection.
      */
-    public function fill(T|array $entities, string $relationName): EntityCollection
+    public function fill(EntityInterface|array $entities, string $relationName): EntityCollection
     {
         $relation = $this->hydrator->getRelation($relationName);
         $targetRepo = $this->getRepository($relation->targetEntity);
