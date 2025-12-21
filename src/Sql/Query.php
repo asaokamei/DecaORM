@@ -3,6 +3,7 @@
 namespace WScore\DecaORM\Sql;
 
 use Countable;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\RepositoryInterface;
 
@@ -68,4 +69,11 @@ class Query extends QueryBuilder implements Countable
         }
         return count($this->found);
     }
+
+    public function getCollection(): EntityCollection
+    {
+        $entities = $this->getResult();
+        return new EntityCollection($this->repository, $entities);
+    }
+
 }

@@ -128,11 +128,10 @@ trait RepositoryTrait
 
     public function getRepository(string|EntityInterface $entity): ?RepositoryInterface
     {
-        $repoName = $entity::getRepositoryClass();
-        if (!$this->container->has($repoName)) {
-            throw new RuntimeException('no such repository: ' . $repoName);
+        if (!method_exists($entity, 'getRepositoryClass')) {
+            throw new RuntimeException('no repository class defined for entity: ' . $entity);
         }
-        /** @var RepositoryInterface $childRepo */
+        $repoName = $entity::getRepositoryClass();
         try {
             return $this->container->get($repoName);
         } catch (NotFoundExceptionInterface) {
