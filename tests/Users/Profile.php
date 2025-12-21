@@ -8,7 +8,7 @@ use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\EntityTrait;
+use WScore\DecaORM\Trait\EntityTrait;
 
 #[Table(name: 'profiles')]
 #[Repository(ProfileRepository::class)]

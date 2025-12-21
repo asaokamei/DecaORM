@@ -2,6 +2,8 @@
 
 namespace WScore\DecaORM;
 
+use WScore\DecaORM\Trait\RepositoryTrait;
+
 /**
  * @template T of EntityInterface
  */

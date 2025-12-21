@@ -17,6 +17,7 @@ use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\ManyToMany;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\Attribute\UpdatedAt;
+use WScore\DecaORM\Trait\HydratorTrait;
 
 /**
  * Attribute-based Hydrator implementation

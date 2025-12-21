@@ -14,7 +14,7 @@ use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\EntityTrait;
+use WScore\DecaORM\Trait\EntityTrait;
 use WScore\DecaORM\Tests\Users\Container;
 
 // Test entities for HasMany::loader

@@ -44,7 +44,7 @@ use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\EntityTrait;
+use WScore\DecaORM\Trait\EntityTrait;
 
 #[Table(name: 'users')]
 #[Repository(UserRepository::class)]
@@ -78,7 +78,7 @@ use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\EntityTrait;
+use WScore\DecaORM\Trait\EntityTrait;
 
 #[Table(name: 'posts')]
 #[Repository(PostRepository::class)]

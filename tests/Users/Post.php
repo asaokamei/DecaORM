@@ -12,7 +12,7 @@ use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\Attribute\UpdatedAt;
 use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\EntityTrait;
+use WScore\DecaORM\Trait\EntityTrait;
 
 /**
  * Postエンティティ - Userに対するOneToManyの子エンティティ

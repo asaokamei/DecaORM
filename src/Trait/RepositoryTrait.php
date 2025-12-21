@@ -1,6 +1,6 @@
 <?php
 
-namespace WScore\DecaORM;
+namespace WScore\DecaORM\Trait;
 
 use DateTimeInterface;
 use PDO;
@@ -16,6 +16,11 @@ use WScore\DecaORM\Attribute\CustomLoader;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Attribute\ManyToMany;
+use WScore\DecaORM\DirtyTracker;
+use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\EntityCollection;
+use WScore\DecaORM\EntityInterface as T;
+use WScore\DecaORM\HydratorInterface;
 use WScore\DecaORM\Relation\LoadBelongsTo;
 use WScore\DecaORM\Relation\LoadBelongsToOne;
 use WScore\DecaORM\Relation\LoadCustomLoader;
@@ -23,13 +28,14 @@ use WScore\DecaORM\Relation\LoadHasMany;
 use WScore\DecaORM\Relation\LoadHasOne;
 use WScore\DecaORM\Relation\LoadManyToMany;
 use WScore\DecaORM\Relation\RelationTrait;
+use WScore\DecaORM\RepositoryInterface;
 use WScore\DecaORM\Sql\Insert;
 use WScore\DecaORM\Sql\Query;
 use WScore\DecaORM\Sql\Update;
 use WScore\DecaORM\Sql\Delete;
 
 /**
- * @template T of EntityInterface
+ * @template T of T
  */
 trait RepositoryTrait
 {
@@ -126,7 +132,7 @@ trait RepositoryTrait
         return $list;
     }
 
-    public function getRepository(string|EntityInterface $entity): ?RepositoryInterface
+    public function getRepository(string|T $entity): ?RepositoryInterface
     {
         if (!method_exists($entity, 'getRepositoryClass')) {
             throw new RuntimeException('no repository class defined for entity: ' . $entity);
@@ -153,7 +159,7 @@ trait RepositoryTrait
     /**
      * Insert an entity
      */
-    public function insertEntity(EntityInterface $entity): void
+    public function insertEntity(T $entity): void
     {
         if ($this->hydrator->isPkAutoNumber()) {
             if ($entity->getId() !== null) {
@@ -198,7 +204,7 @@ trait RepositoryTrait
         return $insert;
     }
 
-    protected function fillAllForeignKeys(EntityInterface $entity): void
+    protected function fillAllForeignKeys(T $entity): void
     {
         foreach ($this->hydrator->getRelations() as $relation) {
             if (!($relation instanceof HasMany || $relation instanceof HasOne)) {
@@ -234,7 +240,7 @@ trait RepositoryTrait
             $childForeignKey = $childRel->foreignKey ?? null;
 
             foreach ($children as $child) {
-                if (!$child instanceof EntityInterface) {
+                if (!$child instanceof T) {
                     continue; // ignore invalid child
                 }
                 $child->set($childBackRefProperty, $entity);
@@ -250,7 +256,7 @@ trait RepositoryTrait
     /**
      * Update an entity
      */
-    public function updateEntity(EntityInterface $entity): void
+    public function updateEntity(T $entity): void
     {
         $id = $entity->getId();
         if ($id === null) {
@@ -295,7 +301,7 @@ trait RepositoryTrait
     /**
      * Delete an entity
      */
-    public function deleteEntity(EntityInterface $entity): void
+    public function deleteEntity(T $entity): void
     {
         $id = $entity->getId();
         if ($id === null) {
@@ -319,11 +325,11 @@ trait RepositoryTrait
     /**
      * Fills the specified relation for the given entity or entities.
      * 
-     * @param EntityInterface|array<EntityInterface> $entities
+     * @param T|T $entities
      * @param string $relationName
      * @return EntityCollection The loaded relation entities as a collection.
      */
-    public function fill(EntityInterface|array $entities, string $relationName): EntityCollection
+    public function fill(T|array $entities, string $relationName): EntityCollection
     {
         $relation = $this->hydrator->getRelation($relationName);
         $targetRepo = $this->getRepository($relation->targetEntity);

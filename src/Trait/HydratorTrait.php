@@ -1,6 +1,9 @@
 <?php
 
-namespace WScore\DecaORM;
+namespace WScore\DecaORM\Trait;
+
+use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\EntityInterface;
 
 trait HydratorTrait
 {
