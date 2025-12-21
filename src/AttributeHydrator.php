@@ -8,6 +8,7 @@ use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\Column;
 use WScore\DecaORM\Attribute\CreatedAt;
+use WScore\DecaORM\Attribute\CustomLoader;
 use WScore\DecaORM\Attribute\Entity;
 use WScore\DecaORM\Attribute\GeneratedValue;
 use WScore\DecaORM\Attribute\HasMany;
@@ -16,6 +17,7 @@ use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\ManyToMany;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\Attribute\UpdatedAt;
+use WScore\DecaORM\Trait\HydratorTrait;
 
 /**
  * Attribute-based Hydrator implementation
@@ -246,6 +248,9 @@ class AttributeHydrator implements HydratorInterface
                 $this->relations[$propertyName] = $instance;
                 $instance->propertyName = $propertyName;
             } elseif ($instance instanceof ManyToMany) {
+                $this->relations[$propertyName] = $instance;
+                $instance->propertyName = $propertyName;
+            } elseif ($instance instanceof CustomLoader) {
                 $this->relations[$propertyName] = $instance;
                 $instance->propertyName = $propertyName;
             }

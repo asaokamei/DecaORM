@@ -90,7 +90,6 @@ class ManyToManyTest extends TestCase
         $courses = $this->studentRepo->fill($student, 'courses');
 
         // Verify return value
-        $this->assertIsArray($courses);
         $this->assertCount(2, $courses);
 
         // Verify courses are set on student
@@ -99,11 +98,11 @@ class ManyToManyTest extends TestCase
         $this->assertCount(2, $studentCourses);
 
         // Verify course details
-        $courseIds = array_map(fn($course) => $course->getId(), $courses);
+        $courseIds = $courses->getIds();
         $this->assertContains($course1->getId(), $courseIds);
         $this->assertContains($course2->getId(), $courseIds);
 
-        $courseNames = array_map(fn($course) => $course->get('name'), $courses);
+        $courseNames = $courses->getValues('name');
         $this->assertContains('Mathematics', $courseNames);
         $this->assertContains('Physics', $courseNames);
     }
@@ -138,7 +137,6 @@ class ManyToManyTest extends TestCase
         $students = $this->courseRepo->fill($course, 'students');
 
         // Verify return value
-        $this->assertIsArray($students);
         $this->assertCount(2, $students);
 
         // Verify students are set on course
@@ -147,7 +145,7 @@ class ManyToManyTest extends TestCase
         $this->assertCount(2, $courseStudents);
 
         // Verify student details
-        $studentIds = array_map(fn($student) => $student->getId(), $students);
+        $studentIds = $students->getIds();
         $this->assertContains($student1->getId(), $studentIds);
         $this->assertContains($student2->getId(), $studentIds);
     }
@@ -163,7 +161,6 @@ class ManyToManyTest extends TestCase
         $courses = $this->studentRepo->fill($student, 'courses');
 
         // Verify empty array is returned
-        $this->assertIsArray($courses);
         $this->assertCount(0, $courses);
 
         // Verify empty array is set on student
@@ -270,7 +267,6 @@ class ManyToManyTest extends TestCase
         $courses = $this->studentRepo->fill([$student1, $student2], 'courses');
 
         // Verify return value contains all courses
-        $this->assertIsArray($courses);
         $this->assertGreaterThanOrEqual(3, count($courses)); // At least 3 unique courses
 
         // Verify student1 has correct courses

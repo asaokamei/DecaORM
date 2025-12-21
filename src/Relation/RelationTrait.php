@@ -18,23 +18,31 @@ trait RelationTrait
      * @return array{0: array<int|string>, 1: array<int|string, array<EntityInterface>>}
      *         Returns [ids, idMap] where ids is array of unique IDs and idMap is ID => [entities]
      */
+    /**
+     * Collect entity IDs and create a map of ID => entity.
+     * Skips entities with null IDs.
+     *
+     * @param array<EntityInterface> $entities
+     * @return array{0: array<int|string>, 1: array<int|string, EntityInterface>}
+     *         Returns [ids, idMap] where ids is array of unique IDs and idMap is ID => entity
+     */
     protected static function collectEntityIds(array $entities): array
     {
         $ids = [];
-        $idMap = []; // id => [entities with this id]
-        
+        $idMap = []; // id => entity
+
         foreach ($entities as $entity) {
             $id = $entity->getId();
             if ($id === null) {
                 continue; // Skip entities without ID
             }
             if (!isset($idMap[$id])) {
-                $idMap[$id] = [];
                 $ids[] = $id;
+                $idMap[$id] = $entity;
             }
-            $idMap[$id][] = $entity;
+            // If duplicate IDs exist, keep the first encountered entity instance.
         }
-        
+
         return [$ids, $idMap];
     }
 

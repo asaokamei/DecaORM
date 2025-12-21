@@ -121,7 +121,6 @@ class HasOneTest extends TestCase
         $users = $this->profileRepo->fill($profile, 'user');
 
         // Verify return value
-        $this->assertIsArray($users);
         $this->assertCount(1, $users);
 
         // Verify user is set on profile
@@ -173,8 +172,7 @@ class HasOneTest extends TestCase
         $users = $this->profileRepo->fill($profiles, 'user');
 
         // Verify return value
-        $this->assertIsArray($users);
-        $this->assertCount(2, $users);
+       $this->assertCount(2, $users);
 
         // Verify users are set on profiles
         $profile1User = $profiles[0]->get('user');
@@ -212,7 +210,6 @@ class HasOneTest extends TestCase
         $users = $this->profileRepo->fill($profile, 'user');
 
         // Verify return value
-        $this->assertIsArray($users);
         $this->assertCount(0, $users);
 
         // Should be null if user doesn't exist

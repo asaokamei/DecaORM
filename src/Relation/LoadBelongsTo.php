@@ -88,37 +88,50 @@ class LoadBelongsTo
         }
 
         // Batch load all parents using WHERE IN
-        $allParents = [];
         $query = $targetRepository->sqlQuery()
             ->whereIn($primaryKey, $parentIds);
         $parents = $query->getResult();
 
-        // Create a map of parentId => parent entity
-        $parentMap = [];
-        foreach ($parents as $parent) {
-            $parentId = $parent->getId();
-            if ($parentId !== null) {
-                if (isset($parentMap[$parentId])) {
-                    throw new RuntimeException('BelongsTo relation must have only one parent for ID: ' . $parentId);
-                }
-                $parentMap[$parentId] = $parent;
-            }
-        }
+        // Use applyLoaderResult to map parents to children
+        return self::applyLoaderResult($childEntities, $parents, $childRelation, $targetRepository);
+    }
 
+    /**
+     * Apply loader result for BelongsTo relation.
+     * Maps loaded parent entities to child entities using foreign key.
+     * 
+     * @param EntityInterface|array<EntityInterface> $childEntities
+     * @param array<EntityInterface> $loadedParents
+     * @param BelongsTo $relation
+     * @param RepositoryInterface $targetRepository
+     * @return EntityInterface[] All loaded parent entities
+     */
+    public static function applyLoaderResult(
+        EntityInterface|array $childEntities,
+        array $loadedParents,
+        BelongsTo $relation,
+        RepositoryInterface $targetRepository
+    ): array {
+        $childEntities = is_array($childEntities) ? $childEntities : [$childEntities];
+        $childProperty = $relation->propertyName;
+        $foreignKey = $relation->foreignKey;
+        
+        // Create a map of parent ID => parent entity
+        $parentMap = self::createEntityMap($loadedParents);
+        
         // Set parent for each child entity
         // Note: BelongsTo does not set child on parent (parent may have HasMany, which is dangerous)
-        foreach ($childrenByParentId as $parentId => $children) {
-            $parent = $parentMap[$parentId] ?? null;
-            
-            foreach ($children as $childEntity) {
-                $childEntity->set($childProperty, $parent);
-            }
-
-            if ($parent !== null) {
-                $allParents[] = $parent;
+        $allParents = [];
+        foreach ($childEntities as $childEntity) {
+            $parentId = $childEntity->get($foreignKey);
+            if ($parentId !== null && isset($parentMap[$parentId])) {
+                $childEntity->set($childProperty, $parentMap[$parentId]);
+                $allParents[] = $parentMap[$parentId];
+            } else {
+                $childEntity->set($childProperty, null);
             }
         }
-
-        return $allParents;
+        
+        return array_unique($allParents, SORT_REGULAR);
     }
 }

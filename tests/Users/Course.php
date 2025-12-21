@@ -9,7 +9,7 @@ use WScore\DecaORM\Attribute\ManyToMany;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\EntityTrait;
+use WScore\DecaORM\Trait\EntityTrait;
 
 #[Table(name: 'courses')]
 #[Repository(CourseRepository::class)]

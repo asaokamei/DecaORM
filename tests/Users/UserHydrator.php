@@ -4,7 +4,7 @@ namespace WScore\DecaORM\Tests\Users;
 
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\HydratorInterface;
-use WScore\DecaORM\HydratorTrait;
+use WScore\DecaORM\Trait\HydratorTrait;
 
 class UserHydrator implements HydratorInterface
 {

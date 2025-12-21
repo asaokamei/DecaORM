@@ -44,7 +44,7 @@ use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\EntityTrait;
+use WScore\DecaORM\Trait\EntityTrait;
 
 #[Table(name: 'users')]
 #[Repository(UserRepository::class)]
@@ -78,7 +78,7 @@ use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\EntityTrait;
+use WScore\DecaORM\Trait\EntityTrait;
 
 #[Table(name: 'posts')]
 #[Repository(PostRepository::class)]
@@ -195,7 +195,10 @@ $users = $userRepo->sqlQuery()
     ->getResult();
 
 // 一度のクエリで全ユーザーの投稿を読み込む（N+1問題を回避）
-$userRepo->fill($users, 'posts');
+$posts = $userRepo->fill($users, 'posts');
+
+// $post はEntityCollection
+$titles = $posts->map(fn($e) => $e->get('title'));
 
 // 各ユーザーの投稿にアクセス
 foreach ($users as $user) {
@@ -203,6 +206,20 @@ foreach ($users as $user) {
         echo $post->title;
     }
 }
+```
+
+#### Collectionオブジェクトの利用
+
+複雑な条件で複数のエンティティを取得するためにCollectionオブジェクトが用意されている。また、Collectionオブジェクトからは、バッチローディングを簡単に行う機能が用意されている。
+
+```php
+// Collectionオブジェクト
+$users = $userRepo->sqlQuery()->...->getCollection();
+// リレーションを読み込む
+$posts = $users->fill('posts');
+$comments = $posts->fill('comments');
+// エンティティの保存など
+$posts->save();
 ```
 
 #### ManyToManyリレーションの利用
