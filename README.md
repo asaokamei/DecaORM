@@ -195,7 +195,10 @@ $users = $userRepo->sqlQuery()
     ->getResult();
 
 // 一度のクエリで全ユーザーの投稿を読み込む（N+1問題を回避）
-$userRepo->fill($users, 'posts');
+$posts = $userRepo->fill($users, 'posts');
+
+// $post はEntityCollection
+$titles = $posts->map(fn($e) => $e->get('title'));
 
 // 各ユーザーの投稿にアクセス
 foreach ($users as $user) {
@@ -215,6 +218,8 @@ $users = $userRepo->sqlQuery()->...->getCollection();
 // リレーションを読み込む
 $posts = $users->fill('posts');
 $comments = $posts->fill('comments');
+// エンティティの保存など
+$posts->save();
 ```
 
 #### ManyToManyリレーションの利用
