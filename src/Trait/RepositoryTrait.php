@@ -93,15 +93,12 @@ trait RepositoryTrait
         if (!$stmt) {
             return [];
         }
-        $list = $stmt->fetchAll(PDO::FETCH_CLASS, $this->hydrator->getEntityClass());
-        foreach ($list as $idx => $entity) {
-            $entity = EntityCache::cache($entity);
-            $list[$idx] = $entity;
-
-            // DirtyTracking: DBから取得した直後の状態をスナップショットとして記録
+        $list = [];
+        foreach ($stmt as $item) {
+            $entity = $this->hydrator->hydrate($item);
             DirtyTracker::takeEntity($this->hydrator, $entity);
+            $list[] = $entity;
         }
-
         return $list;
     }
 
@@ -334,7 +331,6 @@ trait RepositoryTrait
         $relation = $this->hydrator->getRelation($relationName);
         $targetRepo = $this->getRepository($relation->targetEntity);
 
-        $results = [];
         // Use standard loading (loader is handled inside LoadHasMany/LoadHasOne if specified)
         if ($relation instanceof HasMany) {
             $results = LoadHasMany::load($entities, $relation, $targetRepo, $this);

@@ -68,7 +68,9 @@ class LoadHasMany
         } else {
             // Find posts by foreign key
             $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
-            $children = $targetRepository->find($parentEntity->getId(), $childRelation->foreignKey, $parentRelation->orderBy);
+            $foreignKey = $targetRepository->getHydrator()->getColumnNameForProperty($childRelation->foreignKey)
+                ?? $childRelation->foreignKey;
+            $children = $targetRepository->find($parentEntity->getId(), $foreignKey, $parentRelation->orderBy);
         }
         if (empty($children)) {
             $parentEntity->set($parentProperty, []);
@@ -86,11 +88,11 @@ class LoadHasMany
 
     /**
      * Batch load HasMany relations for multiple entities.
-     * 
+     *
      * @param array<EntityInterface> $parentEntities
      * @param HasMany $parentRelation
      * @param RepositoryInterface $targetRepository
-     * @param RepositoryInterface|null $sourceRepository The repository for the source entities (needed for loader)
+     * @param callable|null $loader
      * @return EntityInterface[] All loaded children entities
      */
     public static function loadBatch(
@@ -109,9 +111,11 @@ class LoadHasMany
         } else {
             // Batch load all children using WHERE IN
             $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
-            [$parentIds, $parentMap] = self::collectEntityIds($parentEntities);
-                $query = $targetRepository->sqlQuery()
-                ->whereIn($childRelation->foreignKey, $parentIds);
+            [$parentIds, ] = self::collectEntityIds($parentEntities);
+            $foreignKey = $targetRepository->getHydrator()->getColumnNameForProperty($childRelation->foreignKey)
+                ?? $childRelation->foreignKey;
+            $query = $targetRepository->sqlQuery()
+                ->whereIn($foreignKey, $parentIds);
             if ($parentRelation->orderBy !== null) {
                 $query->orderBy($parentRelation->orderBy);
             }

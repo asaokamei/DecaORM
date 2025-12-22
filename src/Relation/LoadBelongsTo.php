@@ -73,7 +73,6 @@ class LoadBelongsTo
 
         $childProperty = $childRelation->propertyName;
         $foreignKey = $childRelation->foreignKey;
-        $primaryKey = $targetRepository->getPrimaryKeyColumn();
 
         // Collect parent IDs from child entities (skip null foreign keys)
         [$parentIds, $childrenByParentId, $childrenWithoutParent] = self::collectParentIdsFromChildren($childEntities, $foreignKey);
@@ -88,6 +87,7 @@ class LoadBelongsTo
         }
 
         // Batch load all parents using WHERE IN
+        $primaryKey = $targetRepository->getPrimaryKeyColumn();
         $query = $targetRepository->sqlQuery()
             ->whereIn($primaryKey, $parentIds);
         $parents = $query->getResult();

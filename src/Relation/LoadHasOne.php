@@ -67,7 +67,9 @@ class LoadHasOne
         if ($loader !== null) {
             $children = call_user_func($loader, $parentEntity);
         } else {
-            $children = $targetRepository->find($parentEntity->getId(), $childRelation->foreignKey);
+            $foreignKey = $targetRepository->getHydrator()->getColumnNameForProperty($childRelation->foreignKey)
+                ?? $childRelation->foreignKey;
+            $children = $targetRepository->find($parentEntity->getId(), $foreignKey);
         }
 
         if (empty($children)) {
@@ -85,11 +87,11 @@ class LoadHasOne
 
     /**
      * Batch load HasOne relations for multiple entities.
-     * 
+     *
      * @param array<EntityInterface> $parentEntities
      * @param HasOne $parentRelation
      * @param RepositoryInterface $targetRepository
-     * @param RepositoryInterface|null $sourceRepository The repository for the source entities (needed for loader)
+     * @param callable|null $loader
      * @return EntityInterface[] All loaded children entities (array with 0 or 1 element per parent)
      */
     public static function loadBatch(
@@ -108,9 +110,11 @@ class LoadHasOne
         } else {
             // Batch load all children using WHERE IN
             $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
-            [$parentIds, $parentMap] = self::collectEntityIds($parentEntities);
+            [$parentIds, ] = self::collectEntityIds($parentEntities);
+            $foreignKey = $targetRepository->getHydrator()->getColumnNameForProperty($childRelation->foreignKey)
+                ?? $childRelation->foreignKey;
             $query = $targetRepository->sqlQuery()
-                ->whereIn($childRelation->foreignKey, $parentIds);
+                ->whereIn($foreignKey, $parentIds);
             $children = $query->getResult();
         }
 
@@ -163,11 +167,8 @@ class LoadHasOne
             }
             
             $child = $childrenForParent[0] ?? null;
-            
-            if ($child !== null) {
-                // Set bidirectional link (child -> parent)
-                $child->set($childProperty, $entity);
-            }
+
+            $child?->set($childProperty, $entity);
             
             // Set child for all parent entities with this ID
             $entity->set($parentProperty, $child);
