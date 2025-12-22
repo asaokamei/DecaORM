@@ -2,7 +2,6 @@
 
 namespace WScore\DecaORM\Relation;
 
-use RuntimeException;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\RepositoryInterface;
@@ -112,7 +111,7 @@ class LoadHasMany
 
     /**
      * Apply loader result for HasMany relation.
-     * Groups loaded entities by parent ID using foreign key and sets them on parent entities.
+     * Groups loaded entities by parent ID using foreign key and set them on parent entities.
      * 
      * @param EntityInterface|array<EntityInterface> $parentEntities
      * @param array<EntityInterface> $loadedChildren

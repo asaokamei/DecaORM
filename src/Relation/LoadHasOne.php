@@ -108,7 +108,7 @@ class LoadHasOne
 
     /**
      * Apply loader result for HasOne relation.
-     * Groups loaded entities by parent ID using foreign key and sets them on parent entities.
+     * Groups loaded entities by parent ID using foreign key and set them on parent entities.
      * 
      * @param EntityInterface|array<EntityInterface> $parentEntities
      * @param array<EntityInterface> $loadedChildren
