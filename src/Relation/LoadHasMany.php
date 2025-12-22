@@ -26,23 +26,7 @@ class LoadHasMany
         ?RepositoryInterface $sourceRepository = null
     ): array {
 
-        $loader = null;
-        // If loader is specified, use it instead of WHERE IN query
-        if ($parentRelation->loader !== null) {
-            if ($sourceRepository === null) {
-                throw new RuntimeException(
-                    'Source repository is required when using loader. ' .
-                    'Please pass the source repository to LoadHasMany::load()'
-                );
-            }
-            
-            if (!method_exists($sourceRepository, $parentRelation->loader)) {
-                throw new RuntimeException(
-                    'Loader method "' . $parentRelation->loader . '" not found in repository: ' . $sourceRepository::class
-                );
-            }
-            $loader = [$sourceRepository, $parentRelation->loader];
-        }
+        $loader = self::getLoader($parentRelation, $sourceRepository);
 
         if (is_array($entities)) {
             return self::loadBatch($entities, $parentRelation, $targetRepository, $loader);
