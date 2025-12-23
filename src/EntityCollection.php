@@ -14,12 +14,12 @@ use IteratorAggregate;
 class EntityCollection implements IteratorAggregate, Countable, ArrayAccess
 {
     /**
-     * @param RepositoryInterface $repository
      * @param array|EntityInterface[]|T[] $entities
+     * @param ?RepositoryInterface $repository
      */
     public function __construct(
-        private RepositoryInterface $repository,
-        private array $entities = []
+        private array $entities = [],
+        private ?RepositoryInterface $repository = null
     ) {
     }
 
@@ -42,7 +42,7 @@ class EntityCollection implements IteratorAggregate, Countable, ArrayAccess
         $relation = $this->repository->getRelation($propertyName);
         $relatedRepository = $this->repository->getRepository($relation->targetEntity);
 
-        return new static($relatedRepository, $uniqueEntities);
+        return new static($uniqueEntities, $relatedRepository);
     }
 
     public function save(): static
@@ -99,7 +99,7 @@ class EntityCollection implements IteratorAggregate, Countable, ArrayAccess
     public function filter(callable $callback): static
     {
         $entities = array_filter($this->entities, $callback);
-        return new static($this->repository, $entities);
+        return new static($entities, $this->repository);
     }
 
     /**
@@ -136,7 +136,7 @@ class EntityCollection implements IteratorAggregate, Countable, ArrayAccess
     {
         $chunks = [];
         foreach (array_chunk($this->entities, $size, $preserveKeys) as $chunk) {
-            $chunks[] = new static($this->repository, $chunk);
+            $chunks[] = new static($chunk, $this->repository);
         }
         return $chunks;
     }

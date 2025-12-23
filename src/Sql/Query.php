@@ -56,7 +56,7 @@ class Query extends QueryBuilder
     public function getCollection(): EntityCollection
     {
         $entities = $this->getResult();
-        return new EntityCollection($this->repository, $entities);
+        return new EntityCollection($entities, $this->repository);
     }
 
 }

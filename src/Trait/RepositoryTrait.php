@@ -348,7 +348,7 @@ trait RepositoryTrait
             throw new RuntimeException('unknown relation: ' . get_class($relation));
         }
 
-        return new EntityCollection($targetRepo, $results);
+        return new EntityCollection($results, $targetRepo);
     }
 
 }
