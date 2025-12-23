@@ -3,6 +3,7 @@
 namespace WScore\DecaORM\Relation;
 
 use WScore\DecaORM\Attribute\BelongsTo;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\RepositoryInterface;
 
@@ -63,28 +64,20 @@ class LoadBelongsTo
             return [];
         }
 
-        $childProperty = $childRelation->propertyName;
-        $foreignKey = $childRelation->foreignKey;
-
-        // Collect parent IDs from child entities (skip null foreign keys)
-        [$parentIds, $childrenByParentId, $childrenWithoutParent] = self::collectParentIdsFromChildren($childEntities, $foreignKey);
-
-        // Set null for children without parent ID
-        foreach ($childrenWithoutParent as $childEntity) {
-            $childEntity->set($childProperty, null);
-        }
-
+        $children = new EntityCollection($childEntities);
+        $parentIds = $children->getValues($childRelation->foreignKey);
         if (empty($parentIds)) {
             return [];
         }
 
         // Batch load all parents using WHERE IN
-        $primaryKey = $targetRepository->getPrimaryKeyColumn();
-        $query = $targetRepository->sqlQuery()
-            ->whereIn($primaryKey, $parentIds);
-        $parents = $query->getResult();
+        $parents = $targetRepository
+            ->sqlQuery()
+            ->whereIn($targetRepository->getPrimaryKeyColumn(), $parentIds)
+            ->getCollection();
+        $allParents = self::getParents($parents, $childRelation, $childEntities);
 
-        // Use applyLoaderResult to map parents to children
-        return self::applyLoaderResult($childEntities, $parents, $childRelation);
+        return array_unique($allParents, SORT_REGULAR);
     }
+
 }

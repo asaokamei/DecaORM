@@ -13,6 +13,8 @@ use IteratorAggregate;
  */
 class EntityCollection implements IteratorAggregate, Countable, ArrayAccess
 {
+    private array $idMap;
+
     /**
      * @param array|EntityInterface[]|T[] $entities
      * @param ?RepositoryInterface $repository
@@ -61,6 +63,22 @@ class EntityCollection implements IteratorAggregate, Countable, ArrayAccess
         return $this->entities;
     }
 
+    public function findById(int|string $id): ?EntityInterface
+    {
+        if (!isset($this->idMap)) {
+            $this->buildIdMap();
+        }
+        return $this->idMap[$id] ?? null;
+    }
+
+    public function hasId(int|string $id): bool
+    {
+        if (!isset($this->idMap)) {
+            $this->buildIdMap();
+        }
+        return isset($this->idMap[$id]);
+    }
+
     /**
      * @param string $propertyName
      * @return array|string[]
@@ -82,7 +100,18 @@ class EntityCollection implements IteratorAggregate, Countable, ArrayAccess
             return $entity->getId();
         };
         return $this->map($callback);
+    }
 
+    /**
+     * @return array<EntityInterface>
+     */
+    public function getIdMap(): array
+    {
+        $map = [];
+        foreach ($this->entities as $entity) {
+            $map[$entity->getId()] = $entity;
+        }
+        return $map;
     }
 
     public function map(callable $callback): array
@@ -173,5 +202,23 @@ class EntityCollection implements IteratorAggregate, Countable, ArrayAccess
     public function offsetUnset(mixed $offset): void
     {
         unset($this->entities[$offset]);
+    }
+
+    /**
+     * @param string $foreignKey
+     * @return array<array<EntityInterface>>
+     */
+    public function groupBy(string $foreignKey): array
+    {
+        $group = [];
+        foreach ($this->entities as $entity) {
+            $group[$entity->get($foreignKey)][] = $entity;
+        }
+        return $group;
+    }
+
+    private function buildIdMap(): void
+    {
+        $this->idMap = $this->getIdMap();
     }
 }
