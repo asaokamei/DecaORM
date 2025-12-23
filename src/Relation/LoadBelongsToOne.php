@@ -11,6 +11,8 @@ use WScore\DecaORM\RepositoryInterface;
 class LoadBelongsToOne
 {
     use RelationTrait;
+    use RelationBelongsToTrait;
+
     /**
      * Load BelongsToOne relation for single entity or multiple entities.
      * 
@@ -40,24 +42,14 @@ class LoadBelongsToOne
         BelongsToOne $childRelation,
         RepositoryInterface $targetRepository
     ): array {
-        $parentId = $childEntity->get($childRelation->foreignKey);
-        $parentEntity = $targetRepository->find($parentId);
-        if (empty($parentEntity)) {
-            $childEntity->set($childRelation->propertyName, null);
-            return [];
-        } elseif (count($parentEntity) > 1) {
-            throw new RuntimeException('BelongsToOne relation must have only one parent.');
-        } else {
-            $parentEntity = $parentEntity[0];
-            $childEntity->set($childRelation->propertyName, $parentEntity);
-            
-            // Set child on parent if inversedBy is specified and parent has HasOne
-            if ($childRelation->inversedBy !== null) {
-                self::setChildOnParent($parentEntity, $childRelation->inversedBy, $childEntity, $targetRepository);
-            }
-            
-            return [$parentEntity];
+        $parentEntity = self::loadSingleEntity($childEntity, $childRelation, $targetRepository);
+
+        // Set child on parent if inversedBy is specified and parent has HasOne
+        if ($parentEntity && $childRelation->inversedBy !== null) {
+            self::setChildOnParent($parentEntity, $childRelation->inversedBy, $childEntity, $targetRepository);
         }
+
+        return $parentEntity ? [$parentEntity]: [];
     }
 
     /**
@@ -99,7 +91,7 @@ class LoadBelongsToOne
         $parents = $query->getResult();
 
         // Use applyLoaderResult to map parents to children
-        $allParents = self::applyLoaderResult($childEntities, $parents, $childRelation, $targetRepository);
+        $allParents = self::applyLoaderResult($childEntities, $parents, $childRelation);
 
         // Set child on parent if inversedBy is specified and parent has HasOne
         if ($childRelation->inversedBy !== null) {
@@ -143,49 +135,6 @@ class LoadBelongsToOne
         if ($parentRelation instanceof HasOne) {
             // Set as single entity (not array)
             $parentEntity->set($parentPropertyName, $childEntity);
-            return;
         }
-        
-        // If parent has HasMany or unknown relation type, do not set
-        // (HasMany is dangerous - assumes all children are loaded)
-    }
-
-    /**
-     * Apply loader result for BelongsToOne relation.
-     * Maps loaded parent entities to child entities using foreign key.
-     * 
-     * @param EntityInterface|array<EntityInterface> $childEntities
-     * @param array<EntityInterface> $loadedParents
-     * @param BelongsToOne $relation
-     * @param RepositoryInterface $targetRepository
-     * @return EntityInterface[] All loaded parent entities
-     */
-    public static function applyLoaderResult(
-        EntityInterface|array $childEntities,
-        array $loadedParents,
-        BelongsToOne $relation,
-        RepositoryInterface $targetRepository
-    ): array {
-        $childEntities = is_array($childEntities) ? $childEntities : [$childEntities];
-        $childProperty = $relation->propertyName;
-        $foreignKey = $relation->foreignKey;
-        
-        // Create a map of parent ID => parent entity
-        $parentMap = self::createEntityMap($loadedParents);
-        
-        // Set parent for each child entity
-        $allParents = [];
-        foreach ($childEntities as $childEntity) {
-            $parentId = $childEntity->get($foreignKey);
-            if ($parentId !== null && isset($parentMap[$parentId])) {
-                $childEntity->set($childProperty, $parentMap[$parentId]);
-                $allParents[] = $parentMap[$parentId];
-            } else {
-                $childEntity->set($childProperty, null);
-            }
-        }
-        
-        return array_unique($allParents, SORT_REGULAR);
     }
 }
-

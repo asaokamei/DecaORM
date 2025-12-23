@@ -2,7 +2,6 @@
 
 namespace WScore\DecaORM\Relation;
 
-use RuntimeException;
 use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\RepositoryInterface;
@@ -10,6 +9,8 @@ use WScore\DecaORM\RepositoryInterface;
 class LoadBelongsTo
 {
     use RelationTrait;
+    use RelationBelongsToTrait;
+
     /**
      * Load BelongsTo relation for single entity or multiple entities.
      * 
@@ -39,19 +40,10 @@ class LoadBelongsTo
         BelongsTo $childRelation,
         RepositoryInterface $targetRepository
     ): array {
-        $parentId = $childEntity->get($childRelation->foreignKey);
-        $parentEntity = $targetRepository->find($parentId);
-        if (empty($parentEntity)) {
-            $childEntity->set($childRelation->propertyName, null);
-            return [];
-        } elseif (count($parentEntity) > 1) {
-            throw new RuntimeException('BelongsTo relation must have only one parent.');
-        } else {
-            $parentEntity = $parentEntity[0];
-            $childEntity->set($childRelation->propertyName, $parentEntity);
-            // Note: BelongsTo does not set child on parent (parent may have HasMany, which is dangerous)
-            return [$parentEntity];
-        }
+
+        $parentEntity = self::loadSingleEntity($childEntity, $childRelation, $targetRepository);
+        // Note: BelongsTo does not set child on parent (parent may have HasMany, which is dangerous)
+        return $parentEntity ? [$parentEntity]: [];
     }
 
     /**
@@ -93,45 +85,6 @@ class LoadBelongsTo
         $parents = $query->getResult();
 
         // Use applyLoaderResult to map parents to children
-        return self::applyLoaderResult($childEntities, $parents, $childRelation, $targetRepository);
-    }
-
-    /**
-     * Apply loader result for BelongsTo relation.
-     * Maps loaded parent entities to child entities using foreign key.
-     * 
-     * @param EntityInterface|array<EntityInterface> $childEntities
-     * @param array<EntityInterface> $loadedParents
-     * @param BelongsTo $relation
-     * @param RepositoryInterface $targetRepository
-     * @return EntityInterface[] All loaded parent entities
-     */
-    public static function applyLoaderResult(
-        EntityInterface|array $childEntities,
-        array $loadedParents,
-        BelongsTo $relation,
-        RepositoryInterface $targetRepository
-    ): array {
-        $childEntities = is_array($childEntities) ? $childEntities : [$childEntities];
-        $childProperty = $relation->propertyName;
-        $foreignKey = $relation->foreignKey;
-        
-        // Create a map of parent ID => parent entity
-        $parentMap = self::createEntityMap($loadedParents);
-        
-        // Set parent for each child entity
-        // Note: BelongsTo does not set child on parent (parent may have HasMany, which is dangerous)
-        $allParents = [];
-        foreach ($childEntities as $childEntity) {
-            $parentId = $childEntity->get($foreignKey);
-            if ($parentId !== null && isset($parentMap[$parentId])) {
-                $childEntity->set($childProperty, $parentMap[$parentId]);
-                $allParents[] = $parentMap[$parentId];
-            } else {
-                $childEntity->set($childProperty, null);
-            }
-        }
-        
-        return array_unique($allParents, SORT_REGULAR);
+        return self::applyLoaderResult($childEntities, $parents, $childRelation);
     }
 }
