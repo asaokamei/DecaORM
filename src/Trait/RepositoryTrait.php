@@ -16,6 +16,7 @@ use WScore\DecaORM\Attribute\CustomLoader;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Attribute\ManyToMany;
+use WScore\DecaORM\Collection;
 use WScore\DecaORM\DirtyTracker;
 use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
@@ -324,31 +325,46 @@ trait RepositoryTrait
      * 
      * @param T|T[] $entities
      * @param string $relationName
-     * @return EntityCollection The loaded relation entities as a collection.
+     * @return Collection|EntityCollection The loaded relation entities as a collection.
+     *         Returns EntityCollection if the result contains EntityInterface instances, Collection otherwise.
      */
-    public function fill(EntityInterface|array $entities, string $relationName): EntityCollection
+    public function fill(EntityInterface|array $entities, string $relationName): Collection|EntityCollection
     {
         $relation = $this->hydrator->getRelation($relationName);
-        $targetRepo = $this->getRepository($relation->targetEntity);
+        $targetRepo = $relation->targetEntity 
+            ? $this->getRepository($relation->targetEntity) 
+            : null;
 
         // Use standard loading (loader is handled inside LoadHasMany/LoadHasOne if specified)
         if ($relation instanceof HasMany) {
             $results = LoadHasMany::load($entities, $relation, $targetRepo, $this);
+            return new EntityCollection($results, $targetRepo);
         } elseif ($relation instanceof HasOne) {
             $results = LoadHasOne::load($entities, $relation, $targetRepo, $this);
+            return new EntityCollection($results, $targetRepo);
         } elseif ($relation instanceof BelongsTo) {
             $results = LoadBelongsTo::load($entities, $relation, $targetRepo);
+            return new EntityCollection($results, $targetRepo);
         } elseif ($relation instanceof BelongsToOne) {
             $results = LoadBelongsToOne::load($entities, $relation, $targetRepo);
+            return new EntityCollection($results, $targetRepo);
         } elseif ($relation instanceof ManyToMany) {
             $results = LoadManyToMany::load($entities, $relation, $this, $targetRepo);
+            return new EntityCollection($results, $targetRepo);
         } elseif ($relation instanceof CustomLoader) {
             $results = LoadCustomLoader::load($entities, $relation, $this);
+            // CustomLoaderの場合、返り値がEntityInterface[]かどうかで判断
+            $results = is_array($results) ? $results : [$results];
+            if (!empty($results) && $results[0] instanceof EntityInterface) {
+                // EntityInterface[]の場合はEntityCollectionを返す
+                return new EntityCollection($results, $targetRepo);
+            } else {
+                // それ以外（計算値など）の場合はCollectionを返す
+                return new Collection($results);
+            }
         } else {
             throw new RuntimeException('unknown relation: ' . get_class($relation));
         }
-
-        return new EntityCollection($results, $targetRepo);
     }
 
 }
