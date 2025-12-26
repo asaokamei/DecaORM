@@ -7,7 +7,7 @@ use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\RepositoryInterface;
 
-class Query extends QueryBuilder implements Countable
+class Query extends QueryBuilder
 {
     /**
      * @var EntityInterface[]
@@ -16,13 +16,9 @@ class Query extends QueryBuilder implements Countable
 
     public function __construct(private RepositoryInterface $repository)
     {
-        $columns = [];
         $table = $this->repository->getTableName();
         $this->from($table);
-        foreach ($this->repository->listColumnsToProperties() as $column => $property) {
-            $columns[] = "{$table}.{$column} AS {$property}";
-        }
-        $this->select(...$columns);
+        $this->select("{$table}.*");
     }
 
     public function newQuery(): static
@@ -48,7 +44,7 @@ class Query extends QueryBuilder implements Countable
      *
      * @return int The total count of records.
      */
-    public function getQueryCount(): int
+    public function executeCountQuery(): int
     {
         $query = clone $this;
         $query->select('COUNT(*)');
@@ -57,23 +53,10 @@ class Query extends QueryBuilder implements Countable
         return (int) $query->getResult()[0]['COUNT(*)'];
     }
 
-    public function getEntities(): array
-    {
-        return $this->found;
-    }
-
-    public function count(): int
-    {
-        if (!isset($this->found)) {
-            $this->getResult();
-        }
-        return count($this->found);
-    }
-
     public function getCollection(): EntityCollection
     {
         $entities = $this->getResult();
-        return new EntityCollection($this->repository, $entities);
+        return new EntityCollection($entities, $this->repository);
     }
 
 }

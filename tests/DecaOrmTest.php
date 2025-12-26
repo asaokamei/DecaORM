@@ -5,6 +5,7 @@ namespace WScore\DecaORM\Tests;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\AttributeHydrator;
+use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\Tests\Users\User;
 use WScore\DecaORM\Tests\Users\UserHydrator;
 use WScore\DecaORM\Tests\Users\UserRepository;
@@ -28,6 +29,7 @@ class DecaOrmTest extends TestCase
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         // Create table
+        $sql = file_get_contents(__DIR__ . '/Users/users.sql');
         $this->pdo->exec(
             "CREATE TABLE users (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,6 +73,17 @@ class DecaOrmTest extends TestCase
         $this->assertEquals($id, $user->getId());
         $this->assertEquals('Jane Doe', $user->get('name'));
         $this->assertEquals('jane@example.com', $user->get('email'));
+
+        EntityCache::clear();
+        $stmt = $this->repo->execute('SELECT * FROM users WHERE user_id = ?', [$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $this->assertEquals('Jane Doe', $row['user_name']);
+
+        EntityCache::clear();
+        $entities = $this->repo->fetch('SELECT * FROM users WHERE user_id = ?', [$id]);
+        $this->assertCount(1, $entities);
+        $this->assertEquals('Jane Doe', $entities[0]->get('name'));
+        $this->assertEquals($id, $entities[0]->getId());
     }
 
     public function testUpdateUser()

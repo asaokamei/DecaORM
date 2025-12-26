@@ -2,14 +2,16 @@
 
 namespace WScore\DecaORM\Relation;
 
-use RuntimeException;
 use WScore\DecaORM\Attribute\BelongsTo;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\RepositoryInterface;
 
 class LoadBelongsTo
 {
     use RelationTrait;
+    use RelationBelongsToTrait;
+
     /**
      * Load BelongsTo relation for single entity or multiple entities.
      * 
@@ -39,19 +41,10 @@ class LoadBelongsTo
         BelongsTo $childRelation,
         RepositoryInterface $targetRepository
     ): array {
-        $parentId = $childEntity->get($childRelation->foreignKey);
-        $parentEntity = $targetRepository->find($parentId);
-        if (empty($parentEntity)) {
-            $childEntity->set($childRelation->propertyName, null);
-            return [];
-        } elseif (count($parentEntity) > 1) {
-            throw new RuntimeException('BelongsTo relation must have only one parent.');
-        } else {
-            $parentEntity = $parentEntity[0];
-            $childEntity->set($childRelation->propertyName, $parentEntity);
-            // Note: BelongsTo does not set child on parent (parent may have HasMany, which is dangerous)
-            return [$parentEntity];
-        }
+
+        $parentEntity = self::loadSingleEntity($childEntity, $childRelation, $targetRepository);
+        // Note: BelongsTo does not set child on parent (parent may have HasMany, which is dangerous)
+        return $parentEntity ? [$parentEntity]: [];
     }
 
     /**
@@ -71,67 +64,20 @@ class LoadBelongsTo
             return [];
         }
 
-        $childProperty = $childRelation->propertyName;
-        $foreignKey = $childRelation->foreignKey;
-        $primaryKey = $targetRepository->getPrimaryKeyColumn();
-
-        // Collect parent IDs from child entities (skip null foreign keys)
-        [$parentIds, $childrenByParentId, $childrenWithoutParent] = self::collectParentIdsFromChildren($childEntities, $foreignKey);
-
-        // Set null for children without parent ID
-        foreach ($childrenWithoutParent as $childEntity) {
-            $childEntity->set($childProperty, null);
-        }
-
+        $children = new EntityCollection($childEntities);
+        $parentIds = $children->getValues($childRelation->foreignKey);
         if (empty($parentIds)) {
             return [];
         }
 
         // Batch load all parents using WHERE IN
-        $query = $targetRepository->sqlQuery()
-            ->whereIn($primaryKey, $parentIds);
-        $parents = $query->getResult();
+        $parents = $targetRepository
+            ->sqlQuery()
+            ->whereIn($targetRepository->getPrimaryKeyColumn(), $parentIds)
+            ->getCollection();
+        $allParents = self::getParents($parents, $childRelation, $childEntities);
 
-        // Use applyLoaderResult to map parents to children
-        return self::applyLoaderResult($childEntities, $parents, $childRelation, $targetRepository);
-    }
-
-    /**
-     * Apply loader result for BelongsTo relation.
-     * Maps loaded parent entities to child entities using foreign key.
-     * 
-     * @param EntityInterface|array<EntityInterface> $childEntities
-     * @param array<EntityInterface> $loadedParents
-     * @param BelongsTo $relation
-     * @param RepositoryInterface $targetRepository
-     * @return EntityInterface[] All loaded parent entities
-     */
-    public static function applyLoaderResult(
-        EntityInterface|array $childEntities,
-        array $loadedParents,
-        BelongsTo $relation,
-        RepositoryInterface $targetRepository
-    ): array {
-        $childEntities = is_array($childEntities) ? $childEntities : [$childEntities];
-        $childProperty = $relation->propertyName;
-        $foreignKey = $relation->foreignKey;
-        
-        // Create a map of parent ID => parent entity
-        $parentMap = self::createEntityMap($loadedParents);
-        
-        // Set parent for each child entity
-        // Note: BelongsTo does not set child on parent (parent may have HasMany, which is dangerous)
-        $allParents = [];
-        foreach ($childEntities as $childEntity) {
-            $parentId = $childEntity->get($foreignKey);
-            if ($parentId !== null && isset($parentMap[$parentId])) {
-                $childEntity->set($childProperty, $parentMap[$parentId]);
-                $allParents[] = $parentMap[$parentId];
-            } else {
-                $childEntity->set($childProperty, null);
-            }
-        }
-        
         return array_unique($allParents, SORT_REGULAR);
     }
+
 }

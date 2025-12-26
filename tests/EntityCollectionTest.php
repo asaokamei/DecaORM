@@ -31,7 +31,7 @@ class EntityCollectionTest extends TestCase
         $e1 = $this->createEntityMock(1);
         $e2 = $this->createEntityMock(2);
 
-        $collection = new EntityCollection($repo, [$e1, $e2]);
+        $collection = new EntityCollection([$e1, $e2], $repo);
 
         $this->assertCount(2, $collection);
         $this->assertEquals([1, 2], $collection->getIds());
@@ -51,7 +51,7 @@ class EntityCollectionTest extends TestCase
         $e1 = $this->createEntityMock(1, ['name' => 'Alice']);
         $e2 = $this->createEntityMock(2, ['name' => 'Bob']);
 
-        $collection = new EntityCollection($repo, [$e1, $e2]);
+        $collection = new EntityCollection([$e1, $e2], $repo);
 
         // map
         $names = $collection->map(fn($e) => $e->get('name'));
@@ -74,7 +74,7 @@ class EntityCollectionTest extends TestCase
         $e2 = $this->createEntityMock(2, ['rank' => 10]);
         $e3 = $this->createEntityMock(3, ['rank' => 30]);
 
-        $collection = new EntityCollection($repo, [$e1, $e2, $e3]);
+        $collection = new EntityCollection([$e1, $e2, $e3], $repo);;
 
         // 文字列によるソート
         $collection->sort('rank');
@@ -83,7 +83,7 @@ class EntityCollectionTest extends TestCase
         // 配列による複数条件ソート
         $e4 = $this->createEntityMock(4, ['rank' => 10, 'sub' => 'a']);
         $e5 = $this->createEntityMock(5, ['rank' => 10, 'sub' => 'b']);
-        $collection = new EntityCollection($repo, [$e5, $e4]);
+        $collection = new EntityCollection([$e5, $e4], $repo);
         $collection->sort(['rank', 'sub']);
         $this->assertEquals([4, 5], $collection->getIds());
     }
@@ -96,7 +96,7 @@ class EntityCollectionTest extends TestCase
             $this->createEntityMock(2),
             $this->createEntityMock(3),
         ];
-        $collection = new EntityCollection($repo, $entities);
+        $collection = new EntityCollection($entities, $repo);
 
         $chunks = $collection->chunk(2);
 
@@ -174,7 +174,7 @@ class EntityCollectionTest extends TestCase
 
         $repo->expects($this->exactly(2))->method('save');
 
-        $collection = new EntityCollection($repo, [$e1, $e2]);
+        $collection = new EntityCollection([$e1, $e2], $repo);;
         $collection->save();
     }
 }

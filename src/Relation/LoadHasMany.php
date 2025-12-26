@@ -2,7 +2,6 @@
 
 namespace WScore\DecaORM\Relation;
 
-use RuntimeException;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\RepositoryInterface;
@@ -26,23 +25,7 @@ class LoadHasMany
         ?RepositoryInterface $sourceRepository = null
     ): array {
 
-        $loader = null;
-        // If loader is specified, use it instead of WHERE IN query
-        if ($parentRelation->loader !== null) {
-            if ($sourceRepository === null) {
-                throw new RuntimeException(
-                    'Source repository is required when using loader. ' .
-                    'Please pass the source repository to LoadHasMany::load()'
-                );
-            }
-            
-            if (!method_exists($sourceRepository, $parentRelation->loader)) {
-                throw new RuntimeException(
-                    'Loader method "' . $parentRelation->loader . '" not found in repository: ' . $sourceRepository::class
-                );
-            }
-            $loader = [$sourceRepository, $parentRelation->loader];
-        }
+        $loader = self::getLoader($parentRelation, $sourceRepository);
 
         if (is_array($entities)) {
             return self::loadBatch($entities, $parentRelation, $targetRepository, $loader);
@@ -68,7 +51,9 @@ class LoadHasMany
         } else {
             // Find posts by foreign key
             $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
-            $children = $targetRepository->find($parentEntity->getId(), $childRelation->foreignKey, $parentRelation->orderBy);
+            $foreignKey = $targetRepository->getHydrator()->getColumnNameForProperty($childRelation->foreignKey)
+                ?? $childRelation->foreignKey;
+            $children = $targetRepository->find($parentEntity->getId(), $foreignKey, $parentRelation->orderBy);
         }
         if (empty($children)) {
             $parentEntity->set($parentProperty, []);
@@ -86,11 +71,11 @@ class LoadHasMany
 
     /**
      * Batch load HasMany relations for multiple entities.
-     * 
+     *
      * @param array<EntityInterface> $parentEntities
      * @param HasMany $parentRelation
      * @param RepositoryInterface $targetRepository
-     * @param RepositoryInterface|null $sourceRepository The repository for the source entities (needed for loader)
+     * @param callable|null $loader
      * @return EntityInterface[] All loaded children entities
      */
     public static function loadBatch(
@@ -109,9 +94,11 @@ class LoadHasMany
         } else {
             // Batch load all children using WHERE IN
             $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
-            [$parentIds, $parentMap] = self::collectEntityIds($parentEntities);
-                $query = $targetRepository->sqlQuery()
-                ->whereIn($childRelation->foreignKey, $parentIds);
+            [$parentIds, ] = self::collectEntityIds($parentEntities);
+            $foreignKey = $targetRepository->getHydrator()->getColumnNameForProperty($childRelation->foreignKey)
+                ?? $childRelation->foreignKey;
+            $query = $targetRepository->sqlQuery()
+                ->whereIn($foreignKey, $parentIds);
             if ($parentRelation->orderBy !== null) {
                 $query->orderBy($parentRelation->orderBy);
             }
@@ -124,7 +111,7 @@ class LoadHasMany
 
     /**
      * Apply loader result for HasMany relation.
-     * Groups loaded entities by parent ID using foreign key and sets them on parent entities.
+     * Groups loaded entities by parent ID using foreign key and set them on parent entities.
      * 
      * @param EntityInterface|array<EntityInterface> $parentEntities
      * @param array<EntityInterface> $loadedChildren

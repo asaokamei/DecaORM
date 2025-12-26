@@ -97,9 +97,10 @@ interface RepositoryInterface
      * 
      * @param EntityInterface|array<EntityInterface> $entities The entity or entities for which the relation is to be filled.
      * @param string $relationName The name of the relation property to fill.
-     * @return EntityCollection The loaded relation entities as a collection.
+     * @return Collection|EntityCollection The loaded relation entities as a collection.
+     *         Returns EntityCollection if the result contains EntityInterface instances, Collection otherwise.
      */
-    public function fill(EntityInterface|array $entities, string $relationName): EntityCollection;
+    public function fill(EntityInterface|array $entities, string $relationName): Collection|EntityCollection;
 
     /**
      * Finds a single entity by ID.
