@@ -81,7 +81,7 @@ class CustomLoaderTest extends TestCase
         $project = $this->projectRepo->findById($project->getId());
 
         // Load tasks using CustomLoader
-        $tasks = $this->projectRepo->fill($project, 'tasks');
+        $tasks = $this->projectRepo->load($project, 'tasks');
 
         // Verify tasks are set on entity
         $projectTasks = $project->get('tasks');
@@ -132,7 +132,7 @@ class CustomLoaderTest extends TestCase
         ];
 
         // Batch load tasks using CustomLoader
-        $tasks = $this->projectRepo->fill($projects, 'tasks');
+        $tasks = $this->projectRepo->load($projects, 'tasks');
 
         // Verify tasks are set on entities
         $project1Tasks = $projects[0]->get('tasks');
@@ -159,7 +159,7 @@ class CustomLoaderTest extends TestCase
         $project = $this->projectRepo->findById($project->getId());
 
         // Load tasks using CustomLoader
-        $tasks = $this->projectRepo->fill($project, 'tasks');
+        $tasks = $this->projectRepo->load($project, 'tasks');
 
         // Verify empty array is set on entity
         $projectTasks = $project->get('tasks');
@@ -170,7 +170,7 @@ class CustomLoaderTest extends TestCase
     public function testCustomLoaderWithEmptyArray(): void
     {
         // Test with empty array - should return empty array without error
-        $result = $this->projectRepo->fill([], 'tasks');
+        $result = $this->projectRepo->load([], 'tasks');
         $this->assertCount(0, $result->getEntities());
     }
 
@@ -197,7 +197,7 @@ class CustomLoaderTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Loader method "nonExistentMethod" not found');
 
-        $invalidRepo->fill($project, 'tasks');
+        $invalidRepo->load($project, 'tasks');
     }
 
     public function testCustomLoaderWithReturnValue(): void
@@ -224,7 +224,7 @@ class CustomLoaderTest extends TestCase
         $project = $repo->findById($project->getId());
 
         // Load tasks using CustomLoader
-        $tasks = $repo->fill($project, 'tasks');
+        $tasks = $repo->load($project, 'tasks');
 
         // Verify return value
         $this->assertCount(1, $tasks);

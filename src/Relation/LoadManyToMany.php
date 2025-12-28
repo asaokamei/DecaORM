@@ -76,7 +76,7 @@ class LoadManyToMany
         // Unlike HasOne/BelongsToOne (1:1), ManyToMany relations may have multiple
         // related entities on both sides. Setting a partial list on the inverse side
         // would be misleading, as it would not represent the complete relationship.
-        // Users should explicitly call fill() on the inverse side if needed.
+        // Users should explicitly call load() on the inverse side if needed.
 
         $entity->set($propertyName, $targetEntities);
         return $targetEntities;
@@ -164,7 +164,7 @@ class LoadManyToMany
             // Unlike HasOne/BelongsToOne (1:1), ManyToMany relations may have multiple
             // related entities on both sides. Setting a partial list on the inverse side
             // would be misleading, as it would not represent the complete relationship.
-            // Users should explicitly call fill() on the inverse side if needed.
+            // Users should explicitly call load() on the inverse side if needed.
 
             // Set targets for all entities with this ID
             $entity->set($propertyName, $targetsForEntity);

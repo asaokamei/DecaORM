@@ -130,8 +130,8 @@ class UserRepository extends AbstractRepository
     // リレーションを手動でロードするヘルパーメソッドの例
     public function loadPosts(User $user): void
     {
-        // 親クラスの protected メソッド fill() を呼び出す
-        $this->fill($user, 'posts');
+        // 親クラスの protected メソッド load() を呼び出す
+        $this->load($user, 'posts');
     }
 }
 ```
@@ -165,7 +165,7 @@ $userRepo->delete($user);
 ### 4. リレーションの利用
 
 リレーションデータは自動的には読み込まれません（Lazy Loading的な挙動に近いですが、自動発火はしません）。
-`fill()` メソッドを使用して明示的にロードします。
+`load()` メソッドを使用して明示的にロードします。
 
 #### 単一エンティティのリレーション読み込み
 
@@ -176,7 +176,7 @@ $user = $userRepo->findById(1);
 var_dump($user->posts); // null
 
 // 関連データをロード
-$userRepo->fill($user, 'posts');
+$userRepo->load($user, 'posts');
 
 // データが格納される
 foreach ($user->posts as $post) {
@@ -195,7 +195,7 @@ $users = $userRepo->sqlQuery()
     ->getResult();
 
 // 一度のクエリで全ユーザーの投稿を読み込む（N+1問題を回避）
-$posts = $userRepo->fill($users, 'posts');
+$posts = $userRepo->load($users, 'posts');
 
 // $post はEntityCollection
 $titles = $posts->map(fn($e) => $e->get('title'));
@@ -216,8 +216,8 @@ foreach ($users as $user) {
 // Collectionオブジェクト
 $users = $userRepo->sqlQuery()->...->getCollection();
 // リレーションを読み込む
-$posts = $users->fill('posts');
-$comments = $posts->fill('comments');
+$posts = $users->load('posts');
+$comments = $posts->load('comments');
 // エンティティの保存など
 $posts->save();
 ```
@@ -280,13 +280,13 @@ class Course implements EntityInterface
 ```php
 // 単一エンティティのリレーション読み込み
 $student = $studentRepo->findById(1);
-$studentRepo->fill($student, 'courses');
+$studentRepo->load($student, 'courses');
 
 // バッチローディング
 $students = $studentRepo->sqlQuery()
     ->whereIn('student_id', [1, 2, 3])
     ->getResult();
-$studentRepo->fill($students, 'courses');
+$studentRepo->load($students, 'courses');
 ```
 
 **ManyToManyリレーションの同期:**
@@ -391,7 +391,7 @@ try {
 
 *   **Unit of Work (UoW)**: エンティティの保存順序の自動解決や、変更の遅延書き込み（flush）は実装されていません。依存性を考慮して手動で保存順序を制御する必要があります。
 *   **カスケード削除**: 親エンティティを削除した際に、関連する子エンティティを自動的に削除する機能はありません。手動で削除する必要があります。
-*   **自動リレーション読み込み**: リレーションデータは自動的には読み込まれません。`fill()` メソッドを明示的に呼び出す必要があります。
+*   **自動リレーション読み込み**: リレーションデータは自動的には読み込まれません。`load()` メソッドを明示的に呼び出す必要があります。
 
 ### 注意すべき点
 
@@ -399,7 +399,7 @@ try {
 
 2. **トランザクション管理**: 複数のエンティティを保存する場合は、トランザクションを使用してデータの整合性を保つことを推奨します。
 
-3. **リレーションの読み込み**: リレーションデータは自動的には読み込まれません。必要に応じて `fill()` メソッドを明示的に呼び出してください。
+3. **リレーションの読み込み**: リレーションデータは自動的には読み込まれません。必要に応じて `load()` メソッドを明示的に呼び出してください。
 
 4. **外部キー制約**: データベースの外部キー制約を適切に設定することで、データの整合性を保つことができます。
 

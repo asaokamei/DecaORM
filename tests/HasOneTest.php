@@ -89,7 +89,7 @@ class HasOneTest extends TestCase
         EntityCache::clear();
 
         $user = $this->userRepo->findById($userId);
-        $this->userRepo->fillProfile($user);
+        $this->userRepo->loadProfile($user);
 
         $profile = $user->get('profile');
         $this->assertInstanceOf(Profile::class, $profile);
@@ -118,7 +118,7 @@ class HasOneTest extends TestCase
         $this->assertNotNull($profile);
 
         // Fill user from profile (BelongsToOne)
-        $users = $this->profileRepo->fill($profile, 'user');
+        $users = $this->profileRepo->load($profile, 'user');
 
         // Verify return value
         $this->assertCount(1, $users);
@@ -169,7 +169,7 @@ class HasOneTest extends TestCase
         ];
 
         // Batch load users for all profiles
-        $users = $this->profileRepo->fill($profiles, 'user');
+        $users = $this->profileRepo->load($profiles, 'user');
 
         // Verify return value
        $this->assertCount(2, $users);
@@ -207,7 +207,7 @@ class HasOneTest extends TestCase
         $this->assertNotNull($profile);
 
         // Try to load user (should handle gracefully)
-        $users = $this->profileRepo->fill($profile, 'user');
+        $users = $this->profileRepo->load($profile, 'user');
 
         // Verify return value
         $this->assertCount(0, $users);

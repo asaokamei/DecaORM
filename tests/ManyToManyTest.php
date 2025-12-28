@@ -87,7 +87,7 @@ class ManyToManyTest extends TestCase
         $this->assertNotNull($student);
 
         // Fill courses for student
-        $courses = $this->studentRepo->fill($student, 'courses');
+        $courses = $this->studentRepo->load($student, 'courses');
 
         // Verify return value
         $this->assertCount(2, $courses);
@@ -134,7 +134,7 @@ class ManyToManyTest extends TestCase
         $this->assertNotNull($course);
 
         // Fill students for course
-        $students = $this->courseRepo->fill($course, 'students');
+        $students = $this->courseRepo->load($course, 'students');
 
         // Verify return value
         $this->assertCount(2, $students);
@@ -158,7 +158,7 @@ class ManyToManyTest extends TestCase
         ]);
 
         // Fill courses for student
-        $courses = $this->studentRepo->fill($student, 'courses');
+        $courses = $this->studentRepo->load($student, 'courses');
 
         // Verify empty array is returned
         $this->assertCount(0, $courses);
@@ -194,7 +194,7 @@ class ManyToManyTest extends TestCase
         $student = $this->studentRepo->findById($student->getId());
 
         // Fill courses for student
-        $this->studentRepo->fill($student, 'courses');
+        $this->studentRepo->load($student, 'courses');
 
         // Verify student -> courses
         $courses = $student->get('courses');
@@ -211,7 +211,7 @@ class ManyToManyTest extends TestCase
         }
 
         // If bidirectional link is needed, explicitly fill it
-        $this->courseRepo->fill($courses, 'students');
+        $this->courseRepo->load($courses, 'students');
         
         // Now verify bidirectional link is set
         foreach ($courses as $course) {
@@ -264,7 +264,7 @@ class ManyToManyTest extends TestCase
         $student2 = $this->studentRepo->findById($student2->getId());
 
         // Batch load courses for students
-        $courses = $this->studentRepo->fill([$student1, $student2], 'courses');
+        $courses = $this->studentRepo->load([$student1, $student2], 'courses');
 
         // Verify return value contains all courses
         $this->assertGreaterThanOrEqual(3, count($courses)); // At least 3 unique courses

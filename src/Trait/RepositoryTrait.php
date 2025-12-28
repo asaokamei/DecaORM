@@ -187,7 +187,7 @@ trait RepositoryTrait
         EntityCache::cache($entity);
 
         if ($this->hydrator->isPkAutoNumber()) {
-            $this->fillAllForeignKeys($entity);
+            $this->loadAllForeignKeys($entity);
         }
 
         // DirtyTracking: INSERT後の状態をスナップショットとして記録
@@ -202,7 +202,7 @@ trait RepositoryTrait
         return $insert;
     }
 
-    protected function fillAllForeignKeys(EntityInterface $entity): void
+    protected function loadAllForeignKeys(EntityInterface $entity): void
     {
         foreach ($this->hydrator->getRelations() as $relation) {
             if (!($relation instanceof HasMany || $relation instanceof HasOne)) {
@@ -228,7 +228,7 @@ trait RepositoryTrait
                 continue;
             }
 
-            // retrieve property names to fill: $childBackRefProperty and $childForeignKey.
+            // retrieve property names to load: $childBackRefProperty and $childForeignKey.
             $childRepo = $this->getRepository($relation->targetEntity);
             $childRel = $childRepo->getRelation($relation->mappedBy);
             if (!$childRel instanceof BelongsTo && !$childRel instanceof BelongsToOne) {
@@ -321,14 +321,14 @@ trait RepositoryTrait
     }
 
     /**
-     * Fills the specified relation for the given entity or entities.
+     * Loads the specified relation for the given entity or entities.
      * 
      * @param T|T[] $entities
      * @param string $relationName
      * @return Collection|EntityCollection The loaded relation entities as a collection.
      *         Returns EntityCollection if the result contains EntityInterface instances, Collection otherwise.
      */
-    public function fill(EntityInterface|array $entities, string $relationName): Collection|EntityCollection
+    public function load(EntityInterface|array $entities, string $relationName): Collection|EntityCollection
     {
         $relation = $this->hydrator->getRelation($relationName);
         $targetRepo = $relation->targetEntity 

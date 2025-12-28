@@ -111,7 +111,7 @@ class BatchLoadingTest extends TestCase
         ];
 
         // Batch load posts for all users
-        $posts = $this->userRepo->fill($users, 'posts');
+        $posts = $this->userRepo->load($users, 'posts');
 
         // Verify return value
         $this->assertIsArray($posts->getEntities());
@@ -165,7 +165,7 @@ class BatchLoadingTest extends TestCase
         ];
 
         // Batch load profiles for all users
-        $profiles = $this->userRepo->fill($users, 'profile');
+        $profiles = $this->userRepo->load($users, 'profile');
 
         // Verify return value
         $this->assertIsArray($profiles->getEntities());
@@ -213,7 +213,7 @@ class BatchLoadingTest extends TestCase
         ];
 
         // Batch load users for all posts
-        $users = $this->postsRepo->fill($posts, 'user');
+        $users = $this->postsRepo->load($posts, 'user');
 
         // Verify return value
         $this->assertIsArray($users->getEntities());
@@ -231,7 +231,7 @@ class BatchLoadingTest extends TestCase
 
     public function testBatchLoadWithEmptyArray(): void
     {
-        $result = $this->userRepo->fill([], 'posts');
+        $result = $this->userRepo->load([], 'posts');
         $this->assertIsArray($result->getEntities());
         $this->assertCount(0, $result->getEntities());
     }
@@ -257,7 +257,7 @@ class BatchLoadingTest extends TestCase
         ];
 
         // Batch load posts (should return empty array)
-        $posts = $this->userRepo->fill($users, 'posts');
+        $posts = $this->userRepo->load($users, 'posts');
 
         // Verify return value
         $this->assertIsArray($posts->getEntities());
@@ -305,7 +305,7 @@ class BatchLoadingTest extends TestCase
         ];
 
         // Chain: load posts, then load users for those posts
-        $posts = $this->userRepo->fill($users, 'posts');
+        $posts = $this->userRepo->load($users, 'posts');
         $this->assertCount(2, $posts);
 
         // Verify posts are set on users
@@ -313,7 +313,7 @@ class BatchLoadingTest extends TestCase
         $this->assertCount(1, $users[1]->get('posts'));
 
         // Now load users for posts (this is the chaining use case)
-        $loadedUsers = $posts->fill('user');
+        $loadedUsers = $posts->load('user');
         $this->assertCount(2, $loadedUsers);
 
         // Verify users are set on posts
@@ -344,7 +344,7 @@ class BatchLoadingTest extends TestCase
         $user = $this->userRepo->findById($user->getId());
 
         // Single entity fill (existing behavior)
-        $posts = $this->userRepo->fill($user, 'posts');
+        $posts = $this->userRepo->load($user, 'posts');
 
         // Verify return value
         $this->assertIsArray($posts->getEntities());

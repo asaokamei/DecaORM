@@ -28,9 +28,9 @@ class PostsRepository extends AbstractRepository
         return $this->createAndSave($data);
     }
 
-    public function fillUser(Post $post): void
+    public function loadUser(Post $post): void
     {
-        $this->fill($post, 'user');
+        $this->load($post, 'user');
     }
 }
 
