@@ -26,26 +26,26 @@ class Post implements EntityInterface
     #[Id]
     #[GeneratedValue]
     #[Column(name: 'post_id')]
-    public ?string $post_id = null;
+    private ?string $post_id = null;
 
     #[Column(name: 'user_id')]
-    public ?string $user_id = null;
+    private ?string $user_id = null;
 
     #[Column(name: 'title')]
-    public string $title = '';
+    private string $title = '';
 
     #[Column(name: 'content')]
-    public string $content = '';
+    private string $content = '';
 
     #[CreatedAt(name: 'created_at')]
-    public ?string $created_at = null;
+    private ?string $created_at = null;
 
     #[UpdatedAt(name: 'updated_at')]
-    public ?string $updated_at = null;
+    private ?string $updated_at = null;
 
     /** @var User|null */
     #[BelongsTo(targetEntity: User::class, foreignKey: 'user_id', inversedBy: 'posts')]
-    public ?User $user = null;
+    private ?User $user = null;
 
     public function getId(): ?int
     {
@@ -60,6 +60,32 @@ class Post implements EntityInterface
     public function getUpdatedAt(): ?DateTimeImmutable
     {
         return $this->updated_at !== null ? new DateTimeImmutable($this->updated_at) : null;
+    }
+
+    public function getTitle(): string
+    {
+        return $this->title;
+    }
+
+    public function setTitle(string $title): void
+    {
+        $this->title = $title;
+    }
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): void
+    {
+        $originalUser = $this->user;
+        $this->user = $user;
+        $this->user_id = $user->getId();
+        if ($originalUser && $originalUser !== $user) {
+            $user->addPost($this);
+            $originalUser->removePost($this);
+        }
     }
 }
 
