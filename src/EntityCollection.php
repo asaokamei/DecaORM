@@ -24,15 +24,15 @@ class EntityCollection extends Collection
         parent::__construct($entities);
     }
 
-    public function fill(string $propertyName, int $chunkSize = 100): static
+    public function load(string $propertyName, int $chunkSize = 100): static
     {
         if ($this->repository === null) {
-            throw new InvalidArgumentException('fill() requires a repository');
+            throw new InvalidArgumentException('load() requires a repository');
         }
         
         $relatedEntities = [];
         foreach (array_chunk($this->items, $chunkSize) as $chunk) {
-            $collection = $this->repository->fill($chunk, $propertyName);
+            $collection = $this->repository->load($chunk, $propertyName);
             $relatedEntities = array_merge($relatedEntities, $collection->getEntities());
         }
 

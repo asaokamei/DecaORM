@@ -22,13 +22,13 @@ class UserRepository extends AbstractRepository
         $this->container = $container;
     }
 
-    public function fillPosts(User $user): void
+    public function loadPosts(User $user): void
     {
-        $this->fill($user, 'posts');
+        $this->load($user, 'posts');
     }
 
-    public function fillProfile(User $user): void
+    public function loadProfile(User $user): void
     {
-        $this->fill($user, 'profile');
+        $this->load($user, 'profile');
     }
 }

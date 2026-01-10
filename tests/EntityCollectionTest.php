@@ -145,7 +145,7 @@ class EntityCollectionTest extends TestCase
         $this->assertEquals(['Alice', 'Bob'], $users->getValues('name'));
 
 
-        $posts = $users->fill('posts');
+        $posts = $users->load('posts');
         $this->assertCount(5, $posts);
 
         $posts1 = $users[0]->get('posts');

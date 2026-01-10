@@ -196,7 +196,7 @@ class HasManyLoaderTest extends TestCase
         $project = $this->projectRepo->findById($project->getId());
 
         // Load recentTasks using loader
-        $tasks = $this->projectRepo->fill($project, 'recentTasks');
+        $tasks = $this->projectRepo->load($project, 'recentTasks');
 
         // Verify return value
         $this->assertCount(1, $tasks);
@@ -259,7 +259,7 @@ class HasManyLoaderTest extends TestCase
         ];
 
         // Batch load recentTasks using loader
-        $tasks = $this->projectRepo->fill($projects, 'recentTasks');
+        $tasks = $this->projectRepo->load($projects, 'recentTasks');
 
         // Verify return value
         $this->assertCount(3, $tasks); // 2 from project1, 1 from project2
@@ -310,7 +310,7 @@ class HasManyLoaderTest extends TestCase
         $project = $this->projectRepo->findById($project->getId());
 
         // Load recentTasks using loader
-        $tasks = $this->projectRepo->fill($project, 'recentTasks');
+        $tasks = $this->projectRepo->load($project, 'recentTasks');
 
         // Verify return value
         $this->assertCount(0, $tasks);
@@ -333,7 +333,7 @@ class HasManyLoaderTest extends TestCase
         $project = $this->projectRepo->findById($project->getId());
 
         // Load recentTasks using loader
-        $tasks = $this->projectRepo->fill($project, 'recentTasks');
+        $tasks = $this->projectRepo->load($project, 'recentTasks');
 
         // Verify return value
         $this->assertCount(0, $tasks);
@@ -381,7 +381,7 @@ class HasManyLoaderTest extends TestCase
         $project = $this->projectRepo->findById($project->getId());
 
         // Load recentTasks using loader
-        $tasks = $this->projectRepo->fill($project, 'recentTasks');
+        $tasks = $this->projectRepo->load($project, 'recentTasks');
 
         // Verify only recent tasks (within 7 days) are returned
         $this->assertCount(2, $tasks);

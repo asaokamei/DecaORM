@@ -56,9 +56,11 @@ class DecaOrmTest extends TestCase
                                                 ]);
 
         $this->assertNotNull($savedUser->getId());
-        $this->assertEquals('John Doe', $savedUser->get('name'));
-        $this->assertNotNull($savedUser->get('registered_at'));
-        $this->assertNotNull($savedUser->get('updated_at'));
+        $this->assertEquals('John Doe', $savedUser->getName());
+        $this->assertNotNull($savedUser->getRegisteredAt());
+        $this->assertNotNull($savedUser->getUpdatedAt());
+        $this->assertInstanceOf(\DateTimeImmutable::class, $savedUser->getRegisteredAt());
+        $this->assertInstanceOf(\DateTimeImmutable::class, $savedUser->getUpdatedAt());
     }
 
     public function testFindUser()
@@ -71,8 +73,8 @@ class DecaOrmTest extends TestCase
 
         $this->assertInstanceOf(User::class, $user);
         $this->assertEquals($id, $user->getId());
-        $this->assertEquals('Jane Doe', $user->get('name'));
-        $this->assertEquals('jane@example.com', $user->get('email'));
+        $this->assertEquals('Jane Doe', $user->getName());
+        $this->assertEquals('jane@example.com', $user->getEmail());
 
         EntityCache::clear();
         $stmt = $this->repo->execute('SELECT * FROM users WHERE user_id = ?', [$id]);
@@ -82,22 +84,22 @@ class DecaOrmTest extends TestCase
         EntityCache::clear();
         $entities = $this->repo->fetch('SELECT * FROM users WHERE user_id = ?', [$id]);
         $this->assertCount(1, $entities);
-        $this->assertEquals('Jane Doe', $entities[0]->get('name'));
+        $this->assertEquals('Jane Doe', $entities[0]->getName());
         $this->assertEquals($id, $entities[0]->getId());
     }
 
     public function testUpdateUser()
     {
         $user = new User();
-        $user->set('name', 'Test User');
-        $user->set('email', 'test@example.com');
+        $user->setName('Test User');
+        $user->setEmail('test@example.com');
         $this->assertNull($user->getId());
         $this->repo->save($user);
         $this->assertNotNull($user->getId());
         $id = $user->getId();
 
         // Update
-        $user->set('name', 'New Name');
+        $user->setName('New Name');
         $this->repo->save($user);
 
         // Reload from DB to verify persistence

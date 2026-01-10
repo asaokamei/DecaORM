@@ -27,26 +27,26 @@ class User implements EntityInterface
     #[Id]
     #[GeneratedValue]
     #[Column(name: 'user_id')]
-    public ?string $id = null;
+    private ?string $id = null;
 
     #[Column(name: 'user_name')]
-    public string $name = '';
+    private string $name = '';
 
     #[Column(name: 'email')]
-    public string $email = '';
+    private string $email = '';
 
     #[CreatedAt(name: 'created_at')]
-    public ?string $registered_at = null;
+    private ?string $registered_at = null;
 
     #[UpdatedAt(name: 'updated_at')]
-    public ?string $updated_at = null;
+    private ?string $updated_at = null;
 
     /** @var Post[]|null */
     #[HasMany(targetEntity: Post::class, mappedBy: 'user', orderBy: 'created_at DESC')]
-    public ?array $posts = null;
+    private ?array $posts = null;
 
     #[HasOne(targetEntity: Profile::class, mappedBy: 'user')]
-    public ?Profile $profile = null;
+    private ?Profile $profile = null;
 
     public function getId(): ?int
     {
@@ -61,6 +61,76 @@ class User implements EntityInterface
     public function getUpdatedAt(): ?DateTimeImmutable
     {
         return $this->updated_at !== null ? new DateTimeImmutable($this->updated_at) : null;
+    }
+
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    public function setName(string $name): void
+    {
+        $this->name = $name;
+    }
+
+    public function getEmail(): string
+    {
+        return $this->email;
+    }
+
+    public function setEmail(string $email): void
+    {
+        $this->email = $email;
+    }
+
+    public function getPosts(): ?array
+    {
+        return $this->posts;
+    }
+
+    /**
+     * @param Post[]|null $posts
+     */
+    public function setPosts(?array $posts): void
+    {
+        $this->posts = $posts;
+        foreach ($posts ?? [] as $post) {
+            $post->setUser($this);
+        }
+    }
+
+    public function getProfile(): ?Profile
+    {
+        return $this->profile;
+    }
+
+    public function setProfile(?Profile $profile): void
+    {
+        $this->profile = $profile;
+    }
+
+    public function addPost(Post $post): void
+    {
+        if (!$this->posts) {
+            $this->posts = [];
+        }
+        if (in_array($post, $this->posts, true)) {
+            return;
+        }
+        $this->posts[] = $post;
+        if ($post->getUser() !== $this) {
+            $post->setUser($this);
+        }
+    }
+
+    public function removePost(Post $post): void
+    {
+        if ($post->getUser() === $this) {
+            $post->setUser(null);
+        }
+        $this->posts = array_filter($this->posts, function (Post $p) use ($post) {
+            return $p->getId() !== $post->getId();
+        });
     }
 }
 
