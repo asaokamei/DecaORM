@@ -14,7 +14,11 @@
   },
   "autoload": {
     "psr-4": {
-      "WScore\\DecaORM\\": "src/",
+      "WScore\\DecaORM\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
       "WScore\\DecaORM\\Tests\\": "tests/"
     }
   }

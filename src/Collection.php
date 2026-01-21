@@ -34,14 +34,6 @@ class Collection implements IteratorAggregate, Countable, ArrayAccess
     /**
      * @return array<T>
      */
-    public function getEntities(): array
-    {
-        return $this->items;
-    }
-
-    /**
-     * @return array<T>
-     */
     public function map(callable $callback): array
     {
         return array_map($callback, $this->items);
@@ -53,9 +45,6 @@ class Collection implements IteratorAggregate, Countable, ArrayAccess
         return $this;
     }
 
-    /**
-     * @return static
-     */
     public function filter(callable $callback): static
     {
         $filtered = array_filter($this->items, $callback);

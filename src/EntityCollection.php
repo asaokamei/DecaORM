@@ -152,20 +152,6 @@ class EntityCollection extends Collection
     }
 
     /**
-     * @param int $size
-     * @param bool $preserveKeys
-     * @return static[]
-     */
-    public function chunk(int $size = 100, bool $preserveKeys = false): array
-    {
-        $chunks = [];
-        foreach (array_chunk($this->items, $size, $preserveKeys) as $chunk) {
-            $chunks[] = new static($chunk, $this->repository);
-        }
-        return $chunks;
-    }
-
-    /**
      * @param string $foreignKey
      * @return array<array<EntityInterface>>
      */

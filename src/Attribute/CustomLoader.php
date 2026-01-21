@@ -38,8 +38,8 @@ class CustomLoader
      * @param string $method The method name in the repository to load this relation
      */
     public function __construct(
+        public string $method,
         public ?string $targetEntity = null,
-        public string $method
     ) {
     }
 }
