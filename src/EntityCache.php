@@ -83,5 +83,17 @@ class EntityCache
             unset(self::$cached[$class]);
         }
     }
+
+    public static function count(?string $class = null): int
+    {
+        if (is_string($class)) {
+            return isset(self::$cached[$class]) ? count(self::$cached[$class]) : 0;
+        }
+        $count = 0;
+        foreach (self::$cached as $entities) {
+            $count += count($entities);
+        }
+        return $count;
+    }
 }
 
