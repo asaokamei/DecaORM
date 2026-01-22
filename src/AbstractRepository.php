@@ -14,8 +14,8 @@ abstract class AbstractRepository implements RepositoryInterface
     /**
      * IDに基づいてUserエンティティを取得
      *
-     * @param int $id
-     * @return T|null
+     * @param int|string $id
+     * @return EntityInterface|T|null
      */
     public function findById(int|string $id): ?EntityInterface
     {
@@ -85,4 +85,8 @@ abstract class AbstractRepository implements RepositoryInterface
         $this->deleteEntity($entity);
     }
 
+    public function makeHandler(EntityInterface $entity): EntityHandler
+    {
+        return new EntityHandler($entity, $this);
+    }
 }

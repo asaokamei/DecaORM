@@ -7,6 +7,7 @@ use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\Attribute\Column;
 use WScore\DecaORM\Attribute\CreatedAt;
 use WScore\DecaORM\Attribute\GeneratedValue;
+use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
@@ -47,6 +48,9 @@ class Post implements EntityInterface
     #[BelongsTo(targetEntity: User::class, foreignKey: 'user_id', inversedBy: 'posts')]
     private ?User $user = null;
 
+    #[HasMany(targetEntity: Comment::class, mappedBy: 'post')]
+    private array $comments = [];
+
     public function getId(): ?int
     {
         return $this->post_id !== null ? (int) $this->post_id : null;
@@ -86,6 +90,32 @@ class Post implements EntityInterface
             $user->addPost($this);
             $originalUser->removePost($this);
         }
+    }
+
+    public function getComments(): array
+    {
+        return $this->comments;
+    }
+    public function setComments(array $comments): void
+    {
+        $this->comments = $comments;
+        foreach ($comments as $comment) {
+            $comment->setPost($this);
+        }
+    }
+    public function addComment(Comment $comment): void
+    {
+        if (in_array($comment, $this->comments, true)) {
+            return;
+        }
+        $this->comments[] = $comment;
+        if ($comment->getPost() !== $this) {
+            $comment->setPost($this);
+        }
+    }
+    public function removeComment(Comment $comment): void
+    {
+        $this->comments = array_filter($this->comments, fn($c) => $c !== $comment);
     }
 }
 
