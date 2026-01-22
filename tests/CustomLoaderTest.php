@@ -171,7 +171,7 @@ class CustomLoaderTest extends TestCase
     {
         // Test with empty array - should return empty array without error
         $result = $this->projectRepo->load([], 'tasks');
-        $this->assertCount(0, $result->getEntities());
+        $this->assertCount(0, $result->getItems());
     }
 
     public function testCustomLoaderWithInvalidMethod(): void
