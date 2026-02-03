@@ -83,12 +83,19 @@ class Post implements EntityInterface
 
     public function setUser(?User $user): void
     {
+        if ($this->user === $user) {
+            return;
+        }
+
         $originalUser = $this->user;
         $this->user = $user;
-        $this->user_id = $user->getId();
-        if ($originalUser && $originalUser !== $user) {
-            $user->addPost($this);
+        $this->user_id = $user?->getId();
+
+        if ($originalUser !== null) {
             $originalUser->removePost($this);
+        }
+        if ($user !== null) {
+            $user->addPost($this);
         }
     }
 
