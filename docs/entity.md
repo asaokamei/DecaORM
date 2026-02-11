@@ -65,6 +65,118 @@ private string $user_id = '';
 private ?User $user = null;
 ```
 
+### HasMany / BelongsTo 用メソッドの書き方
+
+双方向の参照を自分で更新する場合、`User::addPost()` と `Post::setUser()` が互いに呼び合って
+永久ループにならないようにガードを入れる必要があります。以下はフラグなしで安全に動作する実装例です。
+
+```php
+// User.php
+class User implements EntityInterface
+{
+    use EntityTrait;
+
+    #[HasMany(targetEntity: Post::class, mappedBy: 'user')]
+    private ?array $posts = null;
+
+    /**
+     * @return Post[]
+     */
+    public function getPosts(): array
+    {
+        return $this->posts ?? [];
+    }
+
+    /**
+     * @param Post[] $posts
+     */
+    public function setPosts(array $posts): static
+    {
+        $this->posts = $posts;
+        foreach ($posts as $post) {
+            if ($post->getUser() !== $this) {
+                $post->setUser($this);
+            }
+        }
+        return $this;
+    }
+
+    public function addPost(Post $post): void
+    {
+        $this->posts ??= [];
+        if (in_array($post, $this->posts, true)) {
+            return;
+        }
+        $this->posts[] = $post;
+
+        // 逆側の参照も更新
+        $post->setUser($this);
+    }
+
+    public function removePost(Post $post): void
+    {
+        if ($this->posts === null) {
+            return;
+        }
+        $index = array_search($post, $this->posts, true);
+        if ($index === false) {
+            return;
+        }
+        array_splice($this->posts, $index, 1);
+
+        if ($post->getUser() === $this) {
+            $post->setUser(null);
+        }
+    }
+}
+```
+
+```php
+// Post.php
+class Post implements EntityInterface
+{
+    use EntityTrait;
+
+    #[Column(name: 'user_id')]
+    private string $user_id = '';
+
+    #[BelongsTo(targetEntity: User::class, foreignKey: 'user_id', inversedBy: 'posts')]
+    private ?User $user = null;
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): void
+    {
+        if ($this->user === $user) {
+            return;
+        }
+
+        $old = $this->user;
+        $this->user = $user;
+
+        // user_id を同期
+        $this->user_id = $user?->id ?? '';
+
+        // 片方だけの変更で済むように、相互更新は1回で止める
+        if ($old !== null) {
+            $old->removePost($this);
+        }
+        if ($user !== null) {
+            $user->addPost($this);
+        }
+    }
+}
+```
+
+ポイント:
+
+- `addPost()` は先に配列に追加し、その後 `setUser()` を呼ぶ
+- `setUser()` は同一参照なら何もしないガードでループを止める
+- `in_array(..., true)` と `array_search(..., true)` で同一インスタンスの重複を防ぐ
+
 ### HasOne と BelongsToOne (1対1)
 
 「一人のユーザーが一つのプロフィールを持つ」ような1対1の関係に使用します。

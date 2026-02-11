@@ -83,20 +83,26 @@ class User implements EntityInterface
         $this->email = $email;
     }
 
-    public function getPosts(): ?array
+    /**
+     * @return Post[]
+     */
+    public function getPosts(): array
     {
-        return $this->posts;
+        return $this->posts ?? [];
     }
 
     /**
-     * @param Post[]|null $posts
+     * @param Post[] $posts
      */
-    public function setPosts(?array $posts): void
+    public function setPosts(array $posts): static
     {
         $this->posts = $posts;
-        foreach ($posts ?? [] as $post) {
-            $post->setUser($this);
+        foreach ($posts as $post) {
+            if ($post->getUser() !== $this) {
+                $post->setUser($this);
+            }
         }
+        return $this;
     }
 
     public function getProfile(): ?Profile
@@ -111,26 +117,28 @@ class User implements EntityInterface
 
     public function addPost(Post $post): void
     {
-        if (!$this->posts) {
-            $this->posts = [];
-        }
+        $this->posts ??= [];
         if (in_array($post, $this->posts, true)) {
             return;
         }
         $this->posts[] = $post;
-        if ($post->getUser() !== $this) {
-            $post->setUser($this);
-        }
+        $post->setUser($this);
     }
 
     public function removePost(Post $post): void
     {
+        if ($this->posts === null) {
+            return;
+        }
+        $index = array_search($post, $this->posts, true);
+        if ($index === false) {
+            return;
+        }
+        array_splice($this->posts, $index, 1);
+
         if ($post->getUser() === $this) {
             $post->setUser(null);
         }
-        $this->posts = array_filter($this->posts, function (Post $p) use ($post) {
-            return $p->getId() !== $post->getId();
-        });
     }
 }
 
