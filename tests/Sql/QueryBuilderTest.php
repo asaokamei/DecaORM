@@ -75,7 +75,7 @@ class QueryBuilderTest extends TestCase
             ->orderBy('u.id DESC')
         ->setParameters(['user_id' => $user_ids]);
 
-        $sql = $builder->getSql();
+        $sql = str_replace("\r\n", "\n", $builder->getSql());
         $params = $builder->getParameters();
 
         $this->assertNotEmpty($sql);
@@ -96,6 +96,7 @@ LIMIT 3
 OFFSET 2
 
 END_SQL;
+        $expectedSql = str_replace("\r\n", "\n", $expectedSql);
 
         $this->assertEquals($expectedSql, $sql);
         foreach ($params as $key => $value) {

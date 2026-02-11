@@ -27,8 +27,12 @@ abstract class AbstractRepository implements RepositoryInterface
     {
         $class = $this->hydrator->getEntityClass();
         $entity = new $class();
-        foreach ($this->hydrator->listProperties() as $property) {
-            $entity->set($property, $data[$property] ?? null);
+        if (method_exists($entity, 'fill')) {
+            $entity->fill($data);
+        } else {
+            foreach ($this->hydrator->listProperties() as $property) {
+                $entity->set($property, $data[$property] ?? null);
+            }
         }
         return $entity;
     }
