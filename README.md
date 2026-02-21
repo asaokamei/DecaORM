@@ -398,6 +398,28 @@ try {
 }
 ```
 
+### デフォルトコンテナの設定（アプリ起動時に1回）
+
+```php
+use WScore\DecaORM\RepositoryManager;
+RepositoryManager::setContainer($container);
+```
+
+### スコープ実行（テナントごとのコンテナ切り替え）
+
+Webアプリで「1リクエスト = 1テナント」のように扱う場合は、ミドルウェア（またはフロントコントローラ）で、
+テナント確定後に `runWithContainer()` で処理全体を包むのが安全です。
+
+```php
+use WScore\DecaORM\RepositoryManager;
+// tenantContainer は tenantId に対応するPDO/Repository群を持つコンテナ
+return RepositoryManager::runWithContainer($tenantContainer, 
+    function () use ($handler, $request) { // PSR-15想定なら: 
+        return $handler->handle(request);
+    });
+```
+
+
 ## 制限事項と注意点
 
 1. **保存順序の管理**: Unit of Workがないため、エンティティを保存する際は依存性を考慮して適切な順番で保存してください。親エンティティを先に保存し、IDを確定させてから子エンティティを保存します。

@@ -15,7 +15,10 @@ class Container implements ContainerInterface
 
     public function get(string $id)
     {
-        return $this->services[$id] ?? null;
+        if (!isset($this->services[$id])) {
+            throw new \RuntimeException("Service not found: {$id}");
+        }
+        return $this->services[$id];
     }
 
     public function has(string $id): bool
