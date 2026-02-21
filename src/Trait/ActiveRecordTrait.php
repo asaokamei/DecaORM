@@ -4,6 +4,7 @@ namespace WScore\DecaORM\Trait;
 
 use WScore\DecaORM\Collection;
 use WScore\DecaORM\EntityCollection;
+use WScore\DecaORM\EntityHandler;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\RepositoryManager;
 use WScore\DecaORM\RepositoryInterface;
@@ -112,5 +113,15 @@ trait ActiveRecordTrait
     public function loadRelation(string $relationName): Collection|EntityCollection
     {
         return self::_repository()->load($this, $relationName);
+    }
+
+    public function getHandler(): EntityHandler
+    {
+        return new EntityHandler($this, self::_repository());
+    }
+
+    public function replicate(): EntityHandler
+    {
+        return $this->getHandler()->replicate();
     }
 }
