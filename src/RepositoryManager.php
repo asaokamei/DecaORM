@@ -2,8 +2,10 @@
 
 namespace WScore\DecaORM;
 
+use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
+use RuntimeException;
 
 class RepositoryManager
 {
@@ -27,7 +29,7 @@ class RepositoryManager
     /**
      * Enters a scoped container.
      *
-     * Typical usage: middleware/job wrapper sets tenant container here.
+     * Typical usage: middleware/job wrapper sets a tenant container here.
      */
     public static function enterScope(ContainerInterface $container): void
     {
@@ -77,22 +79,23 @@ class RepositoryManager
      * @template T of RepositoryInterface
      * @param class-string<T> $repositoryClass
      * @return T
+     * @throws ContainerExceptionInterface
      */
     public static function get(string $repositoryClass): RepositoryInterface
     {
         $container = self::getCurrentContainer();
 
         if ($container === null) {
-            throw new \RuntimeException('RepositoryManager container is not set.');
+            throw new RuntimeException('RepositoryManager container is not set.');
         }
         try {
             $repo = $container->get($repositoryClass);
         } catch (NotFoundExceptionInterface $e) {
-            throw new \RuntimeException("Repository for {$repositoryClass} not found in container.", 0, $e);
+            throw new RuntimeException("Repository for {$repositoryClass} not found in container.", 0, $e);
         }
 
         if (!$repo instanceof RepositoryInterface) {
-            throw new \RuntimeException("Container entry {$repositoryClass} is not a RepositoryInterface.");
+            throw new RuntimeException("Container entry {$repositoryClass} is not a RepositoryInterface.");
         }
 
         return $repo;
