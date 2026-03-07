@@ -33,12 +33,11 @@ class ActiveRecordTest extends TestCase
         EntityCache::clear();
 
         $container = new Container();
-        $userRepo = new ARTestUserRepository($this->pdo, $container);
-        $postsRepo = new ARTestPostsRepository($this->pdo, $container);
+        $manager = RepositoryManager::initialize($container);
+        $userRepo = new ARTestUserRepository($this->pdo, $manager);
+        $postsRepo = new ARTestPostsRepository($this->pdo, $manager);
         $container->set(ARTestUserRepository::class, $userRepo);
         $container->set(ARTestPostsRepository::class, $postsRepo);
-
-        RepositoryManager::setContainer($container);
     }
 
     public function testSaveAndFindById(): void
@@ -300,19 +299,19 @@ class ARTestPost implements \WScore\DecaORM\EntityInterface {
 }
 
 class ARTestUserRepository extends AbstractRepository {
-    public function __construct(PDO $pdo, $container = null) {
+    public function __construct(PDO $pdo, $manager = null) {
         $this->db = $pdo;
         $this->hydrator = new AttributeHydrator(ARTestUser::class);
-        $this->container = $container;
+        $this->manager = $manager;
         $this->now = new \DateTimeImmutable();
     }
 }
 
 class ARTestPostsRepository extends AbstractRepository {
-    public function __construct(PDO $pdo, $container = null) {
+    public function __construct(PDO $pdo, $manager = null) {
         $this->db = $pdo;
         $this->hydrator = new AttributeHydrator(ARTestPost::class);
-        $this->container = $container;
+        $this->manager = $manager;
         $this->now = new \DateTimeImmutable();
     }
 }

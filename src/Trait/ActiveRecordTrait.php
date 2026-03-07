@@ -20,7 +20,7 @@ trait ActiveRecordTrait
      */
     protected static function _repository(): RepositoryInterface
     {
-        return RepositoryManager::get(self::getRepositoryClass());
+        return RepositoryManager::getRepository(self::getRepositoryClass());
     }
 
     /**
@@ -98,6 +98,7 @@ trait ActiveRecordTrait
      *
      * @param int|string $id
      * @return static|null
+     * @todo: delete this method. Entity does not behave like a repository.
      */
     public static function findById(int|string $id): ?EntityInterface
     {
@@ -110,7 +111,7 @@ trait ActiveRecordTrait
      * @param string $relationName
      * @return Collection|EntityCollection
      */
-    public function loadRelation(string $relationName): Collection|EntityCollection
+    public function load(string $relationName): Collection|EntityCollection
     {
         return self::_repository()->load($this, $relationName);
     }

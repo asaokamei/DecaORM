@@ -5,6 +5,7 @@ namespace WScore\DecaORM\Tests;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\RepositoryManager;
 use WScore\DecaORM\Tests\Users\Container;
 use WScore\DecaORM\Tests\Users\Course;
 use WScore\DecaORM\Tests\Users\CourseRepository;
@@ -54,8 +55,9 @@ class ManyToManyTest extends TestCase
         EntityCache::clear();
 
         $container = new Container();
-        $this->studentRepo = new StudentRepository($this->pdo, $container);
-        $this->courseRepo = new CourseRepository($this->pdo, $container);
+        $manager = RepositoryManager::initialize($container);
+        $this->studentRepo = new StudentRepository($this->pdo, $manager);
+        $this->courseRepo = new CourseRepository($this->pdo, $manager);
         $container->set(StudentRepository::class, $this->studentRepo);
         $container->set(CourseRepository::class, $this->courseRepo);
     }

@@ -9,21 +9,29 @@ use RuntimeException;
 
 class RepositoryManager
 {
-    private static ?ContainerInterface $container = null;
+    private static ?RepositoryManager $_self = null;
 
     /**
      * Scoped containers stack (per request/job/tenant).
      *
      * @var ContainerInterface[]
      */
-    private static array $containerStack = [];
+    private array $containerStack = [];
+
+    private function __construct(private ContainerInterface $container) {}
 
     /**
      * @param ContainerInterface $container
      */
-    public static function setContainer(ContainerInterface $container): void
+    public static function initialize(ContainerInterface $container): static
     {
-        self::$container = $container;
+        self::$_self = new static($container);
+        return self::$_self;
+    }
+    
+    public static function getRepository(string $class): ?RepositoryInterface
+    {
+        return self::$_self?->get($class);
     }
 
     /**
@@ -31,9 +39,9 @@ class RepositoryManager
      *
      * Typical usage: middleware/job wrapper sets a tenant container here.
      */
-    public static function enterScope(ContainerInterface $container): void
+    public function enterScope(ContainerInterface $container): void
     {
-        self::$containerStack[] = $container;
+        $this->containerStack[] = $container;
     }
 
     /**
@@ -41,9 +49,9 @@ class RepositoryManager
      *
      * Always pair with enterScope() (prefer runWithContainer()).
      */
-    public static function leaveScope(): void
+    public function leaveScope(): void
     {
-        array_pop(self::$containerStack);
+        array_pop($this->containerStack);
     }
 
     /**
@@ -54,34 +62,33 @@ class RepositoryManager
      * @param callable():TReturn $callback
      * @return TReturn
      */
-    public static function runWithContainer(ContainerInterface $container, callable $callback)
+    public function runWithContainer(ContainerInterface $container, callable $callback)
     {
-        self::enterScope($container);
+        $this->enterScope($container);
         try {
             return $callback();
         } finally {
-            self::leaveScope();
+            $this->leaveScope();
         }
     }
 
     /**
      * @return ContainerInterface|null
      */
-    private static function getCurrentContainer(): ?ContainerInterface
+    private function getCurrentContainer(): ?ContainerInterface
     {
-        if (!empty(self::$containerStack)) {
-            return self::$containerStack[count(self::$containerStack) - 1];
+        if (!empty($this->containerStack)) {
+            return $this->containerStack[count($this->containerStack) - 1];
         }
-        return self::$container;
+        return $this->container;
     }
 
     /**
      * @template T of RepositoryInterface
      * @param class-string<T> $repositoryClass
      * @return T
-     * @throws ContainerExceptionInterface
      */
-    public static function get(string $repositoryClass): RepositoryInterface
+    public function get(string $repositoryClass): RepositoryInterface
     {
         $container = self::getCurrentContainer();
 
@@ -92,6 +99,8 @@ class RepositoryManager
             $repo = $container->get($repositoryClass);
         } catch (NotFoundExceptionInterface $e) {
             throw new RuntimeException("Repository for {$repositoryClass} not found in container.", 0, $e);
+        } catch (ContainerExceptionInterface $e) {
+            throw new RuntimeException("Failed to get repository for {$repositoryClass} from container.", 0, $e);
         }
 
         if (!$repo instanceof RepositoryInterface) {

@@ -30,6 +30,7 @@ use WScore\DecaORM\Relation\LoadHasOne;
 use WScore\DecaORM\Relation\LoadManyToMany;
 use WScore\DecaORM\Relation\RelationTrait;
 use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\RepositoryManager;
 use WScore\DecaORM\Sql\Insert;
 use WScore\DecaORM\Sql\Query;
 use WScore\DecaORM\Sql\Update;
@@ -42,7 +43,7 @@ trait RepositoryTrait
 {
     use RelationTrait;
     
-    protected ?ContainerInterface $container;
+    protected ?RepositoryManager $manager;
     protected PDO $db;
     protected HydratorInterface $hydrator;
     protected DateTimeInterface $now;
@@ -136,13 +137,7 @@ trait RepositoryTrait
             throw new RuntimeException('no repository class defined for entity: ' . $entity);
         }
         $repoName = $entity::getRepositoryClass();
-        try {
-            return $this->container->get($repoName);
-        } catch (NotFoundExceptionInterface) {
-            return null;
-        } catch (ContainerExceptionInterface $e) {
-            throw new RuntimeException('failed to get repository: ' . $repoName, 0, $e);
-        }
+        return $this->manager->get($repoName);
     }
 
     /**

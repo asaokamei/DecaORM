@@ -8,18 +8,19 @@ use Psr\Container\ContainerInterface;
 use WScore\DecaORM\AttributeHydrator;
 use WScore\DecaORM\HydratorInterface;
 use WScore\DecaORM\AbstractRepository;
+use WScore\DecaORM\RepositoryManager;
 
 /**
  * @extends AbstractRepository<User>
  */
 class UserRepository extends AbstractRepository
 {
-    public function __construct(PDO $pdo, ?ContainerInterface $container = null, ?HydratorInterface $hydrator = null)
+    public function __construct(PDO $pdo, ?RepositoryManager $manager = null, ?HydratorInterface $hydrator = null)
     {
         $this->db = $pdo;
         $this->hydrator = $hydrator ?? new AttributeHydrator(User::class);
         $this->now = new DateTimeImmutable();
-        $this->container = $container;
+        $this->manager = $manager;
     }
 
     public function loadPosts(User $user): void

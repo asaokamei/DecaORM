@@ -1,7 +1,10 @@
 <?php
+namespace WScore\DecaORM\Tests;
 
+use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\RepositoryManager;
 use WScore\DecaORM\Tests\Users\Container;
 use WScore\DecaORM\Tests\Users\Profile;
 use WScore\DecaORM\Tests\Users\ProfileRepository;
@@ -46,8 +49,9 @@ class HasOneTest extends TestCase
         EntityCache::clear();
 
         $container = new Container();
-        $this->userRepo = new UserRepository($this->pdo, $container);
-        $this->profileRepo = new ProfileRepository($this->pdo, $container);
+        $manager = RepositoryManager::initialize($container);
+        $this->userRepo = new UserRepository($this->pdo, $manager);
+        $this->profileRepo = new ProfileRepository($this->pdo, $manager);
         $container->set(UserRepository::class, $this->userRepo);
         $container->set(ProfileRepository::class, $this->profileRepo);
     }

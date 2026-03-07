@@ -6,6 +6,7 @@ use PDO;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\RepositoryManager;
 use WScore\DecaORM\Tests\CustomLoader\InvalidProject;
 use WScore\DecaORM\Tests\CustomLoader\InvalidProjectRepository;
 use WScore\DecaORM\Tests\CustomLoader\Project;
@@ -50,8 +51,9 @@ class CustomLoaderTest extends TestCase
         EntityCache::clear();
 
         $container = new Container();
-        $this->projectRepo = new ProjectRepository($this->pdo, $container);
-        $this->taskRepo = new TaskRepository($this->pdo, $container);
+        $manager = RepositoryManager::initialize($container);
+        $this->projectRepo = new ProjectRepository($this->pdo, $manager);
+        $this->taskRepo = new TaskRepository($this->pdo, $manager);
         $container->set(ProjectRepository::class, $this->projectRepo);
         $container->set(TaskRepository::class, $this->taskRepo);
     }
@@ -177,7 +179,8 @@ class CustomLoaderTest extends TestCase
     public function testCustomLoaderWithInvalidMethod(): void
     {
         $container = new Container();
-        $invalidRepo = new InvalidProjectRepository($this->pdo, $container);
+        $manager = RepositoryManager::initialize($container);
+        $invalidRepo = new InvalidProjectRepository($this->pdo, $manager);
         $container->set(InvalidProjectRepository::class, $invalidRepo);
         $container->set(TaskRepository::class, $this->taskRepo);
 
@@ -203,7 +206,8 @@ class CustomLoaderTest extends TestCase
     public function testCustomLoaderWithReturnValue(): void
     {
         $container = new Container();
-        $repo = new ProjectRepositoryWithReturn($this->pdo, $container);
+        $manager = RepositoryManager::initialize($container);
+        $repo = new ProjectRepositoryWithReturn($this->pdo, $manager);
         $container->set(ProjectRepositoryWithReturn::class, $repo);
         $container->set(TaskRepository::class, $this->taskRepo);
 

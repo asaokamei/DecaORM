@@ -153,7 +153,8 @@ class UserRepository extends AbstractRepository
 
 ```php
 $pdo = new PDO('mysql:host=localhost;dbname=test', 'user', 'pass');
-$userRepo = new UserRepository($pdo);
+$manager = RepositoryManager::getInstance($container);
+$userRepo = new UserRepository($pdo, $manager);
 
 // --- 作成 (Create) ---
 $user = new User();
@@ -402,7 +403,7 @@ try {
 
 ```php
 use WScore\DecaORM\RepositoryManager;
-RepositoryManager::setContainer($container);
+$manager = RepositoryManager::initialize($container);
 ```
 
 ### スコープ実行（テナントごとのコンテナ切り替え）
@@ -413,7 +414,7 @@ Webアプリで「1リクエスト = 1テナント」のように扱う場合は
 ```php
 use WScore\DecaORM\RepositoryManager;
 // tenantContainer は tenantId に対応するPDO/Repository群を持つコンテナ
-return RepositoryManager::runWithContainer($tenantContainer, 
+return $manager->runWithContainer($tenantContainer, 
     function () use ($handler, $request) { // PSR-15想定なら: 
         return $handler->handle(request);
     });

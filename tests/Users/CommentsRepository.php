@@ -9,18 +9,19 @@ use WScore\DecaORM\AttributeHydrator;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\HydratorInterface;
 use WScore\DecaORM\AbstractRepository;
+use WScore\DecaORM\RepositoryManager;
 
 /**
  * @extends AbstractRepository<Post>
  */
 class CommentsRepository extends AbstractRepository
 {
-    public function __construct(PDO $pdo, ?ContainerInterface $container = null, ?HydratorInterface $hydrator = null)
+    public function __construct(PDO $pdo, RepositoryManager $manager, ?HydratorInterface $hydrator = null)
     {
         $this->db = $pdo;
         $this->hydrator = $hydrator ?? new AttributeHydrator(Comment::class);
         $this->now = new DateTimeImmutable();
-        $this->container = $container;
+        $this->manager = $manager;
     }
 
     public function create(Post $post, array $data): Comment|EntityInterface

@@ -8,14 +8,15 @@ use WScore\DecaORM\AttributeHydrator;
 use WScore\DecaORM\AbstractRepository;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\HydratorInterface;
+use WScore\DecaORM\RepositoryManager;
 
 class ProjectRepository extends AbstractRepository
 {
-    public function __construct(PDO $pdo, ?ContainerInterface $container = null, ?HydratorInterface $hydrator = null)
+    public function __construct(PDO $pdo, ?RepositoryManager $manager, ?HydratorInterface $hydrator = null)
     {
         $this->db = $pdo;
         $this->hydrator = $hydrator ?? new AttributeHydrator(Project::class);
-        $this->container = $container;
+        $this->manager = $manager;
     }
 
     public function findTasks(EntityInterface|array $entities): void

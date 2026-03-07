@@ -6,6 +6,7 @@ use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityInterface;
+use WScore\DecaORM\RepositoryManager;
 use WScore\DecaORM\Tests\Users\Container;
 use WScore\DecaORM\Tests\Users\Post;
 use WScore\DecaORM\Tests\Users\PostsRepository;
@@ -36,8 +37,9 @@ class OneToManyTest extends TestCase
         EntityCache::clear();
 
         $container = new Container();
-        $this->userRepo = new UserRepository($this->pdo, $container);
-        $this->postsRepo = new PostsRepository($this->pdo, $container);
+        $manager = RepositoryManager::initialize($container);
+        $this->userRepo = new UserRepository($this->pdo, $manager);
+        $this->postsRepo = new PostsRepository($this->pdo, $manager);
         $container->set(UserRepository::class, $this->userRepo);
         $container->set(PostsRepository::class, $this->postsRepo);
     }
