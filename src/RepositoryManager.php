@@ -2,10 +2,12 @@
 
 namespace WScore\DecaORM;
 
+use PDO;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use RuntimeException;
+use Throwable;
 
 class RepositoryManager
 {
@@ -20,9 +22,6 @@ class RepositoryManager
 
     private function __construct(private ContainerInterface $container) {}
 
-    /**
-     * @param ContainerInterface $container
-     */
     public static function initialize(ContainerInterface $container): static
     {
         self::$_self = new static($container);
@@ -32,6 +31,24 @@ class RepositoryManager
     public static function getRepository(string $class): ?RepositoryInterface
     {
         return self::$_self?->get($class);
+    }
+
+    public static function transaction(callable $callback): mixed
+    {
+        try {
+            $pdo = self::$_self->getCurrentContainer()->get(PDO::class);
+        } catch (NotFoundExceptionInterface|ContainerExceptionInterface $e) {
+            throw new RuntimeException('Failed to get PDO instance from container.', 0, $e);
+        }
+        $pdo->beginTransaction();
+        try {
+            $result = $callback();
+            $pdo->commit();
+            return $result;
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            throw new RuntimeException('Failed execute a database transaction.', 0, $e);
+        }
     }
 
     /**
