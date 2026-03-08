@@ -19,6 +19,7 @@ use WScore\DecaORM\AbstractRepository;
 class ActiveRecordTest extends TestCase
 {
     private PDO $pdo;
+    private ARTestUserRepository $userRepo;
 
     protected function setUp(): void
     {
@@ -38,12 +39,20 @@ class ActiveRecordTest extends TestCase
         $postsRepo = new ARTestPostsRepository($this->pdo, $manager);
         $container->set(ARTestUserRepository::class, $userRepo);
         $container->set(ARTestPostsRepository::class, $postsRepo);
+
+        $this->userRepo = $userRepo;
+    }
+
+    protected function createUser($data): ARTestUser
+    {
+        $user = new ARTestUser();
+        $user->fill($data);
+        return $user;
     }
 
     public function testSaveAndFindById(): void
     {
-        $user = new ARTestUser();
-        $user->fill([
+        $user = $this->createUser([
             'name' => 'AR User',
             'email' => 'ar@example.com'
         ]);
@@ -54,14 +63,14 @@ class ActiveRecordTest extends TestCase
 
         EntityCache::clear();
 
-        $found = ARTestUser::findById($userId);
+        $found = $this->userRepo->findById($userId);
         $this->assertInstanceOf(ARTestUser::class, $found);
         $this->assertEquals('SETTER: AR User', $found->get('name'));
     }
 
     public function testCreate(): void
     {
-        $user = ARTestUser::create([
+        $user = $this->createUser([
             'name' => 'Created User',
             'email' => 'created@example.com'
         ]);
@@ -77,7 +86,7 @@ class ActiveRecordTest extends TestCase
 
     public function testDelete(): void
     {
-        $user = ARTestUser::create([
+        $user = $this->createUser([
             'name' => 'To Be Deleted',
             'email' => 'delete@example.com'
         ])->save();
@@ -86,7 +95,7 @@ class ActiveRecordTest extends TestCase
         $user->delete();
 
         EntityCache::clear();
-        $found = ARTestUser::findById($userId);
+        $found = $this->userRepo->findById($userId);
         $this->assertNull($found);
     }
 

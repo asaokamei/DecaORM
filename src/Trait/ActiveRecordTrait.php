@@ -43,18 +43,6 @@ trait ActiveRecordTrait
     }
 
     /**
-     * Creates a new entity.
-     * Does NOT save this to a database.
-     *
-     * @param array $data
-     * @return static|EntityInterface
-     */
-    public static function create(array $data): static|EntityInterface
-    {
-        return self::_repository()->createEntity($data);
-    }
-
-    /**
      * Fills the entity with data.
      *
      * @param array $data
@@ -91,18 +79,6 @@ trait ActiveRecordTrait
             }
         }
         return $this;
-    }
-
-    /**
-     * Finds an entity by ID.
-     *
-     * @param int|string $id
-     * @return static|null
-     * @todo: delete this method. Entity does not behave like a repository.
-     */
-    public static function findById(int|string $id): ?EntityInterface
-    {
-        return self::_repository()->findById($id);
     }
 
     /**
