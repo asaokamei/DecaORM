@@ -4,11 +4,11 @@ namespace WScore\DecaORM\Tests;
 
 use PDO;
 use PHPUnit\Framework\TestCase;
-use WScore\DecaORM\AttributeHydrator;
 use WScore\DecaORM\EntityCache;
-use WScore\DecaORM\Tests\Users\User;
-use WScore\DecaORM\Tests\Users\UserHydrator;
-use WScore\DecaORM\Tests\Users\UserRepository;
+use WScore\DecaORM\RepositoryManager;
+use WScore\DecaORM\Tests\Fixtures\Relations\User;
+use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
 
 // --- Mock Classes for Testing ---
 
@@ -28,8 +28,6 @@ class DecaOrmTest extends TestCase
         $this->pdo = new PDO('sqlite::memory:');
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        // Create table
-        $sql = file_get_contents(__DIR__ . '/Users/users.sql');
         $this->pdo->exec(
             "CREATE TABLE users (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,9 +41,11 @@ class DecaOrmTest extends TestCase
         // Clear cache before each test
         \WScore\DecaORM\EntityCache::clear();
 
-        $this->repo = new UserRepository($this->pdo);
-        // $this->repo = new UserRepository($this->pdo, new UserHydrator());
-
+        $container = new TestContainer();
+        $container->set(PDO::class, $this->pdo);
+        $manager = RepositoryManager::initialize($container);
+        $this->repo = new UserRepository($manager);
+        $container->set(UserRepository::class, $this->repo);
     }
 
     public function testCreateAndSaveUser()

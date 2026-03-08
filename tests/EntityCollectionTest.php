@@ -9,9 +9,9 @@ use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\RepositoryInterface;
 use WScore\DecaORM\RepositoryManager;
-use WScore\DecaORM\Tests\Users\Container;
-use WScore\DecaORM\Tests\Users\PostsRepository;
-use WScore\DecaORM\Tests\Users\UserRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\PostRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
+use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
 
 class EntityCollectionTest extends TestCase
 {
@@ -114,20 +114,21 @@ class EntityCollectionTest extends TestCase
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         // Create users table
-        $sql = file_get_contents(__DIR__ . '/Users/users.sql');
+        $sql = file_get_contents(__DIR__ . '/Fixtures/Relations/Sql/users.sql');
         $pdo->exec($sql);
 
         // Create posts table
-        $sql = file_get_contents(__DIR__ . '/Users/posts.sql');
+        $sql = file_get_contents(__DIR__ . '/Fixtures/Relations/Sql/posts.sql');
         $pdo->exec($sql);
 
         // prepare repositories
-        $container = new Container();
+        $container = new TestContainer();
+        $container->set(PDO::class, $pdo);
         $manager = RepositoryManager::initialize($container);
-        $userRepo = new UserRepository($pdo, $manager);
-        $postsRepo = new PostsRepository($pdo, $manager);
+        $userRepo = new UserRepository($manager);
+        $postsRepo = new PostRepository($manager);
         $container->set(UserRepository::class, $userRepo);
-        $container->set(PostsRepository::class, $postsRepo);
+        $container->set(PostRepository::class, $postsRepo);
 
         // Start TESTING!
 

@@ -1,22 +1,16 @@
 <?php
 
-namespace WScore\DecaORM\Tests\CustomLoader;
+namespace WScore\DecaORM\Tests\Fixtures\CustomLoader;
 
-use PDO;
-use Psr\Container\ContainerInterface;
-use WScore\DecaORM\AttributeHydrator;
 use WScore\DecaORM\AbstractRepository;
 use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\HydratorInterface;
 use WScore\DecaORM\RepositoryManager;
 
 class ProjectRepositoryWithReturn extends AbstractRepository
 {
-    public function __construct(PDO $pdo, ?RepositoryManager $manager, ?HydratorInterface $hydrator = null)
+    public function __construct(RepositoryManager $manager)
     {
-        $this->db = $pdo;
-        $this->hydrator = $hydrator ?? new AttributeHydrator(Project::class);
-        $this->manager = $manager;
+        $this->setUpRepository($manager, null, Project::class);
     }
 
     public function findTasks(EntityInterface|array $entities): array
@@ -36,7 +30,6 @@ class ProjectRepositoryWithReturn extends AbstractRepository
             ->whereIn('project_id', $projectIds)
             ->getResult();
 
-        // Group by project_id and set on entities
         $tasksByProjectId = [];
         foreach ($tasks as $task) {
             $projectId = $task->get('project_id');
@@ -48,13 +41,11 @@ class ProjectRepositoryWithReturn extends AbstractRepository
             }
         }
 
-        // Set tasks on each entity
         foreach ($entities as $entity) {
             $projectId = $entity->getId();
             $entity->set('tasks', $tasksByProjectId[$projectId] ?? []);
         }
 
-        // Return tasks array
         return $tasks;
     }
 }

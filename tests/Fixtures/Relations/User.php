@@ -1,6 +1,6 @@
 <?php
 
-namespace WScore\DecaORM\Tests\Users;
+namespace WScore\DecaORM\Tests\Fixtures\Relations;
 
 use DateTimeImmutable;
 use WScore\DecaORM\Attribute\Column;
@@ -9,15 +9,13 @@ use WScore\DecaORM\Attribute\GeneratedValue;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Attribute\Id;
+use WScore\DecaORM\Attribute\ManyToMany;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\Attribute\UpdatedAt;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\Trait\EntityTrait;
 
-/**
- * Attributeを使ったUserエンティティのサンプル
- */
 #[Table(name: 'users')]
 #[Repository(UserRepository::class)]
 class User implements EntityInterface
@@ -47,6 +45,15 @@ class User implements EntityInterface
 
     #[HasOne(targetEntity: Profile::class, mappedBy: 'user')]
     private ?Profile $profile = null;
+
+    /** @var Role[]|null */
+    #[ManyToMany(
+        targetEntity: Role::class,
+        joinTable: 'user_role',
+        foreignKey: 'user_id',
+        inverseForeignKey: 'role_id'
+    )]
+    private ?array $roles = null;
 
     public function getId(): ?int
     {
@@ -83,26 +90,20 @@ class User implements EntityInterface
         $this->email = $email;
     }
 
-    /**
-     * @return Post[]
-     */
-    public function getPosts(): array
+    public function getPosts(): ?array
     {
-        return $this->posts ?? [];
+        return $this->posts;
     }
 
     /**
-     * @param Post[] $posts
+     * @param Post[]|null $posts
      */
-    public function setPosts(array $posts): static
+    public function setPosts(?array $posts): void
     {
         $this->posts = $posts;
-        foreach ($posts as $post) {
-            if ($post->getUser() !== $this) {
-                $post->setUser($this);
-            }
+        foreach ($posts ?? [] as $post) {
+            $post->setUser($this);
         }
-        return $this;
     }
 
     public function getProfile(): ?Profile
@@ -117,29 +118,25 @@ class User implements EntityInterface
 
     public function addPost(Post $post): void
     {
-        $this->posts ??= [];
+        if (!$this->posts) {
+            $this->posts = [];
+        }
         if (in_array($post, $this->posts, true)) {
             return;
         }
         $this->posts[] = $post;
-        $post->setUser($this);
+        if ($post->getUser() !== $this) {
+            $post->setUser($this);
+        }
     }
 
     public function removePost(Post $post): void
     {
-        if ($this->posts === null) {
-            return;
-        }
-        $index = array_search($post, $this->posts, true);
-        if ($index === false) {
-            return;
-        }
-        array_splice($this->posts, $index, 1);
-
         if ($post->getUser() === $this) {
             $post->setUser(null);
         }
+        $this->posts = array_filter($this->posts ?? [], static function (Post $p) use ($post) {
+            return $p->getId() !== $post->getId();
+        });
     }
 }
-
-

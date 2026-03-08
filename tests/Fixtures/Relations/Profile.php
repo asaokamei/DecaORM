@@ -1,6 +1,6 @@
 <?php
 
-namespace WScore\DecaORM\Tests\Users;
+namespace WScore\DecaORM\Tests\Fixtures\Relations;
 
 use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\Column;
@@ -19,11 +19,13 @@ class Profile implements EntityInterface
     #[Column(name: 'profile_id')]
     #[Id]
     private int $id;
+
     #[Column(name: 'nickname')]
     private string $nickname;
 
     #[BelongsToOne(targetEntity: User::class, foreignKey: 'id', inversedBy: 'profile')]
     private ?User $user;
+
     public function getId(): null|int|string
     {
         return $this->id;

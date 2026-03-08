@@ -8,8 +8,10 @@ use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\DirtyTracker;
 use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\RepositoryManager;
 use WScore\DecaORM\Tests\Support\SpyUserRepository;
-use WScore\DecaORM\Tests\Users\User;
+use WScore\DecaORM\Tests\Fixtures\Relations\User;
+use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
 
 final class DirtyTrackingTest extends TestCase
 {
@@ -33,7 +35,11 @@ final class DirtyTrackingTest extends TestCase
 
         EntityCache::clear();
 
-        $this->repo = new SpyUserRepository($this->pdo);
+        $container = new TestContainer();
+        $container->set(PDO::class, $this->pdo);
+        $manager = RepositoryManager::initialize($container);
+        $this->repo = new SpyUserRepository($manager);
+        $container->set(SpyUserRepository::class, $this->repo);
     }
 
     public function testSaveWithoutChangesDoesNotExecuteUpdate(): void

@@ -14,9 +14,8 @@ use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\RepositoryManager;
 use WScore\DecaORM\Trait\EntityTrait;
-use WScore\DecaORM\Tests\Users\Container;
+use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
 
 // Test entities for HasMany::loader
 #[Table('projects')]
@@ -76,11 +75,9 @@ class TaskWithDate implements EntityInterface
 #[Repository(ProjectWithLoader::class)]
 class ProjectWithLoaderRepository extends \WScore\DecaORM\AbstractRepository
 {
-    public function __construct(PDO $pdo, ?RepositoryManager $manager, ?\WScore\DecaORM\HydratorInterface $hydrator = null)
+    public function __construct(\WScore\DecaORM\RepositoryManager $manager)
     {
-        $this->db = $pdo;
-        $this->hydrator = $hydrator ?? new \WScore\DecaORM\AttributeHydrator(ProjectWithLoader::class);
-        $this->manager = $manager;
+        $this->setUpRepository($manager, null, ProjectWithLoader::class);
     }
 
     /**
@@ -118,11 +115,9 @@ class ProjectWithLoaderRepository extends \WScore\DecaORM\AbstractRepository
 #[Repository(TaskWithDate::class)]
 class TaskWithDateRepository extends \WScore\DecaORM\AbstractRepository
 {
-    public function __construct(PDO $pdo, ?RepositoryManager $manager, ?\WScore\DecaORM\HydratorInterface $hydrator = null)
+    public function __construct(\WScore\DecaORM\RepositoryManager $manager)
     {
-        $this->db = $pdo;
-        $this->hydrator = $hydrator ?? new \WScore\DecaORM\AttributeHydrator(TaskWithDate::class);
-        $this->manager = $manager;
+        $this->setUpRepository($manager, null, TaskWithDate::class);
     }
 }
 
@@ -160,10 +155,11 @@ class HasManyLoaderTest extends TestCase
         // Clear cache before each test
         EntityCache::clear();
 
-        $container = new Container();
-        $manager = RepositoryManager::initialize($container);
-        $this->projectRepo = new ProjectWithLoaderRepository($this->pdo, $manager);
-        $this->taskRepo = new TaskWithDateRepository($this->pdo, $manager);
+        $container = new TestContainer();
+        $container->set(PDO::class, $this->pdo);
+        $manager = \WScore\DecaORM\RepositoryManager::initialize($container);
+        $this->projectRepo = new ProjectWithLoaderRepository($manager);
+        $this->taskRepo = new TaskWithDateRepository($manager);
         $container->set(ProjectWithLoaderRepository::class, $this->projectRepo);
         $container->set(TaskWithDateRepository::class, $this->taskRepo);
     }

@@ -6,15 +6,15 @@ use PDO;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\Tests\Fixtures\CustomLoader\InvalidProject;
+use WScore\DecaORM\Tests\Fixtures\CustomLoader\InvalidProjectRepository;
+use WScore\DecaORM\Tests\Fixtures\CustomLoader\Project;
+use WScore\DecaORM\Tests\Fixtures\CustomLoader\ProjectRepository;
+use WScore\DecaORM\Tests\Fixtures\CustomLoader\ProjectRepositoryWithReturn;
+use WScore\DecaORM\Tests\Fixtures\CustomLoader\Task;
+use WScore\DecaORM\Tests\Fixtures\CustomLoader\TaskRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
 use WScore\DecaORM\RepositoryManager;
-use WScore\DecaORM\Tests\CustomLoader\InvalidProject;
-use WScore\DecaORM\Tests\CustomLoader\InvalidProjectRepository;
-use WScore\DecaORM\Tests\CustomLoader\Project;
-use WScore\DecaORM\Tests\CustomLoader\ProjectRepository;
-use WScore\DecaORM\Tests\CustomLoader\ProjectRepositoryWithReturn;
-use WScore\DecaORM\Tests\CustomLoader\Task;
-use WScore\DecaORM\Tests\CustomLoader\TaskRepository;
-use WScore\DecaORM\Tests\Users\Container;
 
 class CustomLoaderTest extends TestCase
 {
@@ -50,10 +50,11 @@ class CustomLoaderTest extends TestCase
         // Clear cache before each test
         EntityCache::clear();
 
-        $container = new Container();
+        $container = new TestContainer();
+        $container->set(PDO::class, $this->pdo);
         $manager = RepositoryManager::initialize($container);
-        $this->projectRepo = new ProjectRepository($this->pdo, $manager);
-        $this->taskRepo = new TaskRepository($this->pdo, $manager);
+        $this->projectRepo = new ProjectRepository($manager);
+        $this->taskRepo = new TaskRepository($manager);
         $container->set(ProjectRepository::class, $this->projectRepo);
         $container->set(TaskRepository::class, $this->taskRepo);
     }
@@ -171,18 +172,20 @@ class CustomLoaderTest extends TestCase
 
     public function testCustomLoaderWithEmptyArray(): void
     {
-        // Test with empty array - should return empty array without error
+        // Test with empty array - should return empty array without error (CustomLoader returns Collection for non-entity results)
         $result = $this->projectRepo->load([], 'tasks');
         $this->assertCount(0, $result->getItems());
     }
 
     public function testCustomLoaderWithInvalidMethod(): void
     {
-        $container = new Container();
+        $container = new TestContainer();
+        $container->set(PDO::class, $this->pdo);
         $manager = RepositoryManager::initialize($container);
-        $invalidRepo = new InvalidProjectRepository($this->pdo, $manager);
+        $taskRepo = new TaskRepository($manager);
+        $invalidRepo = new InvalidProjectRepository($manager);
         $container->set(InvalidProjectRepository::class, $invalidRepo);
-        $container->set(TaskRepository::class, $this->taskRepo);
+        $container->set(TaskRepository::class, $taskRepo);
 
         // Create table
         $this->pdo->exec(
@@ -205,11 +208,13 @@ class CustomLoaderTest extends TestCase
 
     public function testCustomLoaderWithReturnValue(): void
     {
-        $container = new Container();
+        $container = new TestContainer();
+        $container->set(PDO::class, $this->pdo);
         $manager = RepositoryManager::initialize($container);
-        $repo = new ProjectRepositoryWithReturn($this->pdo, $manager);
+        $taskRepo = new TaskRepository($manager);
+        $repo = new ProjectRepositoryWithReturn($manager);
         $container->set(ProjectRepositoryWithReturn::class, $repo);
-        $container->set(TaskRepository::class, $this->taskRepo);
+        $container->set(TaskRepository::class, $taskRepo);
 
         // Create a project
         $project = $repo->createAndSave([

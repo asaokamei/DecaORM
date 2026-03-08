@@ -4,7 +4,7 @@ namespace WScore\DecaORM\Tests;
 
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\AttributeHydrator;
-use WScore\DecaORM\Tests\Users\User;
+use WScore\DecaORM\Tests\Fixtures\Relations\User;
 
 class AttributeHydratorTest extends TestCase
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace WScore\DecaORM\Tests\CustomLoader;
+namespace WScore\DecaORM\Tests\Fixtures\CustomLoader;
 
 use WScore\DecaORM\Attribute\Column;
 use WScore\DecaORM\Attribute\CustomLoader;
@@ -12,10 +12,10 @@ use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\Trait\EntityTrait;
 
-#[Table('projects')]
+#[Table('invalid_projects')]
 #[Entity]
-#[Repository(ProjectRepository::class)]
-class Project implements EntityInterface
+#[Repository(InvalidProjectRepository::class)]
+class InvalidProject implements EntityInterface
 {
     use EntityTrait;
 
@@ -27,7 +27,7 @@ class Project implements EntityInterface
     #[Column(name: 'name')]
     public string $name = '';
 
-    #[CustomLoader(targetEntity: Task::class, method: 'findTasks')]
+    #[CustomLoader(targetEntity: Task::class, method: 'nonExistentMethod')]
     public array $tasks = [];
 
     public function getId(): ?int

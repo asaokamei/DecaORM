@@ -27,15 +27,15 @@ abstract class AbstractRepository implements RepositoryInterface
      * @param string|null $entityClass
      * @return void
      */
-    protected function setUpRepository(RepositoryManager $manager, ?PDO $pdo = null, ?string $entityClass): void
+    protected function setUpRepository(RepositoryManager $manager, ?PDO $pdo = null, ?string $entityClass = null): void
     {
         $this->manager = $manager;
         $this->db = $pdo ?? $manager->getPDO();
-        if ($this->hydrator === null && $entityClass) {
+        if ($entityClass !== null) {
             $this->hydrator = new AttributeHydrator($entityClass);
         }
         $this->now = $manager->getDateTimeImmutable() ?? new \DateTimeImmutable();
-        if ($this->hydrator === null) {
+        if (!isset($this->hydrator)) {
             throw new \RuntimeException('Hydrator is not set');
         }
     }

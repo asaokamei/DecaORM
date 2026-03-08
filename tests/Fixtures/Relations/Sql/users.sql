@@ -5,4 +5,4 @@ CREATE TABLE users
     email      TEXT NOT NULL,
     created_at TEXT,
     updated_at TEXT
-)
+);

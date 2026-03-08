@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace WScore\DecaORM\Tests\Support;
 
 use PDOStatement;
-use WScore\DecaORM\Tests\Users\UserRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
 
 final class SpyUserRepository extends UserRepository
 {

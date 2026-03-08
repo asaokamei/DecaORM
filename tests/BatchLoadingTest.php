@@ -4,76 +4,30 @@ namespace WScore\DecaORM\Tests;
 
 use PDO;
 use PHPUnit\Framework\TestCase;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
-use WScore\DecaORM\RepositoryManager;
-use WScore\DecaORM\Tests\Users\Container;
-use WScore\DecaORM\Tests\Users\Post;
-use WScore\DecaORM\Tests\Users\PostsRepository;
-use WScore\DecaORM\Tests\Users\Profile;
-use WScore\DecaORM\Tests\Users\ProfileRepository;
-use WScore\DecaORM\Tests\Users\User;
-use WScore\DecaORM\Tests\Users\UserRepository;
+use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\Tests\Fixtures\Relations\Post;
+use WScore\DecaORM\Tests\Fixtures\Relations\PostRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\Profile;
+use WScore\DecaORM\Tests\Fixtures\Relations\ProfileRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\RelationsFixture;
+use WScore\DecaORM\Tests\Fixtures\Relations\User;
+use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
 
 class BatchLoadingTest extends TestCase
 {
     private PDO $pdo;
     private UserRepository $userRepo;
-    private PostsRepository $postsRepo;
+    private PostRepository $postsRepo;
     private ProfileRepository $profileRepo;
 
     protected function setUp(): void
     {
-        // In-memory SQLite database for testing
-        $this->pdo = new PDO('sqlite::memory:');
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        // Create users table
-        $this->pdo->exec(
-            "CREATE TABLE users (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            created_at TEXT,
-            updated_at TEXT
-        )"
-        );
-
-        // Create posts table
-        $this->pdo->exec(
-            "CREATE TABLE posts (
-            post_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            title TEXT NOT NULL,
-            content TEXT NOT NULL,
-            created_at TEXT,
-            updated_at TEXT,
-            FOREIGN KEY (user_id) REFERENCES users(user_id)
-        )"
-        );
-
-        // Create profiles table
-        $this->pdo->exec(
-            "CREATE TABLE profiles (
-            profile_id INTEGER PRIMARY KEY,
-            nickname TEXT NOT NULL,
-            created_at TIMESTAMP,
-            updated_at TIMESTAMP,
-            FOREIGN KEY (profile_id) REFERENCES users(user_id)
-        )"
-        );
-
-        // Clear cache before each test
-        EntityCache::clear();
-
-        $container = new Container();
-        $manager = RepositoryManager::initialize($container);
-        $this->userRepo = new UserRepository($this->pdo, $manager);
-        $this->postsRepo = new PostsRepository($this->pdo, $manager);
-        $this->profileRepo = new ProfileRepository($this->pdo, $manager);
-        $container->set(UserRepository::class, $this->userRepo);
-        $container->set(PostsRepository::class, $this->postsRepo);
-        $container->set(ProfileRepository::class, $this->profileRepo);
+        $fixture = RelationsFixture::create();
+        $this->pdo = $fixture->pdo;
+        $this->userRepo = $fixture->users;
+        $this->postsRepo = $fixture->posts;
+        $this->profileRepo = $fixture->profiles;
     }
 
     public function testBatchLoadHasMany(): void

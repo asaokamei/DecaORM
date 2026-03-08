@@ -1,6 +1,6 @@
 <?php
 
-namespace WScore\DecaORM\Tests\Users;
+namespace WScore\DecaORM\Tests\Fixtures\Relations;
 
 use DateTimeImmutable;
 use WScore\DecaORM\Attribute\BelongsTo;
@@ -15,11 +15,8 @@ use WScore\DecaORM\Attribute\UpdatedAt;
 use WScore\DecaORM\EntityInterface;
 use WScore\DecaORM\Trait\EntityTrait;
 
-/**
- * Postエンティティ - Userに対するOneToManyの子エンティティ
- */
 #[Table(name: 'posts')]
-#[Repository(PostsRepository::class)]
+#[Repository(PostRepository::class)]
 class Post implements EntityInterface
 {
     use EntityTrait;
@@ -44,12 +41,12 @@ class Post implements EntityInterface
     #[UpdatedAt(name: 'updated_at')]
     private ?string $updated_at = null;
 
-    /** @var User|null */
     #[BelongsTo(targetEntity: User::class, foreignKey: 'user_id', inversedBy: 'posts')]
     private ?User $user = null;
 
-    #[HasMany(targetEntity: Comment::class, mappedBy: 'post')]
-    private array $comments = [];
+    /** @var Comment[]|null */
+    #[HasMany(targetEntity: Comment::class, mappedBy: 'post', orderBy: 'created_at DESC')]
+    private ?array $comments = null;
 
     public function getId(): ?int
     {
@@ -83,14 +80,12 @@ class Post implements EntityInterface
 
     public function setUser(?User $user): void
     {
-        if ($this->user === $user) {
+        if ($user === $this->user) {
             return;
         }
-
         $originalUser = $this->user;
         $this->user = $user;
-        $this->user_id = $user?->getId();
-
+        $this->user_id = $user?->getId() !== null ? (string) $user->getId() : null;
         if ($originalUser !== null) {
             $originalUser->removePost($this);
         }
@@ -98,31 +93,4 @@ class Post implements EntityInterface
             $user->addPost($this);
         }
     }
-
-    public function getComments(): array
-    {
-        return $this->comments;
-    }
-    public function setComments(array $comments): void
-    {
-        $this->comments = $comments;
-        foreach ($comments as $comment) {
-            $comment->setPost($this);
-        }
-    }
-    public function addComment(Comment $comment): void
-    {
-        if (in_array($comment, $this->comments, true)) {
-            return;
-        }
-        $this->comments[] = $comment;
-        if ($comment->getPost() !== $this) {
-            $comment->setPost($this);
-        }
-    }
-    public function removeComment(Comment $comment): void
-    {
-        $this->comments = array_filter($this->comments, fn($c) => $c !== $comment);
-    }
 }
-

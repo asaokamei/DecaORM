@@ -1,22 +1,16 @@
 <?php
 
-namespace WScore\DecaORM\Tests\CustomLoader;
+namespace WScore\DecaORM\Tests\Fixtures\CustomLoader;
 
-use PDO;
-use Psr\Container\ContainerInterface;
-use WScore\DecaORM\AttributeHydrator;
 use WScore\DecaORM\AbstractRepository;
 use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\HydratorInterface;
 use WScore\DecaORM\RepositoryManager;
 
 class ProjectRepository extends AbstractRepository
 {
-    public function __construct(PDO $pdo, ?RepositoryManager $manager, ?HydratorInterface $hydrator = null)
+    public function __construct(RepositoryManager $manager)
     {
-        $this->db = $pdo;
-        $this->hydrator = $hydrator ?? new AttributeHydrator(Project::class);
-        $this->manager = $manager;
+        $this->setUpRepository($manager, null, Project::class);
     }
 
     public function findTasks(EntityInterface|array $entities): void
@@ -32,13 +26,10 @@ class ProjectRepository extends AbstractRepository
         }
 
         $taskRepo = $this->getRepository(Task::class);
-        // Simulate composite key query (project_id + user_id)
-        // In real scenario, this would be a complex query
         $tasks = $taskRepo->sqlQuery()
             ->whereIn('project_id', $projectIds)
             ->getResult();
 
-        // Group by project_id and set on entities
         $tasksByProjectId = [];
         foreach ($tasks as $task) {
             $projectId = $task->get('project_id');
@@ -50,7 +41,6 @@ class ProjectRepository extends AbstractRepository
             }
         }
 
-        // Set tasks on each entity
         foreach ($entities as $entity) {
             $projectId = $entity->getId();
             $entity->set('tasks', $tasksByProjectId[$projectId] ?? []);

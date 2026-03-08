@@ -6,42 +6,25 @@ use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\RepositoryManager;
-use WScore\DecaORM\Tests\Users\Container;
-use WScore\DecaORM\Tests\Users\Post;
-use WScore\DecaORM\Tests\Users\PostsRepository;
-use WScore\DecaORM\Tests\Users\User;
-use WScore\DecaORM\Tests\Users\UserRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\Comment;
+use WScore\DecaORM\Tests\Fixtures\Relations\Post;
+use WScore\DecaORM\Tests\Fixtures\Relations\PostRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\RelationsFixture;
+use WScore\DecaORM\Tests\Fixtures\Relations\User;
+use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
 
 class OneToManyTest extends TestCase
 {
     private PDO $pdo;
     private UserRepository $userRepo;
-    private PostsRepository $postsRepo;
+    private PostRepository $postsRepo;
 
     protected function setUp(): void
     {
-        // In-memory SQLite database for testing
-        $this->pdo = new PDO('sqlite::memory:');
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        // Create users table
-        $sql = file_get_contents(__DIR__ . '/Users/users.sql');
-        $this->pdo->exec($sql);
-
-        // Create posts table
-        $sql = file_get_contents(__DIR__ . '/Users/posts.sql');
-        $this->pdo->exec($sql);
-
-        // Clear cache before each test
-        EntityCache::clear();
-
-        $container = new Container();
-        $manager = RepositoryManager::initialize($container);
-        $this->userRepo = new UserRepository($this->pdo, $manager);
-        $this->postsRepo = new PostsRepository($this->pdo, $manager);
-        $container->set(UserRepository::class, $this->userRepo);
-        $container->set(PostsRepository::class, $this->postsRepo);
+        $fixture = RelationsFixture::create();
+        $this->pdo = $fixture->pdo;
+        $this->userRepo = $fixture->users;
+        $this->postsRepo = $fixture->posts;
     }
 
     public function createAndSaveUser(string|int $name): User|EntityInterface|null
@@ -346,6 +329,28 @@ class OneToManyTest extends TestCase
         $user = $this->userRepo->findById($user2->getId());
         $this->userRepo->loadPosts($user);
         $this->assertCount(3, $user->get('posts'));
+    }
+
+    public function testLoadCommentsForPost(): void
+    {
+        $user = $this->createAndSaveUser(1);
+        $post = $this->createAndSavePost($user, 'with-comments');
+
+        $this->pdo->exec(
+            "INSERT INTO comments (post_id, body, created_at) VALUES ({$post->getId()}, 'Comment 1', datetime('now'))"
+        );
+        $this->pdo->exec(
+            "INSERT INTO comments (post_id, body, created_at) VALUES ({$post->getId()}, 'Comment 2', datetime('now', '-1 second'))"
+        );
+
+        EntityCache::clear();
+        $post = $this->postsRepo->findById($post->getId());
+        $this->postsRepo->loadComments($post);
+
+        $comments = $post->get('comments');
+        $this->assertIsArray($comments);
+        $this->assertCount(2, $comments);
+        $this->assertInstanceOf(Comment::class, $comments[0]);
     }
 }
 

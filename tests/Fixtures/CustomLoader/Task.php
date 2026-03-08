@@ -1,6 +1,6 @@
 <?php
 
-namespace WScore\DecaORM\Tests\CustomLoader;
+namespace WScore\DecaORM\Tests\Fixtures\CustomLoader;
 
 use WScore\DecaORM\Attribute\Column;
 use WScore\DecaORM\Attribute\Entity;
