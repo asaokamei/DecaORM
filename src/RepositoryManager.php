@@ -6,6 +6,7 @@ use PDO;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
+use DateTimeImmutable;
 use RuntimeException;
 use Throwable;
 
@@ -19,6 +20,9 @@ class RepositoryManager
      * @var ContainerInterface[]
      */
     private array $containerStack = [];
+
+    private ?PDO $pdo = null;
+    private ?DateTimeImmutable $now = null;
 
     private function __construct(private ContainerInterface $container) {}
 
@@ -59,6 +63,7 @@ class RepositoryManager
     public function enterScope(ContainerInterface $container): void
     {
         $this->containerStack[] = $container;
+        $this->pdo = null;
     }
 
     /**
@@ -69,6 +74,7 @@ class RepositoryManager
     public function leaveScope(): void
     {
         array_pop($this->containerStack);
+        $this->pdo = null;
     }
 
     /**
@@ -125,5 +131,21 @@ class RepositoryManager
         }
 
         return $repo;
+    }
+
+    public function getPDO(): PDO
+    {
+        if ($this->pdo === null) {
+            $this->pdo = $this->getCurrentContainer()->get(PDO::class);
+        }
+        return $this->pdo;
+    }
+
+    public function getDateTimeImmutable(): DateTimeImmutable
+    {
+        if ($this->now === null) {
+            $this->now = new \DateTimeImmutable();
+        }
+        return $this->now;
     }
 }

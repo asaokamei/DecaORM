@@ -2,6 +2,7 @@
 
 namespace WScore\DecaORM;
 
+use PDO;
 use WScore\DecaORM\Trait\RepositoryTrait;
 
 /**
@@ -10,6 +11,34 @@ use WScore\DecaORM\Trait\RepositoryTrait;
 abstract class AbstractRepository implements RepositoryInterface
 {
     use RepositoryTrait;
+
+    /**
+     * Sets up the repository.
+     * This method is called by the constructor of the repository.
+     * 
+     * set pdo to use specific database connection.
+     * Or, use container/RepositoryManager to get the database connection.
+     * 
+     * set entityClass to create generic attribute hydrator for the entity class.
+     * Or, set specific hydrator before calling this method.
+     * 
+     * @param RepositoryManager $manager
+     * @param PDO|null $pdo
+     * @param string|null $entityClass
+     * @return void
+     */
+    protected function setUpRepository(RepositoryManager $manager, ?PDO $pdo = null, ?string $entityClass): void
+    {
+        $this->manager = $manager;
+        $this->db = $pdo ?? $manager->getPDO();
+        if ($this->hydrator === null && $entityClass) {
+            $this->hydrator = new AttributeHydrator($entityClass);
+        }
+        $this->now = $manager->getDateTimeImmutable() ?? new \DateTimeImmutable();
+        if ($this->hydrator === null) {
+            throw new \RuntimeException('Hydrator is not set');
+        }
+    }
 
     /**
      * IDに基づいてUserエンティティを取得
