@@ -31,21 +31,26 @@ class RepositoryManager
         self::$_self = new static($container);
         return self::$_self;
     }
-    
+
+    /**
+     * @template T of RepositoryInterface
+     * @param class-string<T> $class
+     * @return T
+     * */
     public static function getRepository(string $class): ?RepositoryInterface
     {
-        return self::$_self?->get($class);
+        $repo = self::$_self->get($class);
+        if (!$repo instanceof RepositoryInterface) {
+            throw new RuntimeException("Container entry {$class} is not a RepositoryInterface.");
+        }
+        return $repo;
     }
 
     public static function transaction(callable $callback): mixed
     {
+        $pdo = self::$_self->get(PDO::class);
         try {
-            $pdo = self::$_self->getCurrentContainer()->get(PDO::class);
-        } catch (NotFoundExceptionInterface|ContainerExceptionInterface $e) {
-            throw new RuntimeException('Failed to get PDO instance from container.', 0, $e);
-        }
-        $pdo->beginTransaction();
-        try {
+            $pdo->beginTransaction();
             $result = $callback();
             $pdo->commit();
             return $result;
@@ -107,27 +112,23 @@ class RepositoryManager
     }
 
     /**
-     * @template T of RepositoryInterface
-     * @param class-string<T> $repositoryClass
-     * @return T
+     * @template T
+     * @param class-string<T> $class
+     * @return T|mixed
      */
-    public function get(string $repositoryClass): RepositoryInterface
+    public function get(string $class): mixed
     {
-        $container = self::getCurrentContainer();
+        $container = $this->getCurrentContainer();
 
         if ($container === null) {
             throw new RuntimeException('RepositoryManager container is not set.');
         }
         try {
-            $repo = $container->get($repositoryClass);
+            $repo = $container->get($class);
         } catch (NotFoundExceptionInterface $e) {
-            throw new RuntimeException("Repository for {$repositoryClass} not found in container.", 0, $e);
+            throw new RuntimeException("Could not found {$class} in container.", 0, $e);
         } catch (ContainerExceptionInterface $e) {
-            throw new RuntimeException("Failed to get repository for {$repositoryClass} from container.", 0, $e);
-        }
-
-        if (!$repo instanceof RepositoryInterface) {
-            throw new RuntimeException("Container entry {$repositoryClass} is not a RepositoryInterface.");
+            throw new RuntimeException("Failed to get {$class} from container.", 0, $e);
         }
 
         return $repo;
