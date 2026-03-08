@@ -137,7 +137,7 @@ trait RepositoryTrait
             throw new RuntimeException('no repository class defined for entity: ' . $entity);
         }
         $repoName = $entity::getRepositoryClass();
-        return $this->manager->get($repoName);
+        return $this->manager->getRepository($repoName);
     }
 
     /**

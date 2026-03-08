@@ -48,7 +48,7 @@ class RepositoryManager
 
     public static function transaction(callable $callback): mixed
     {
-        $pdo = self::$_self->get(PDO::class);
+        $pdo = self::$_self->getPDO();
         try {
             $pdo->beginTransaction();
             $result = $callback();
