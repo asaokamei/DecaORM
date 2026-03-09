@@ -79,11 +79,7 @@ trait RepositoryTrait
 
     public function execute(string $sql, array $data): bool|PDOStatement
     {
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($data);
-        $stmt->setFetchMode(PDO::FETCH_ASSOC);
-
-        return $stmt;
+        return $this->manager->getSqlExecutor()->execute($this->db, $sql, $data);
     }
 
     /**

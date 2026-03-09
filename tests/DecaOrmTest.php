@@ -6,6 +6,7 @@ use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\RepositoryManager;
+use WScore\DecaORM\Tests\Fixtures\ArrayLogger;
 use WScore\DecaORM\Tests\Fixtures\Relations\User;
 use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
@@ -84,8 +85,10 @@ class DecaOrmTest extends TestCase
         EntityCache::clear();
         $entities = $this->repo->fetch('SELECT * FROM users WHERE user_id = ?', [$id]);
         $this->assertCount(1, $entities);
-        $this->assertEquals('Jane Doe', $entities[0]->getName());
-        $this->assertEquals($id, $entities[0]->getId());
+        /** @var User $entity */
+        $entity = $entities[0];
+        $this->assertEquals('Jane Doe', $entity->getName());
+        $this->assertEquals($id, $entity->getId());
     }
 
     public function testUpdateUser()
@@ -141,5 +144,72 @@ class DecaOrmTest extends TestCase
 
         // HydratorTrait uses a static cache, so the same instance should be returned
         $this->assertSame($user1, $user2);
+    }
+
+    public function testExecuteLogsSqlThroughRepositoryManager(): void
+    {
+        $pdo = new PDO('sqlite::memory:');
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo->exec(
+            "CREATE TABLE users (
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            created_at TEXT,
+            updated_at TEXT
+        )"
+        );
+
+        $container = new TestContainer();
+        $container->set(PDO::class, $pdo);
+        $logger = new ArrayLogger();
+        $manager = RepositoryManager::initialize($container)
+            ->setLogger($logger)
+            ->setSlowQueryThresholdMs(0);
+        $repo = new UserRepository($manager);
+
+        $repo->execute(
+            'INSERT INTO users (user_name, email) VALUES (:name, :email)',
+            ['name' => 'Logger Test', 'email' => 'logger@example.com']
+        );
+
+        $this->assertCount(1, $logger->records);
+        $this->assertSame('warning', $logger->records[0]['level']);
+        $this->assertSame('SQL executed.', $logger->records[0]['message']);
+        $this->assertSame(
+            'INSERT INTO users (user_name, email) VALUES (:name, :email)',
+            $logger->records[0]['context']['sql']
+        );
+        $this->assertSame('Logger Test', $logger->records[0]['context']['params']['name']);
+        $this->assertArrayHasKey('duration_ms', $logger->records[0]['context']);
+    }
+
+    public function testExecuteWorksWithoutConfiguredLogger(): void
+    {
+        $pdo = new PDO('sqlite::memory:');
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo->exec(
+            "CREATE TABLE users (
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            created_at TEXT,
+            updated_at TEXT
+        )"
+        );
+
+        $container = new TestContainer();
+        $container->set(PDO::class, $pdo);
+        $manager = RepositoryManager::initialize($container)
+            ->setLogger(null);
+        $repo = new UserRepository($manager);
+
+        $stmt = $repo->execute(
+            'INSERT INTO users (user_name, email) VALUES (:name, :email)',
+            ['name' => 'No Logger', 'email' => 'nologger@example.com']
+        );
+
+        $this->assertSame(1, $stmt->rowCount());
+        $this->assertSame('1', $pdo->lastInsertId());
     }
 }

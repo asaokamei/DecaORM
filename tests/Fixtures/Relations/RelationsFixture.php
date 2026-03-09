@@ -3,6 +3,7 @@
 namespace WScore\DecaORM\Tests\Fixtures\Relations;
 
 use PDO;
+use Psr\Log\LoggerInterface;
 use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\RepositoryManager;
 
@@ -17,7 +18,7 @@ class RelationsFixture
     public RoleRepository $roles;
     private RepositoryManager $manager;
 
-    public static function create(): self
+    public static function create(?LoggerInterface $logger = null, int $slowQueryThresholdMs = 100): self
     {
         $fixture = new self();
         $fixture->pdo = new PDO('sqlite::memory:');
@@ -25,6 +26,10 @@ class RelationsFixture
         $fixture->container = new TestContainer();
         $fixture->container->set(PDO::class, $fixture->pdo);
         $fixture->manager = RepositoryManager::initialize($fixture->container);
+        if ($logger !== null) {
+            $fixture->manager->setLogger($logger);
+        }
+        $fixture->manager->setSlowQueryThresholdMs($slowQueryThresholdMs);
 
         foreach (self::schemaFiles() as $file) {
             $sql = file_get_contents($file);

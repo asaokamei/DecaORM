@@ -54,7 +54,7 @@ class LoadManyToMany
 
         // Get related IDs from join table
         $relatedIds = self::getRelatedIdsFromJoinTable(
-            $sourceRepository->getDb(),
+            $sourceRepository,
             $relation,
             $entityId
         );
@@ -102,7 +102,6 @@ class LoadManyToMany
         }
 
         $propertyName = $relation->propertyName;
-        $db = $sourceRepository->getDb();
 
         // Collect entity IDs (skip null IDs)
         [$entityIds, $entityMap] = self::collectEntityIds($entities);
@@ -117,7 +116,7 @@ class LoadManyToMany
 
         // Get all related IDs from join table for all entities
         $allRelatedIds = self::getRelatedIdsFromJoinTableBatch(
-            $db,
+            $sourceRepository,
             $relation,
             $entityIds
         );
@@ -144,7 +143,7 @@ class LoadManyToMany
 
         // Group target entities by source entity ID
         $relatedIdsByEntityId = self::groupRelatedIdsByEntityId(
-            $db,
+            $sourceRepository,
             $relation,
             $entityIds
         );
@@ -185,13 +184,13 @@ class LoadManyToMany
     /**
      * Get related IDs from join table for a single entity.
      * 
-     * @param PDO $db
+     * @param RepositoryInterface $sourceRepository
      * @param ManyToMany $relation
      * @param int|string $entityId
      * @return array<int|string>
      */
     private static function getRelatedIdsFromJoinTable(
-        PDO $db,
+        RepositoryInterface $sourceRepository,
         ManyToMany $relation,
         int|string $entityId
     ): array {
@@ -206,9 +205,8 @@ class LoadManyToMany
 
         $sql = $query->getSql();
         $params = $query->getParameters();
-        
-        $stmt = $db->prepare($sql);
-        $stmt->execute($params);
+
+        $stmt = $sourceRepository->execute($sql, $params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return array_column($rows, $relation->inverseForeignKey);
@@ -217,13 +215,13 @@ class LoadManyToMany
     /**
      * Get all related IDs from join table for multiple entities.
      * 
-     * @param PDO $db
+     * @param RepositoryInterface $sourceRepository
      * @param ManyToMany $relation
      * @param array<int|string> $entityIds
      * @return array<int|string> All related IDs (may contain duplicates)
      */
     private static function getRelatedIdsFromJoinTableBatch(
-        PDO $db,
+        RepositoryInterface $sourceRepository,
         ManyToMany $relation,
         array $entityIds
     ): array {
@@ -242,9 +240,8 @@ class LoadManyToMany
 
         $sql = $query->getSql();
         $params = $query->getParameters();
-        
-        $stmt = $db->prepare($sql);
-        $stmt->execute($params);
+
+        $stmt = $sourceRepository->execute($sql, $params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return array_column($rows, $relation->inverseForeignKey);
@@ -253,13 +250,13 @@ class LoadManyToMany
     /**
      * Group related IDs by entity ID.
      * 
-     * @param PDO $db
+     * @param RepositoryInterface $sourceRepository
      * @param ManyToMany $relation
      * @param array<int|string> $entityIds
      * @return array<int|string, array<int|string>> Map of entityId => [relatedIds]
      */
     private static function groupRelatedIdsByEntityId(
-        PDO $db,
+        RepositoryInterface $sourceRepository,
         ManyToMany $relation,
         array $entityIds
     ): array {
@@ -278,9 +275,8 @@ class LoadManyToMany
 
         $sql = $query->getSql();
         $params = $query->getParameters();
-        
-        $stmt = $db->prepare($sql);
-        $stmt->execute($params);
+
+        $stmt = $sourceRepository->execute($sql, $params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $grouped = [];

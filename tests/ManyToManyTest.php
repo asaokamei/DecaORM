@@ -5,6 +5,7 @@ namespace WScore\DecaORM\Tests;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\Tests\Fixtures\ArrayLogger;
 use WScore\DecaORM\Tests\Fixtures\Relations\RelationsFixture;
 use WScore\DecaORM\Tests\Fixtures\Relations\Role;
 use WScore\DecaORM\Tests\Fixtures\Relations\RoleRepository;
@@ -131,5 +132,40 @@ class ManyToManyTest extends TestCase
         $this->expectExceptionMessage("Relation 'nonexistent' is not a ManyToMany relationship");
 
         $this->userRepo->syncManyToMany($user, 'nonexistent');
+    }
+
+    public function testManyToManyQueriesAreLogged(): void
+    {
+        $logger = new ArrayLogger();
+        $fixture = RelationsFixture::create($logger, 0);
+        $userRepo = $fixture->users;
+        $roleRepo = $fixture->roles;
+
+        $user = $userRepo->createAndSave(['name' => 'John Doe', 'email' => 'john@example.com']);
+        $role = $roleRepo->createAndSave(['name' => 'admin']);
+
+        $user->set('roles', [$role]);
+        $userRepo->syncManyToMany($user, 'roles');
+
+        EntityCache::clear();
+        $user = $userRepo->findById($user->getId());
+        $userRepo->load($user, 'roles');
+
+        $messages = array_column($logger->records, 'message');
+        $sqlList = array_map(
+            static fn(array $record): string => $record['context']['sql'] ?? '',
+            $logger->records
+        );
+
+        $this->assertContains('SQL executed.', $messages);
+        $this->assertTrue(
+            in_array(
+                'SELECT role_id 
+                FROM user_role 
+                WHERE user_id = :entity_id',
+                $sqlList,
+                true
+            )
+        );
     }
 }
