@@ -11,5 +11,12 @@ class InvalidProjectRepository extends AbstractRepository
     {
         $this->setUpRepository($manager, null, InvalidProject::class);
     }
+
+    public function create(array $data = []): InvalidProject
+    {
+        /** @var InvalidProject $project */
+        $project = $this->createEntity($data);
+        return $project;
+    }
 }
 

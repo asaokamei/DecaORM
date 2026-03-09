@@ -11,4 +11,11 @@ class ProfileRepository extends AbstractRepository
     {
         $this->setUpRepository($manager, null, Profile::class);
     }
+
+    public function create(array $data = []): Profile
+    {
+        /** @var Profile $profile */
+        $profile = $this->createEntity($data);
+        return $profile;
+    }
 }

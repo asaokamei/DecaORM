@@ -25,19 +25,21 @@ class HasOneTest extends TestCase
     public function testCreateUserAndProfile(): void
     {
         // Create a user
-        $user = $this->userRepo->createAndSave([
+        $user = $this->userRepo->create([
                                                    'name' => 'John Doe',
                                                    'email' => 'john@example.com'
                                                ]);
+        $this->userRepo->save($user);
 
         $this->assertNotNull($user->getId());
         $this->assertEquals('John Doe', $user->get('name'));
 
         // Create posts for the user
-        $profile = $this->profileRepo->createAndSave([
+        $profile = $this->profileRepo->create([
                                                      'id' => $user->getId(),
                                                      'nickname' => 'Test Taro',
                                                  ]);
+        $this->profileRepo->save($profile);
 
         $this->assertNotNull($profile->getId());
         $this->assertEquals($profile->getId(), $user->getId());
@@ -46,14 +48,16 @@ class HasOneTest extends TestCase
     public function testFillProfile(): void
     {
         // Create a user
-        $user = $this->userRepo->createAndSave([
+        $user = $this->userRepo->create([
                                                    'name' => 'John Doe',
                                                    'email' => 'john@example.com'
                                                ]);
-        $profile = $this->profileRepo->createAndSave([
+        $this->userRepo->save($user);
+        $profile = $this->profileRepo->create([
                                                          'id' => $user->getId(),
                                                          'nickname' => 'Test Taro',
                                                      ]);
+        $this->profileRepo->save($profile);
 
         $userId = $user->getId();
         EntityCache::clear();
@@ -69,16 +73,18 @@ class HasOneTest extends TestCase
     public function testFillUserFromProfile(): void
     {
         // Create a user
-        $user = $this->userRepo->createAndSave([
+        $user = $this->userRepo->create([
             'name' => 'Jane Doe',
             'email' => 'jane@example.com'
         ]);
+        $this->userRepo->save($user);
 
         // Create profile for the user
-        $profile = $this->profileRepo->createAndSave([
+        $profile = $this->profileRepo->create([
             'id' => $user->getId(),
             'nickname' => 'Jane Profile'
         ]);
+        $this->profileRepo->save($profile);
 
         $profileId = $profile->getId();
         EntityCache::clear();
@@ -110,26 +116,30 @@ class HasOneTest extends TestCase
     public function testBatchLoadUserFromProfiles(): void
     {
         // Create multiple users
-        $user1 = $this->userRepo->createAndSave([
+        $user1 = $this->userRepo->create([
             'name' => 'User One',
             'email' => 'user1@example.com'
         ]);
+        $this->userRepo->save($user1);
 
-        $user2 = $this->userRepo->createAndSave([
+        $user2 = $this->userRepo->create([
             'name' => 'User Two',
             'email' => 'user2@example.com'
         ]);
+        $this->userRepo->save($user2);
 
         // Create profiles
-        $profile1 = $this->profileRepo->createAndSave([
+        $profile1 = $this->profileRepo->create([
             'id' => $user1->getId(),
             'nickname' => 'Profile One'
         ]);
+        $this->profileRepo->save($profile1);
 
-        $profile2 = $this->profileRepo->createAndSave([
+        $profile2 = $this->profileRepo->create([
             'id' => $user2->getId(),
             'nickname' => 'Profile Two'
         ]);
+        $this->profileRepo->save($profile2);
 
         // Clear cache and reload
         EntityCache::clear();

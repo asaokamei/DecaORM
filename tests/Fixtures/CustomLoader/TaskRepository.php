@@ -11,5 +11,12 @@ class TaskRepository extends AbstractRepository
     {
         $this->setUpRepository($manager, null, Task::class);
     }
+
+    public function create(array $data = []): Task
+    {
+        /** @var Task $task */
+        $task = $this->createEntity($data);
+        return $task;
+    }
 }
 

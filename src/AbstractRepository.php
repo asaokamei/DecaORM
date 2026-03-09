@@ -67,23 +67,6 @@ abstract class AbstractRepository implements RepositoryInterface
     }
 
     /**
-     * Creates and saves a new entity from data.
-     * 
-     * This is a convenience method that calls createEntity() and insertEntity().
-     * For more flexible entity creation (e.g., with additional parameters),
-     * implement a custom method in your repository class (e.g., PostRepository::create).
-     * 
-     * @param array $data
-     * @return T|null
-     */
-    public function createAndSave(array $data): ?EntityInterface
-    {
-        $entity = $this->createEntity($data);
-        $this->insertEntity($entity);
-        return $entity;
-    }
-
-    /**
      * Saves an entity (insert or update).
      * 
      * @param EntityInterface $entity

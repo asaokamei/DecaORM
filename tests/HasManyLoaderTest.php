@@ -167,23 +167,26 @@ class HasManyLoaderTest extends TestCase
     public function testHasManyLoaderWithSingleEntity(): void
     {
         // Create a project
-        $project = $this->projectRepo->createAndSave([
+        $project = $this->projectRepo->createEntity([
             'name' => 'Project 1'
         ]);
+        $this->projectRepo->save($project);
 
         // Create recent task (within 7 days) - use current timestamp format
-        $recentTask = $this->taskRepo->createAndSave([
+        $recentTask = $this->taskRepo->createEntity([
             'project_id' => $project->getId(),
             'title' => 'Recent Task',
             'created_at' => date('Y-m-d H:i:s', strtotime('-3 days'))
         ]);
+        $this->taskRepo->save($recentTask);
 
         // Create old task (more than 7 days ago)
-        $oldTask = $this->taskRepo->createAndSave([
+        $oldTask = $this->taskRepo->createEntity([
             'project_id' => $project->getId(),
             'title' => 'Old Task',
             'created_at' => date('Y-m-d H:i:s', strtotime('-10 days'))
         ]);
+        $this->taskRepo->save($oldTask);
 
         // Verify tasks were created
         $this->assertNotNull($recentTask->getId());
@@ -214,40 +217,46 @@ class HasManyLoaderTest extends TestCase
     public function testHasManyLoaderWithMultipleEntities(): void
     {
         // Create multiple projects
-        $project1 = $this->projectRepo->createAndSave([
+        $project1 = $this->projectRepo->createEntity([
             'name' => 'Project 1'
         ]);
+        $this->projectRepo->save($project1);
 
-        $project2 = $this->projectRepo->createAndSave([
+        $project2 = $this->projectRepo->createEntity([
             'name' => 'Project 2'
         ]);
+        $this->projectRepo->save($project2);
 
         // Create recent tasks for project1
-        $task1 = $this->taskRepo->createAndSave([
+        $task1 = $this->taskRepo->createEntity([
             'project_id' => $project1->getId(),
             'title' => 'Project 1 Recent Task 1',
             'created_at' => date('Y-m-d H:i:s', strtotime('-2 days'))
         ]);
+        $this->taskRepo->save($task1);
 
-        $task2 = $this->taskRepo->createAndSave([
+        $task2 = $this->taskRepo->createEntity([
             'project_id' => $project1->getId(),
             'title' => 'Project 1 Recent Task 2',
             'created_at' => date('Y-m-d H:i:s', strtotime('-1 day'))
         ]);
+        $this->taskRepo->save($task2);
 
         // Create old task for project1 (should not be included)
-        $oldTask1 = $this->taskRepo->createAndSave([
+        $oldTask1 = $this->taskRepo->createEntity([
             'project_id' => $project1->getId(),
             'title' => 'Project 1 Old Task',
             'created_at' => date('Y-m-d H:i:s', strtotime('-10 days'))
         ]);
+        $this->taskRepo->save($oldTask1);
 
         // Create recent task for project2
-        $task3 = $this->taskRepo->createAndSave([
+        $task3 = $this->taskRepo->createEntity([
             'project_id' => $project2->getId(),
             'title' => 'Project 2 Recent Task',
             'created_at' => date('Y-m-d H:i:s', strtotime('-5 days'))
         ]);
+        $this->taskRepo->save($task3);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -286,22 +295,25 @@ class HasManyLoaderTest extends TestCase
     public function testHasManyLoaderWithNoRecentTasks(): void
     {
         // Create a project
-        $project = $this->projectRepo->createAndSave([
+        $project = $this->projectRepo->createEntity([
             'name' => 'Project 1'
         ]);
+        $this->projectRepo->save($project);
 
         // Create only old tasks (more than 7 days ago)
-        $oldTask1 = $this->taskRepo->createAndSave([
+        $oldTask1 = $this->taskRepo->createEntity([
             'project_id' => $project->getId(),
             'title' => 'Old Task 1',
             'created_at' => date('Y-m-d H:i:s', strtotime('-10 days'))
         ]);
+        $this->taskRepo->save($oldTask1);
 
-        $oldTask2 = $this->taskRepo->createAndSave([
+        $oldTask2 = $this->taskRepo->createEntity([
             'project_id' => $project->getId(),
             'title' => 'Old Task 2',
             'created_at' => date('Y-m-d H:i:s', strtotime('-20 days'))
         ]);
+        $this->taskRepo->save($oldTask2);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -322,9 +334,10 @@ class HasManyLoaderTest extends TestCase
     public function testHasManyLoaderWithNoTasksAtAll(): void
     {
         // Create a project without any tasks
-        $project = $this->projectRepo->createAndSave([
+        $project = $this->projectRepo->createEntity([
             'name' => 'Project 1'
         ]);
+        $this->projectRepo->save($project);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -345,34 +358,39 @@ class HasManyLoaderTest extends TestCase
     public function testHasManyLoaderFiltersCorrectly(): void
     {
         // Create a project
-        $project = $this->projectRepo->createAndSave([
+        $project = $this->projectRepo->createEntity([
             'name' => 'Project 1'
         ]);
+        $this->projectRepo->save($project);
 
         // Create tasks with various dates
-        $veryRecent = $this->taskRepo->createAndSave([
+        $veryRecent = $this->taskRepo->createEntity([
             'project_id' => $project->getId(),
             'title' => 'Very Recent',
             'created_at' => date('Y-m-d H:i:s', strtotime('-1 day'))
         ]);
+        $this->taskRepo->save($veryRecent);
 
-        $recent = $this->taskRepo->createAndSave([
+        $recent = $this->taskRepo->createEntity([
             'project_id' => $project->getId(),
             'title' => 'Recent',
             'created_at' => date('Y-m-d H:i:s', strtotime('-5 days'))
         ]);
+        $this->taskRepo->save($recent);
 
-        $justOld = $this->taskRepo->createAndSave([
+        $justOld = $this->taskRepo->createEntity([
             'project_id' => $project->getId(),
             'title' => 'Just Old',
             'created_at' => date('Y-m-d H:i:s', strtotime('-8 days')) // Just over 7 days
         ]);
+        $this->taskRepo->save($justOld);
 
-        $veryOld = $this->taskRepo->createAndSave([
+        $veryOld = $this->taskRepo->createEntity([
             'project_id' => $project->getId(),
             'title' => 'Very Old',
             'created_at' => date('Y-m-d H:i:s', strtotime('-30 days'))
         ]);
+        $this->taskRepo->save($veryOld);
 
         // Clear cache and reload
         EntityCache::clear();

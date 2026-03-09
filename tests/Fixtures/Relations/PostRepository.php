@@ -15,10 +15,17 @@ class PostRepository extends AbstractRepository
         $this->setUpRepository($manager, null, Post::class);
     }
 
-    public function create(User $user, array $data): Post
+    public function create(User|array $user, array $data = []): Post
     {
-        $data['user_id'] = $user->getId();
-        return $this->createAndSave($data);
+        if ($user instanceof User) {
+            $data['user_id'] = $user->getId();
+        } else {
+            $data = $user;
+        }
+
+        /** @var Post $post */
+        $post = $this->createEntity($data);
+        return $post;
     }
 
     public function loadUser(Post $post): void

@@ -28,12 +28,15 @@ class ManyToManyTest extends TestCase
 
     public function testFillRolesForUser(): void
     {
-        $user = $this->userRepo->createAndSave([
+        $user = $this->userRepo->create([
             'name' => 'John Doe',
             'email' => 'john@example.com',
         ]);
-        $admin = $this->roleRepo->createAndSave(['name' => 'admin']);
-        $editor = $this->roleRepo->createAndSave(['name' => 'editor']);
+        $this->userRepo->save($user);
+        $admin = $this->roleRepo->create(['name' => 'admin']);
+        $this->roleRepo->save($admin);
+        $editor = $this->roleRepo->create(['name' => 'editor']);
+        $this->roleRepo->save($editor);
 
         $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user->getId()}, {$admin->getId()})");
         $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user->getId()}, {$editor->getId()})");
@@ -52,9 +55,12 @@ class ManyToManyTest extends TestCase
 
     public function testFillUsersForRole(): void
     {
-        $role = $this->roleRepo->createAndSave(['name' => 'viewer']);
-        $user1 = $this->userRepo->createAndSave(['name' => 'A', 'email' => 'a@example.com']);
-        $user2 = $this->userRepo->createAndSave(['name' => 'B', 'email' => 'b@example.com']);
+        $role = $this->roleRepo->create(['name' => 'viewer']);
+        $this->roleRepo->save($role);
+        $user1 = $this->userRepo->create(['name' => 'A', 'email' => 'a@example.com']);
+        $this->userRepo->save($user1);
+        $user2 = $this->userRepo->create(['name' => 'B', 'email' => 'b@example.com']);
+        $this->userRepo->save($user2);
 
         $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user1->getId()}, {$role->getId()})");
         $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user2->getId()}, {$role->getId()})");
@@ -70,11 +76,16 @@ class ManyToManyTest extends TestCase
 
     public function testBatchLoadRolesForUsers(): void
     {
-        $user1 = $this->userRepo->createAndSave(['name' => 'User One', 'email' => 'u1@example.com']);
-        $user2 = $this->userRepo->createAndSave(['name' => 'User Two', 'email' => 'u2@example.com']);
-        $role1 = $this->roleRepo->createAndSave(['name' => 'admin']);
-        $role2 = $this->roleRepo->createAndSave(['name' => 'editor']);
-        $role3 = $this->roleRepo->createAndSave(['name' => 'viewer']);
+        $user1 = $this->userRepo->create(['name' => 'User One', 'email' => 'u1@example.com']);
+        $this->userRepo->save($user1);
+        $user2 = $this->userRepo->create(['name' => 'User Two', 'email' => 'u2@example.com']);
+        $this->userRepo->save($user2);
+        $role1 = $this->roleRepo->create(['name' => 'admin']);
+        $this->roleRepo->save($role1);
+        $role2 = $this->roleRepo->create(['name' => 'editor']);
+        $this->roleRepo->save($role2);
+        $role3 = $this->roleRepo->create(['name' => 'viewer']);
+        $this->roleRepo->save($role3);
 
         $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user1->getId()}, {$role1->getId()})");
         $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user1->getId()}, {$role2->getId()})");
@@ -93,9 +104,12 @@ class ManyToManyTest extends TestCase
 
     public function testSyncAddRoles(): void
     {
-        $user = $this->userRepo->createAndSave(['name' => 'John', 'email' => 'john@example.com']);
-        $role1 = $this->roleRepo->createAndSave(['name' => 'admin']);
-        $role2 = $this->roleRepo->createAndSave(['name' => 'editor']);
+        $user = $this->userRepo->create(['name' => 'John', 'email' => 'john@example.com']);
+        $this->userRepo->save($user);
+        $role1 = $this->roleRepo->create(['name' => 'admin']);
+        $this->roleRepo->save($role1);
+        $role2 = $this->roleRepo->create(['name' => 'editor']);
+        $this->roleRepo->save($role2);
 
         $user->set('roles', [$role1, $role2]);
         $this->userRepo->syncManyToMany($user, 'roles');
@@ -115,7 +129,8 @@ class ManyToManyTest extends TestCase
             'name' => 'John Doe',
             'email' => 'john@example.com',
         ]);
-        $role = $this->roleRepo->createAndSave(['name' => 'admin']);
+        $role = $this->roleRepo->create(['name' => 'admin']);
+        $this->roleRepo->save($role);
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Entity must have an ID to sync relations');
@@ -126,7 +141,8 @@ class ManyToManyTest extends TestCase
 
     public function testSyncRequiresManyToManyRelation(): void
     {
-        $user = $this->userRepo->createAndSave(['name' => 'John Doe', 'email' => 'john@example.com']);
+        $user = $this->userRepo->create(['name' => 'John Doe', 'email' => 'john@example.com']);
+        $this->userRepo->save($user);
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage("Relation 'nonexistent' is not a ManyToMany relationship");
@@ -141,8 +157,10 @@ class ManyToManyTest extends TestCase
         $userRepo = $fixture->users;
         $roleRepo = $fixture->roles;
 
-        $user = $userRepo->createAndSave(['name' => 'John Doe', 'email' => 'john@example.com']);
-        $role = $roleRepo->createAndSave(['name' => 'admin']);
+        $user = $userRepo->create(['name' => 'John Doe', 'email' => 'john@example.com']);
+        $userRepo->save($user);
+        $role = $roleRepo->create(['name' => 'admin']);
+        $roleRepo->save($role);
 
         $user->set('roles', [$role]);
         $userRepo->syncManyToMany($user, 'roles');

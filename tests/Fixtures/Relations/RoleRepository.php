@@ -14,4 +14,11 @@ class RoleRepository extends AbstractRepository
     {
         $this->setUpRepository($manager, null, Role::class);
     }
+
+    public function create(array $data = []): Role
+    {
+        /** @var Role $role */
+        $role = $this->createEntity($data);
+        return $role;
+    }
 }

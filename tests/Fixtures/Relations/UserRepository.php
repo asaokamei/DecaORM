@@ -18,6 +18,13 @@ class UserRepository extends AbstractRepository
         $this->setUpRepository($manager, null, User::class);
     }
 
+    public function create(array $data = []): User
+    {
+        /** @var User $user */
+        $user = $this->createEntity($data);
+        return $user;
+    }
+
     public function loadPosts(User $user): void
     {
         $this->load($user, 'posts');

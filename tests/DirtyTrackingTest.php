@@ -45,10 +45,11 @@ final class DirtyTrackingTest extends TestCase
     public function testSaveWithoutChangesDoesNotExecuteUpdate(): void
     {
         // insert（この時点でDirtyTracker::takeされる想定）
-        $user = $this->repo->createAndSave([
+        $user = $this->repo->create([
             'name' => 'No Change',
             'email' => 'nochange@example.com',
         ]);
+        $this->repo->save($user);
 
         // fetchしてスナップショットを確実に作る（FETCH_CLASSでもfetch()でtake）
         $loaded = $this->repo->findById($user->getId());
@@ -98,10 +99,11 @@ final class DirtyTrackingTest extends TestCase
 
     public function testDeleteForgetsSnapshot(): void
     {
-        $user = $this->repo->createAndSave([
+        $user = $this->repo->create([
             'name' => 'To Delete',
             'email' => 'delete@example.com',
         ]);
+        $this->repo->save($user);
 
         $loaded = $this->repo->findById($user->getId());
         $this->assertInstanceOf(User::class, $loaded);

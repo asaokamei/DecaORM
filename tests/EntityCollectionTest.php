@@ -132,13 +132,20 @@ class EntityCollectionTest extends TestCase
 
         // Start TESTING!
 
-        $user1 = $userRepo->createAndSave(['name' => 'Alice', 'email' => 'alice@example.com']);
-        $user2 = $userRepo->createAndSave(['name' => 'Bob', 'email' => 'bob@example.com']);
-        $post1 = $postsRepo->createAndSave(['user_id' => $user1->getId(), 'title' => 'U1/P1', 'content' => 'Content 1']);
-        $post1 = $postsRepo->createAndSave(['user_id' => $user1->getId(), 'title' => 'U1/P2', 'content' => 'Content 2']);
-        $post1 = $postsRepo->createAndSave(['user_id' => $user2->getId(), 'title' => 'U2/P1', 'content' => 'Content 3']);
-        $post1 = $postsRepo->createAndSave(['user_id' => $user2->getId(), 'title' => 'U2/P2', 'content' => 'Content 4']);
-        $post1 = $postsRepo->createAndSave(['user_id' => $user2->getId(), 'title' => 'U2/P3', 'content' => 'Content 5']);
+        $user1 = $userRepo->create(['name' => 'Alice', 'email' => 'alice@example.com']);
+        $userRepo->save($user1);
+        $user2 = $userRepo->create(['name' => 'Bob', 'email' => 'bob@example.com']);
+        $userRepo->save($user2);
+        $post1 = $postsRepo->create(['user_id' => $user1->getId(), 'title' => 'U1/P1', 'content' => 'Content 1']);
+        $postsRepo->save($post1);
+        $post1 = $postsRepo->create(['user_id' => $user1->getId(), 'title' => 'U1/P2', 'content' => 'Content 2']);
+        $postsRepo->save($post1);
+        $post1 = $postsRepo->create(['user_id' => $user2->getId(), 'title' => 'U2/P1', 'content' => 'Content 3']);
+        $postsRepo->save($post1);
+        $post1 = $postsRepo->create(['user_id' => $user2->getId(), 'title' => 'U2/P2', 'content' => 'Content 4']);
+        $postsRepo->save($post1);
+        $post1 = $postsRepo->create(['user_id' => $user2->getId(), 'title' => 'U2/P3', 'content' => 'Content 5']);
+        $postsRepo->save($post1);
 
         EntityCache::clear();
 

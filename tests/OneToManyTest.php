@@ -30,18 +30,22 @@ class OneToManyTest extends TestCase
     public function createAndSaveUser(string|int $name): User|EntityInterface|null
     {
         $mail = str_replace(' ', '.', (string) $name);
-        return $this->userRepo->createAndSave([
+        $user = $this->userRepo->create([
             'name' => 'User'.$name,
             'email' => 'user.'.$mail.'@example.com',
         ]);
+        $this->userRepo->save($user);
+        return $user;
     }
 
     public function createAndSavePost(User $user, string $title): Post|EntityInterface|null
     {
-        return $this->postsRepo->create($user, [
+        $post = $this->postsRepo->create($user, [
             'title' => "User {$user->getId()} Post {$title}",
             'content' => 'Contents U{$user->getId()}/P{$title}',
         ]);
+        $this->postsRepo->save($post);
+        return $post;
     }
 
     public function createPost(User $user, string $title): Post|EntityInterface|null
@@ -55,26 +59,29 @@ class OneToManyTest extends TestCase
     public function testCreateUserAndPosts(): void
     {
         // Create a user
-        $user = $this->userRepo->createAndSave([
+        $user = $this->userRepo->create([
             'name' => 'John Doe',
             'email' => 'john@example.com'
         ]);
+        $this->userRepo->save($user);
 
         $this->assertNotNull($user->getId());
         $this->assertEquals('John Doe', $user->get('name'));
 
         // Create posts for the user
-        $post1 = $this->postsRepo->createAndSave([
+        $post1 = $this->postsRepo->create([
             'user_id' => $user->getId(),
             'title' => 'First Post',
             'content' => 'This is the first post'
         ]);
+        $this->postsRepo->save($post1);
 
-        $post2 = $this->postsRepo->createAndSave([
+        $post2 = $this->postsRepo->create([
             'user_id' => $user->getId(),
             'title' => 'Second Post',
             'content' => 'This is the second post'
         ]);
+        $this->postsRepo->save($post2);
 
         $this->assertNotNull($post1->getId());
         $this->assertNotNull($post2->getId());
@@ -85,17 +92,19 @@ class OneToManyTest extends TestCase
     public function testLoadUserForPost(): void
     {
         // Create a user
-        $user = $this->userRepo->createAndSave([
+        $user = $this->userRepo->create([
             'name' => 'Jane Doe',
             'email' => 'jane@example.com'
         ]);
+        $this->userRepo->save($user);
 
         // Create a post
-        $post = $this->postsRepo->createAndSave([
+        $post = $this->postsRepo->create([
             'user_id' => $user->getId(),
             'title' => 'Test Post',
             'content' => 'Test content'
         ]);
+        $this->postsRepo->save($post);
 
         // Load user for the post (BelongsTo)
         $this->postsRepo->loadUser($post);
@@ -144,10 +153,11 @@ class OneToManyTest extends TestCase
     public function testLoadPostsForUserWithNoPosts(): void
     {
         // Create a user with no posts
-        $user = $this->userRepo->createAndSave([
+        $user = $this->userRepo->create([
             'name' => 'Empty User',
             'email' => 'empty@example.com'
         ]);
+        $this->userRepo->save($user);
 
         // Load posts for the user
         $this->userRepo->loadPosts($user);
@@ -237,16 +247,18 @@ class OneToManyTest extends TestCase
     public function testUpdatePostAndReloadUser(): void
     {
         // Create user and post
-        $user = $this->userRepo->createAndSave([
+        $user = $this->userRepo->create([
             'name' => 'Update Test',
             'email' => 'update@example.com'
         ]);
+        $this->userRepo->save($user);
 
-        $post = $this->postsRepo->createAndSave([
+        $post = $this->postsRepo->create([
             'user_id' => $user->getId(),
             'title' => 'Original Title',
             'content' => 'Original content'
         ]);
+        $this->postsRepo->save($post);
 
         // Load user for post
         $this->postsRepo->loadUser($post);

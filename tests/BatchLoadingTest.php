@@ -33,31 +33,36 @@ class BatchLoadingTest extends TestCase
     public function testBatchLoadHasMany(): void
     {
         // Create multiple users with posts
-        $user1 = $this->userRepo->createAndSave([
+        $user1 = $this->userRepo->create([
             'name' => 'User One',
             'email' => 'user1@example.com'
         ]);
+        $this->userRepo->save($user1);
 
-        $user2 = $this->userRepo->createAndSave([
+        $user2 = $this->userRepo->create([
             'name' => 'User Two',
             'email' => 'user2@example.com'
         ]);
+        $this->userRepo->save($user2);
 
         // Create posts for user1
         $post1 = $this->postsRepo->create($user1, [
             'title' => 'User 1 Post 1',
             'content' => 'Content 1'
         ]);
+        $this->postsRepo->save($post1);
         $post2 = $this->postsRepo->create($user1, [
             'title' => 'User 1 Post 2',
             'content' => 'Content 2'
         ]);
+        $this->postsRepo->save($post2);
 
         // Create posts for user2
         $post3 = $this->postsRepo->create($user2, [
             'title' => 'User 2 Post 1',
             'content' => 'Content 3'
         ]);
+        $this->postsRepo->save($post3);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -92,26 +97,30 @@ class BatchLoadingTest extends TestCase
     public function testBatchLoadHasOne(): void
     {
         // Create multiple users with profiles
-        $user1 = $this->userRepo->createAndSave([
+        $user1 = $this->userRepo->create([
             'name' => 'User One',
             'email' => 'user1@example.com'
         ]);
+        $this->userRepo->save($user1);
 
-        $user2 = $this->userRepo->createAndSave([
+        $user2 = $this->userRepo->create([
             'name' => 'User Two',
             'email' => 'user2@example.com'
         ]);
+        $this->userRepo->save($user2);
 
         // Create profiles
-        $profile1 = $this->profileRepo->createAndSave([
+        $profile1 = $this->profileRepo->create([
             'id' => $user1->getId(),
             'nickname' => 'Nickname 1'
         ]);
+        $this->profileRepo->save($profile1);
 
-        $profile2 = $this->profileRepo->createAndSave([
+        $profile2 = $this->profileRepo->create([
             'id' => $user2->getId(),
             'nickname' => 'Nickname 2'
         ]);
+        $this->profileRepo->save($profile2);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -140,26 +149,30 @@ class BatchLoadingTest extends TestCase
     public function testBatchLoadBelongsTo(): void
     {
         // Create users
-        $user1 = $this->userRepo->createAndSave([
+        $user1 = $this->userRepo->create([
             'name' => 'User One',
             'email' => 'user1@example.com'
         ]);
+        $this->userRepo->save($user1);
 
-        $user2 = $this->userRepo->createAndSave([
+        $user2 = $this->userRepo->create([
             'name' => 'User Two',
             'email' => 'user2@example.com'
         ]);
+        $this->userRepo->save($user2);
 
         // Create posts
         $post1 = $this->postsRepo->create($user1, [
             'title' => 'Post 1',
             'content' => 'Content 1'
         ]);
+        $this->postsRepo->save($post1);
 
         $post2 = $this->postsRepo->create($user2, [
             'title' => 'Post 2',
             'content' => 'Content 2'
         ]);
+        $this->postsRepo->save($post2);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -195,15 +208,17 @@ class BatchLoadingTest extends TestCase
     public function testBatchLoadWithNoRelations(): void
     {
         // Create users without posts
-        $user1 = $this->userRepo->createAndSave([
+        $user1 = $this->userRepo->create([
             'name' => 'User One',
             'email' => 'user1@example.com'
         ]);
+        $this->userRepo->save($user1);
 
-        $user2 = $this->userRepo->createAndSave([
+        $user2 = $this->userRepo->create([
             'name' => 'User Two',
             'email' => 'user2@example.com'
         ]);
+        $this->userRepo->save($user2);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -232,26 +247,30 @@ class BatchLoadingTest extends TestCase
     public function testBatchLoadChaining(): void
     {
         // Create users with posts
-        $user1 = $this->userRepo->createAndSave([
+        $user1 = $this->userRepo->create([
             'name' => 'User One',
             'email' => 'user1@example.com'
         ]);
+        $this->userRepo->save($user1);
 
-        $user2 = $this->userRepo->createAndSave([
+        $user2 = $this->userRepo->create([
             'name' => 'User Two',
             'email' => 'user2@example.com'
         ]);
+        $this->userRepo->save($user2);
 
         // Create posts
         $post1 = $this->postsRepo->create($user1, [
             'title' => 'Post 1',
             'content' => 'Content 1'
         ]);
+        $this->postsRepo->save($post1);
 
         $post2 = $this->postsRepo->create($user2, [
             'title' => 'Post 2',
             'content' => 'Content 2'
         ]);
+        $this->postsRepo->save($post2);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -280,20 +299,23 @@ class BatchLoadingTest extends TestCase
     public function testSingleEntityStillWorks(): void
     {
         // Create user with posts
-        $user = $this->userRepo->createAndSave([
+        $user = $this->userRepo->create([
             'name' => 'User One',
             'email' => 'user1@example.com'
         ]);
+        $this->userRepo->save($user);
 
         $post1 = $this->postsRepo->create($user, [
             'title' => 'Post 1',
             'content' => 'Content 1'
         ]);
+        $this->postsRepo->save($post1);
 
         $post2 = $this->postsRepo->create($user, [
             'title' => 'Post 2',
             'content' => 'Content 2'
         ]);
+        $this->postsRepo->save($post2);
 
         // Clear cache and reload
         EntityCache::clear();

@@ -62,22 +62,25 @@ class CustomLoaderTest extends TestCase
     public function testCustomLoaderWithSingleEntity(): void
     {
         // Create a project
-        $project = $this->projectRepo->createAndSave([
+        $project = $this->projectRepo->create([
             'name' => 'Project 1'
         ]);
+        $this->projectRepo->save($project);
 
         // Create tasks for the project
-        $task1 = $this->taskRepo->createAndSave([
+        $task1 = $this->taskRepo->create([
             'project_id' => $project->getId(),
             'user_id' => 1,
             'title' => 'Task 1'
         ]);
+        $this->taskRepo->save($task1);
 
-        $task2 = $this->taskRepo->createAndSave([
+        $task2 = $this->taskRepo->create([
             'project_id' => $project->getId(),
             'user_id' => 2,
             'title' => 'Task 2'
         ]);
+        $this->taskRepo->save($task2);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -99,33 +102,38 @@ class CustomLoaderTest extends TestCase
     public function testCustomLoaderWithMultipleEntities(): void
     {
         // Create multiple projects
-        $project1 = $this->projectRepo->createAndSave([
+        $project1 = $this->projectRepo->create([
             'name' => 'Project 1'
         ]);
+        $this->projectRepo->save($project1);
 
-        $project2 = $this->projectRepo->createAndSave([
+        $project2 = $this->projectRepo->create([
             'name' => 'Project 2'
         ]);
+        $this->projectRepo->save($project2);
 
         // Create tasks for project1
-        $task1 = $this->taskRepo->createAndSave([
+        $task1 = $this->taskRepo->create([
             'project_id' => $project1->getId(),
             'user_id' => 1,
             'title' => 'Project 1 Task 1'
         ]);
+        $this->taskRepo->save($task1);
 
-        $task2 = $this->taskRepo->createAndSave([
+        $task2 = $this->taskRepo->create([
             'project_id' => $project1->getId(),
             'user_id' => 2,
             'title' => 'Project 1 Task 2'
         ]);
+        $this->taskRepo->save($task2);
 
         // Create tasks for project2
-        $task3 = $this->taskRepo->createAndSave([
+        $task3 = $this->taskRepo->create([
             'project_id' => $project2->getId(),
             'user_id' => 1,
             'title' => 'Project 2 Task 1'
         ]);
+        $this->taskRepo->save($task3);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -153,9 +161,10 @@ class CustomLoaderTest extends TestCase
     public function testCustomLoaderWithNoRelations(): void
     {
         // Create a project without tasks
-        $project = $this->projectRepo->createAndSave([
+        $project = $this->projectRepo->create([
             'name' => 'Project 1'
         ]);
+        $this->projectRepo->save($project);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -195,9 +204,10 @@ class CustomLoaderTest extends TestCase
         )"
         );
 
-        $project = $invalidRepo->createAndSave([
+        $project = $invalidRepo->create([
             'name' => 'Project 1'
         ]);
+        $invalidRepo->save($project);
 
         // Expect RuntimeException when method doesn't exist
         $this->expectException(RuntimeException::class);
@@ -217,16 +227,18 @@ class CustomLoaderTest extends TestCase
         $container->set(TaskRepository::class, $taskRepo);
 
         // Create a project
-        $project = $repo->createAndSave([
+        $project = $repo->create([
             'name' => 'Project 1'
         ]);
+        $repo->save($project);
 
         // Create tasks
-        $task1 = $this->taskRepo->createAndSave([
+        $task1 = $this->taskRepo->create([
             'project_id' => $project->getId(),
             'user_id' => 1,
             'title' => 'Task 1'
         ]);
+        $this->taskRepo->save($task1);
 
         // Clear cache and reload
         EntityCache::clear();

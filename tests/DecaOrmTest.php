@@ -51,10 +51,11 @@ class DecaOrmTest extends TestCase
 
     public function testCreateAndSaveUser()
     {
-        $savedUser = $this->repo->createAndSave([
-                                                    'name' => 'John Doe',
-                                                    'email' => 'john@example.com'
-                                                ]);
+        $savedUser = $this->repo->create([
+            'name' => 'John Doe',
+            'email' => 'john@example.com'
+        ]);
+        $this->repo->save($savedUser);
 
         $this->assertNotNull($savedUser->getId());
         $this->assertEquals('John Doe', $savedUser->getName());
@@ -121,10 +122,11 @@ class DecaOrmTest extends TestCase
 
     public function testDeleteUser()
     {
-        $user = $this->repo->createAndSave([
-                                       'name' => 'To Delete',
-                                       'email' => 'delete@example.com',
-                                   ]);
+        $user = $this->repo->create([
+            'name' => 'To Delete',
+            'email' => 'delete@example.com',
+        ]);
+        $this->repo->save($user);
         $id = $user->getId();
 
         $this->assertNotNull($user->getId());

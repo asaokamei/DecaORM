@@ -13,6 +13,13 @@ class ProjectRepositoryWithReturn extends AbstractRepository
         $this->setUpRepository($manager, null, Project::class);
     }
 
+    public function create(array $data = []): Project
+    {
+        /** @var Project $project */
+        $project = $this->createEntity($data);
+        return $project;
+    }
+
     public function findTasks(EntityInterface|array $entities): array
     {
         $entities = is_array($entities) ? $entities : [$entities];

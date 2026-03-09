@@ -14,4 +14,11 @@ class CommentRepository extends AbstractRepository
     {
         $this->setUpRepository($manager, null, Comment::class);
     }
+
+    public function create(array $data = []): Comment
+    {
+        /** @var Comment $comment */
+        $comment = $this->createEntity($data);
+        return $comment;
+    }
 }
