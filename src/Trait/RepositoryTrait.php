@@ -43,7 +43,7 @@ trait RepositoryTrait
 {
     use RelationTrait;
     
-    protected ?RepositoryManager $manager;
+    protected RepositoryManager $manager;
     protected PDO $db;
     protected HydratorInterface $hydrator;
     protected DateTimeInterface $now;
@@ -79,7 +79,7 @@ trait RepositoryTrait
 
     public function execute(string $sql, array $data): bool|PDOStatement
     {
-        return $this->manager->getSqlExecutor()->execute($this->db, $sql, $data);
+        return $this->getManager()->getSqlExecutor()->execute($this->db, $sql, $data);
     }
 
     /**
@@ -133,7 +133,16 @@ trait RepositoryTrait
             throw new RuntimeException('no repository class defined for entity: ' . $entity);
         }
         $repoName = $entity::getRepositoryClass();
-        return $this->manager->getRepository($repoName);
+        return $this->getManager()->getRepository($repoName);
+    }
+
+    protected function getManager(): RepositoryManager
+    {
+        if (!isset($this->manager)) {
+            throw new RuntimeException('Repository manager is not set. Call setUpRepository() in the repository constructor.');
+        }
+
+        return $this->manager;
     }
 
     /**

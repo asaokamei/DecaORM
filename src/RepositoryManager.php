@@ -64,7 +64,7 @@ class RepositoryManager
      * */
     public static function getRepository(string $class): ?RepositoryInterface
     {
-        $repo = self::$_self->get($class);
+        $repo = self::instance()->get($class);
         if (!$repo instanceof RepositoryInterface) {
             throw new RuntimeException("Container entry {$class} is not a RepositoryInterface.");
         }
@@ -73,7 +73,7 @@ class RepositoryManager
 
     public static function transaction(callable $callback): mixed
     {
-        $pdo = self::$_self->getPDO();
+        $pdo = self::instance()->getPDO();
         try {
             $pdo->beginTransaction();
             $result = $callback();
@@ -83,6 +83,15 @@ class RepositoryManager
             $pdo->rollBack();
             throw new RuntimeException('Failed execute a database transaction.', 0, $e);
         }
+    }
+
+    private static function instance(): static
+    {
+        if (self::$_self === null) {
+            throw new RuntimeException('RepositoryManager is not initialized. Call RepositoryManager::initialize() first.');
+        }
+
+        return self::$_self;
     }
 
     /**
