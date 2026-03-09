@@ -87,6 +87,11 @@ interface RepositoryInterface
     public function getRepository(string|EntityInterface $entity): ?RepositoryInterface;
 
     /**
+     * Gets the hydrator for the given entity.
+     */
+    public function getHydrator(): ?HydratorInterface;
+
+    /**
      * Gets the relation for the given property name.
      * @return HasMany|HasOne|BelongsTo|BelongsToOne|ManyToMany|null
      */
