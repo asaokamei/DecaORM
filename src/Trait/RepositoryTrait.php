@@ -297,9 +297,9 @@ trait RepositoryTrait
     }
 
     /**
-     * Delete an entity
+     * Physically deletes an entity from the database.
      */
-    public function deleteEntity(EntityInterface $entity): void
+    public function forceDelete(EntityInterface $entity): void
     {
         $id = $entity->getId();
         if ($id === null) {

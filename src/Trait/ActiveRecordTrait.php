@@ -39,7 +39,7 @@ trait ActiveRecordTrait
      */
     public function delete(): void
     {
-        self::_repository()->deleteEntity($this);
+        self::_repository()->delete($this);
     }
 
     /**

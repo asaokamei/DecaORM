@@ -106,16 +106,9 @@ abstract class AbstractRepository implements RepositoryInterface
         }
     }
 
-    /**
-     * Deletes an entity (alias for deleteEntity for backward compatibility).
-     * 
-     * @param EntityInterface $entity
-     * @return void
-     * @deprecated Use deleteEntity() instead. This method is kept for backward compatibility.
-     */
     public function delete(EntityInterface $entity): void
     {
-        $this->deleteEntity($entity);
+        $this->forceDelete($entity);
     }
 
     public function makeHandler(EntityInterface $entity): EntityHandler

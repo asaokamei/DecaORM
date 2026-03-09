@@ -143,14 +143,6 @@ interface RepositoryInterface
     public function updateEntity(EntityInterface $entity): void;
 
     /**
-     * Deletes an entity from the database.
-     * 
-     * @param EntityInterface $entity
-     * @return void
-     */
-    public function deleteEntity(EntityInterface $entity): void;
-
-    /**
      * Saves an entity (insert or update).
      * 
      * This is a convenience method that calls insertEntity() or updateEntity() based on the entity state.
@@ -159,4 +151,12 @@ interface RepositoryInterface
      * @return void
      */
     public function save(EntityInterface $entity): void;
+
+    /**
+     * Deletes an entity using the repository's default deletion policy.
+     *
+     * @param EntityInterface $entity
+     * @return void
+     */
+    public function delete(EntityInterface $entity): void;
 }
