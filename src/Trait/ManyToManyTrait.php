@@ -5,7 +5,7 @@ namespace WScore\DecaORM\Trait;
 use PDO;
 use RuntimeException;
 use WScore\DecaORM\Attribute\ManyToMany;
-use WScore\DecaORM\EntityInterface;
+use WScore\DecaORM\Contacts\EntityInterface;
 
 /**
  * Trait for repositories that need ManyToMany relationship synchronization.
@@ -85,7 +85,7 @@ trait ManyToManyTrait
     /**
      * Extract target entity IDs from the entity's relation property.
      * 
-     * @param EntityInterface $entity
+     * @param \WScore\DecaORM\Contacts\EntityInterface $entity
      * @param string $relationName
      * @return array<int|string>
      */

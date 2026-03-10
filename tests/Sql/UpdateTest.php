@@ -5,7 +5,7 @@ namespace WScore\DecaORM\Tests\Sql;
 use PDOStatement;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\Contacts\RepositoryInterface;
 use WScore\DecaORM\Sql\Delete;
 use WScore\DecaORM\Sql\Insert;
 use WScore\DecaORM\Sql\Query;

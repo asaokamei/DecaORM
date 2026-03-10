@@ -4,8 +4,8 @@ namespace WScore\DecaORM\Relation;
 
 use RuntimeException;
 use WScore\DecaORM\Attribute\CustomLoader;
-use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\Contacts\EntityInterface;
+use WScore\DecaORM\Contacts\RepositoryInterface;
 
 /**
  * Handles CustomLoader relations.
@@ -18,7 +18,7 @@ class LoadCustomLoader
     /**
      * Load CustomLoader relation for single entity or multiple entities.
      * 
-     * @param EntityInterface|array<EntityInterface> $entities
+     * @param EntityInterface|array<\WScore\DecaORM\Contacts\EntityInterface> $entities
      * @param CustomLoader $relation
      * @param RepositoryInterface $repository The repository that contains the loader method
      * @return EntityInterface[] Loaded relation entities (may be empty if mapping is done in loader)

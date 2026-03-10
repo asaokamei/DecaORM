@@ -3,8 +3,8 @@
 namespace WScore\DecaORM\Relation;
 
 use WScore\DecaORM\Attribute\HasMany;
-use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\Contacts\EntityInterface;
+use WScore\DecaORM\Contacts\RepositoryInterface;
 
 class LoadHasMany
 {
@@ -12,7 +12,7 @@ class LoadHasMany
     /**
      * Load HasMany relation for single entity or multiple entities.
      * 
-     * @param EntityInterface|array<EntityInterface> $entities
+     * @param EntityInterface|array<\WScore\DecaORM\Contacts\EntityInterface> $entities
      * @param HasMany $parentRelation
      * @param RepositoryInterface $targetRepository
      * @param RepositoryInterface|null $sourceRepository The repository for the source entities (needed for loader)

@@ -3,7 +3,7 @@
 namespace WScore\DecaORM\Sql;
 
 use PDOStatement;
-use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\Contacts\RepositoryInterface;
 
 class Delete extends DeleteBuilder
 {

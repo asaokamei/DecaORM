@@ -1,6 +1,6 @@
 <?php
 
-namespace WScore\DecaORM;
+namespace WScore\DecaORM\Contacts;
 
 use PDO;
 use PDOStatement;
@@ -9,6 +9,10 @@ use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Attribute\ManyToMany;
+use WScore\DecaORM\Collection;
+use WScore\DecaORM\Contacts\EntityInterface;
+use WScore\DecaORM\Contacts\HydratorInterface;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Sql\Delete;
 use WScore\DecaORM\Sql\Insert;
 use WScore\DecaORM\Sql\Query;
@@ -60,7 +64,7 @@ interface RepositoryInterface
      * 
      * @param string $sql
      * @param array $data
-     * @return T[]
+     * @return EntityInterface
      */
     public function fetch(string $sql, array $data = []): array;
 
@@ -70,7 +74,7 @@ interface RepositoryInterface
      * @param int|string $id
      * @param string|null $column
      * @param string|null $orderBy
-     * @return T[]
+     * @return EntityInterface
      */
     public function find(int|string $id, ?string $column = null, ?string $orderBy = null): array;
 
@@ -111,7 +115,7 @@ interface RepositoryInterface
      * Finds a single entity by ID.
      * 
      * @param int|string $id
-     * @return T|null
+     * @return EntityInterface|null
      */
     public function findById(int|string $id): ?EntityInterface;
 

@@ -2,6 +2,8 @@
 
 namespace WScore\DecaORM;
 
+use WScore\DecaORM\Contacts\EntityInterface;
+
 /**
  * Class to manage entity caching
  */

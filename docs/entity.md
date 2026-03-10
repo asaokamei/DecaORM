@@ -6,7 +6,7 @@ PHP 8のアトリビュートを使用して、テーブル名やカラムとの
 ## 基本原則
 
 *   **プロパティの型**: すべてのプロパティは **string** である必要があります（ORM内部での値の受け渡しや変換の整合性を保つため）。
-*   **必須インターフェース**: `WScore\DecaORM\EntityInterface` を実装する必要があります。
+*   **必須インターフェース**: `WScore\DecaORM\Contacts\EntityInterface` を実装する必要があります。
 *   **トレイトの利用**: 通常、`WScore\DecaORM\Trait\EntityTrait` を `use` することで、必要なメソッドの実装を簡略化します。
 
 ## アトリビュート一覧
@@ -222,7 +222,7 @@ use WScore\DecaORM\Attribute\GeneratedValue;
 use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\Attribute\Repository;
-use WScore\DecaORM\EntityInterface;
+use WScore\DecaORM\Contacts\EntityInterface;
 use WScore\DecaORM\Trait\EntityTrait;
 use App\Repository\UserRepository;
 

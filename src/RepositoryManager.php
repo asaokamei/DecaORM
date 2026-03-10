@@ -11,6 +11,7 @@ use Psr\Log\NullLogger;
 use DateTimeImmutable;
 use RuntimeException;
 use Throwable;
+use WScore\DecaORM\Contacts\RepositoryInterface;
 
 class RepositoryManager
 {

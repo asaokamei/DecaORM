@@ -3,6 +3,8 @@
 namespace WScore\DecaORM;
 
 use InvalidArgumentException;
+use WScore\DecaORM\Contacts\EntityInterface;
+use WScore\DecaORM\Contacts\RepositoryInterface;
 
 /**
  * Collection specifically for EntityInterface instances.

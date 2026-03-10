@@ -2,6 +2,9 @@
 
 namespace WScore\DecaORM;
 
+use WScore\DecaORM\Contacts\EntityInterface;
+use WScore\DecaORM\Contacts\HydratorInterface;
+
 final class DirtyTracker
 {
     /**

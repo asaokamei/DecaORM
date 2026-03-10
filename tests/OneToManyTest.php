@@ -5,7 +5,7 @@ namespace WScore\DecaORM\Tests;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
-use WScore\DecaORM\EntityInterface;
+use WScore\DecaORM\Contacts\EntityInterface;
 use WScore\DecaORM\Tests\Fixtures\Relations\Comment;
 use WScore\DecaORM\Tests\Fixtures\Relations\Post;
 use WScore\DecaORM\Tests\Fixtures\Relations\PostRepository;

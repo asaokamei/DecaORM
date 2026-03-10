@@ -3,7 +3,7 @@
 namespace WScore\DecaORM\Tests\Fixtures\CustomLoader;
 
 use WScore\DecaORM\AbstractRepository;
-use WScore\DecaORM\EntityInterface;
+use WScore\DecaORM\Contacts\EntityInterface;
 use WScore\DecaORM\RepositoryManager;
 
 class ProjectRepositoryWithReturn extends AbstractRepository

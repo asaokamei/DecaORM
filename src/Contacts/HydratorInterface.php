@@ -1,6 +1,8 @@
 <?php
 
-namespace WScore\DecaORM;
+namespace WScore\DecaORM\Contacts;
+
+use WScore\DecaORM\Attribute;
 
 interface HydratorInterface
 {

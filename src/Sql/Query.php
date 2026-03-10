@@ -4,13 +4,13 @@ namespace WScore\DecaORM\Sql;
 
 use Countable;
 use WScore\DecaORM\EntityCollection;
-use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\Contacts\EntityInterface;
+use WScore\DecaORM\Contacts\RepositoryInterface;
 
 class Query extends QueryBuilder
 {
     /**
-     * @var EntityInterface[]
+     * @var \WScore\DecaORM\Contacts\EntityInterface[]
      */
     private array $found;
 
@@ -27,7 +27,7 @@ class Query extends QueryBuilder
     }
 
     /**
-     * @return EntityInterface[]
+     * @return \WScore\DecaORM\Contacts\EntityInterface[]
      */
     public function getResult(): array
     {
