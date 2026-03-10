@@ -67,7 +67,7 @@ trait RelationTrait
         $childrenWithoutParent = []; // child entities with null foreign key
 
         foreach ($childEntities as $childEntity) {
-            $parentId = $childEntity->get($foreignKey);
+            $parentId = $childEntity->getRaw($foreignKey);
             if ($parentId === null) {
                 $childrenWithoutParent[] = $childEntity;
                 continue;
@@ -95,7 +95,7 @@ trait RelationTrait
     ): array {
         $grouped = [];
         foreach ($entities as $entity) {
-            $foreignKeyValue = $entity->get($foreignKeyProperty);
+            $foreignKeyValue = $entity->getRaw($foreignKeyProperty);
             if ($foreignKeyValue !== null) {
                 if (!isset($grouped[$foreignKeyValue])) {
                     $grouped[$foreignKeyValue] = [];

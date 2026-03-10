@@ -57,15 +57,15 @@ class LoadHasOne
         }
 
         if (empty($children)) {
-            $parentEntity->set($parentProperty, null);
+            $parentEntity->setRaw($parentProperty, null);
             return [];
         }
         if (count($children) > 1) {
             throw new RuntimeException('HasOne relation must have only one child.');
         }
         $child = $children[0];
-        $child->set($childProperty, $parentEntity);
-        $parentEntity->set($parentProperty, $child);
+        $child->setRaw($childProperty, $parentEntity);
+        $parentEntity->setRaw($parentProperty, $child);
         return [$child];
     }
 
@@ -132,7 +132,7 @@ class LoadHasOne
         
         if (empty($parentIds)) {
             foreach ($parentEntities as $parentEntity) {
-                $parentEntity->set($parentProperty, null);
+                $parentEntity->setRaw($parentProperty, null);
             }
             return [];
         }
@@ -152,10 +152,10 @@ class LoadHasOne
             
             $child = $childrenForParent[0] ?? null;
 
-            $child?->set($childProperty, $entity);
+            $child?->setRaw($childProperty, $entity);
             
             // Set child for all parent entities with this ID
-            $entity->set($parentProperty, $child);
+            $entity->setRaw($parentProperty, $child);
             
             if ($child !== null) {
                 $allChildren[] = $child;
@@ -164,8 +164,8 @@ class LoadHasOne
         
         // Set null for entities that had no children
         foreach ($parentEntities as $parentEntity) {
-            if ($parentEntity->get($parentProperty) === null && !isset($parentMap[$parentEntity->getId()])) {
-                $parentEntity->set($parentProperty, null);
+            if ($parentEntity->getRaw($parentProperty) === null && !isset($parentMap[$parentEntity->getId()])) {
+                $parentEntity->setRaw($parentProperty, null);
             }
         }
         

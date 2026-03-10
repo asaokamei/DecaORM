@@ -20,17 +20,17 @@ trait RelationBelongsToTrait
         RepositoryInterface $targetRepository
     ): ?EntityInterface {
 
-        $parentId = $childEntity->get($childRelation->foreignKey);
+        $parentId = $childEntity->getRaw($childRelation->foreignKey);
         $parentEntity = $targetRepository->find($parentId);
         if (empty($parentEntity)) {
-            $childEntity->set($childRelation->propertyName, null);
+            $childEntity->setRaw($childRelation->propertyName, null);
             return null;
         }
         if (count($parentEntity) > 1) {
             throw new RuntimeException('BelongsTo relation must have only one parent.');
         }
         $parentEntity = $parentEntity[0];
-        $childEntity->set($childRelation->propertyName, $parentEntity);
+        $childEntity->setRaw($childRelation->propertyName, $parentEntity);
         return $parentEntity;
     }
 
@@ -49,13 +49,13 @@ trait RelationBelongsToTrait
         $allParents = [];
         $childProperty = $childRelation->propertyName;
         foreach ($childEntities as $childEntity) {
-            $parentId = $childEntity->get($childRelation->foreignKey);
+            $parentId = $childEntity->getRaw($childRelation->foreignKey);
             if ($parentId !== null && $parents->hasId($parentId)) {
                 $parent = $parents->findById($parentId);
-                $childEntity->set($childProperty, $parent);
+                $childEntity->setRaw($childProperty, $parent);
                 $allParents[] = $parent;
             } else {
-                $childEntity->set($childProperty, null);
+                $childEntity->setRaw($childProperty, null);
             }
         }
         return $allParents;

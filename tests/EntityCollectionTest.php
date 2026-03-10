@@ -22,7 +22,7 @@ class EntityCollectionTest extends TestCase
     {
         $entity = $this->createMock(EntityInterface::class);
         $entity->method('getId')->willReturn($id);
-        $entity->method('get')->willReturnCallback(fn($key) => $data[$key] ?? null);
+        $entity->method('getRaw')->willReturnCallback(fn($key) => $data[$key] ?? null);
         return $entity;
     }
 
@@ -55,14 +55,14 @@ class EntityCollectionTest extends TestCase
         $collection = new EntityCollection([$e1, $e2], $repo);
 
         // map
-        $names = $collection->map(fn($e) => $e->get('name'));
+        $names = $collection->map(fn($e) => $e->getRaw('name'));
         $this->assertEquals(['Alice', 'Bob'], $names);
 
         // getValues
         $this->assertEquals(['Alice', 'Bob'], $collection->getValues('name'));
 
         // filter
-        $filtered = $collection->filter(fn($e) => $e->get('name') === 'Alice');
+        $filtered = $collection->filter(fn($e) => $e->getRaw('name') === 'Alice');
         $this->assertInstanceOf(EntityCollection::class, $filtered);
         $this->assertCount(1, $filtered);
         $this->assertEquals([1], $filtered->getIds());
@@ -158,22 +158,22 @@ class EntityCollectionTest extends TestCase
         $posts = $users->load('posts');
         $this->assertCount(5, $posts);
 
-        $posts1 = $users[0]->get('posts');
+        $posts1 = $users[0]->getRaw('posts');
         $this->assertCount(2, $posts1);
         $this->assertEquals(1, $posts1[0]->getId());
-        $this->assertEquals('U1/P1', $posts1[0]->get('title'));
+        $this->assertEquals('U1/P1', $posts1[0]->getRaw('title'));
 
         $this->assertEquals(2, $posts1[1]->getId());;
-        $this->assertEquals('U1/P2', $posts1[1]->get('title'));
+        $this->assertEquals('U1/P2', $posts1[1]->getRaw('title'));
 
-        $posts2 = $users[1]->get('posts');
+        $posts2 = $users[1]->getRaw('posts');
         $this->assertCount(3, $posts2);
         $this->assertEquals(3, $posts2[0]->getId());
-        $this->assertEquals('U2/P1', $posts2[0]->get('title'));
+        $this->assertEquals('U2/P1', $posts2[0]->getRaw('title'));
         $this->assertEquals(4, $posts2[1]->getId());
-        $this->assertEquals('U2/P2', $posts2[1]->get('title'));
+        $this->assertEquals('U2/P2', $posts2[1]->getRaw('title'));
         $this->assertEquals(5, $posts2[2]->getId());
-        $this->assertEquals('U2/P3', $posts2[2]->get('title'));
+        $this->assertEquals('U2/P3', $posts2[2]->getRaw('title'));
     }
 
     public function testSave()

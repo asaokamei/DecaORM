@@ -36,7 +36,7 @@ trait EntityTrait
      * Get the value of a property (return as string)
      * Read-only from DB. If type conversion is needed, use the getter method.
      */
-    public function get(string $name): mixed
+    public function getRaw(string $name): mixed
     {
         if (property_exists($this, $name)) {
             $value = $this->$name;
@@ -49,7 +49,7 @@ trait EntityTrait
      * Set the value of a property (set as string)
      * Read-only from DB. If type conversion is needed, use the setter method.
      */
-    public function set(string $name, mixed $value): void
+    public function setRaw(string $name, mixed $value): void
     {
         if (property_exists($this, $name)) {
             $this->$name = $value;
@@ -94,7 +94,7 @@ trait EntityTrait
             if (method_exists($this, $setter)) {
                 $this->$setter($value);
             } else {
-                $this->set($key, $value);
+                $this->setRaw($key, $value);
             }
         }
         return $this;
@@ -120,7 +120,7 @@ trait EntityTrait
 
         $data = [];
         foreach ($hydrator->listProperties() as $property) {
-            $data[$property] = $this->get($property);
+            $data[$property] = $this->getRaw($property);
         }
         return $data;
     }

@@ -91,7 +91,7 @@ trait ManyToManyTrait
      */
     private function extractTargetIdsFromRelation(EntityInterface $entity, string $relationName): array
     {
-        $relationValue = $entity->get($relationName);
+        $relationValue = $entity->getRaw($relationName);
         
         // Handle null or empty
         if ($relationValue === null) {

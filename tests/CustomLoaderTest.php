@@ -90,13 +90,13 @@ class CustomLoaderTest extends TestCase
         $tasks = $this->projectRepo->load($project, 'tasks');
 
         // Verify tasks are set on entity
-        $projectTasks = $project->get('tasks');
+        $projectTasks = $project->getRaw('tasks');
         $this->assertIsArray($projectTasks);
         $this->assertCount(2, $projectTasks);
         $this->assertInstanceOf(Task::class, $projectTasks[0]);
         $this->assertInstanceOf(Task::class, $projectTasks[1]);
-        $this->assertEquals('Task 1', $projectTasks[0]->get('title'));
-        $this->assertEquals('Task 2', $projectTasks[1]->get('title'));
+        $this->assertEquals('Task 1', $projectTasks[0]->getRaw('title'));
+        $this->assertEquals('Task 2', $projectTasks[1]->getRaw('title'));
     }
 
     public function testCustomLoaderWithMultipleEntities(): void
@@ -146,16 +146,16 @@ class CustomLoaderTest extends TestCase
         $tasks = $this->projectRepo->load($projects, 'tasks');
 
         // Verify tasks are set on entities
-        $project1Tasks = $projects[0]->get('tasks');
+        $project1Tasks = $projects[0]->getRaw('tasks');
         $this->assertIsArray($project1Tasks);
         $this->assertCount(2, $project1Tasks);
-        $this->assertEquals('Project 1 Task 1', $project1Tasks[0]->get('title'));
-        $this->assertEquals('Project 1 Task 2', $project1Tasks[1]->get('title'));
+        $this->assertEquals('Project 1 Task 1', $project1Tasks[0]->getRaw('title'));
+        $this->assertEquals('Project 1 Task 2', $project1Tasks[1]->getRaw('title'));
 
-        $project2Tasks = $projects[1]->get('tasks');
+        $project2Tasks = $projects[1]->getRaw('tasks');
         $this->assertIsArray($project2Tasks);
         $this->assertCount(1, $project2Tasks);
-        $this->assertEquals('Project 2 Task 1', $project2Tasks[0]->get('title'));
+        $this->assertEquals('Project 2 Task 1', $project2Tasks[0]->getRaw('title'));
     }
 
     public function testCustomLoaderWithNoRelations(): void
@@ -174,7 +174,7 @@ class CustomLoaderTest extends TestCase
         $tasks = $this->projectRepo->load($project, 'tasks');
 
         // Verify empty array is set on entity
-        $projectTasks = $project->get('tasks');
+        $projectTasks = $project->getRaw('tasks');
         $this->assertIsArray($projectTasks);
         $this->assertCount(0, $projectTasks);
     }
@@ -252,7 +252,7 @@ class CustomLoaderTest extends TestCase
         $this->assertInstanceOf(Task::class, $tasks[0]);
 
         // Verify tasks are set on entity
-        $projectTasks = $project->get('tasks');
+        $projectTasks = $project->getRaw('tasks');
         $this->assertIsArray($projectTasks);
         $this->assertCount(1, $projectTasks);
     }

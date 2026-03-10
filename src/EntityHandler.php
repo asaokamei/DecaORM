@@ -52,7 +52,7 @@ class EntityHandler
         foreach ($repository->getHydrator()->getRelations() as $relation)
         {
             if ($relation instanceof HasMany || $relation instanceof HasOne) {
-                $related = $entity->get($relation->propertyName);
+                $related = $entity->getRaw($relation->propertyName);
                 if ($related instanceof EntityInterface) {
                     $related = $this->replicateEntity($related);
                     $this->magicSetter($replicated, $relation->propertyName, $related);
@@ -72,7 +72,7 @@ class EntityHandler
         if (method_exists($entity, $method)) {
             $entity->$method($value);
         } else {
-            $entity->set($propertyName, $value);
+            $entity->setRaw($propertyName, $value);
         }
     }
 
@@ -114,7 +114,7 @@ class EntityHandler
         $repository->save($entity);
         foreach ($repository->getHydrator()->getRelations() as $relation) {
             if ($relation instanceof HasMany || $relation instanceof HasOne) {
-                $related = $entity->get($relation->propertyName);
+                $related = $entity->getRaw($relation->propertyName);
                 if ($related instanceof EntityInterface) {
                     $this->saveEntity($related);
                 } elseif (is_array($related)) {
@@ -149,15 +149,15 @@ class EntityHandler
         $repository = $this->getRepository($entity);
 
         $idKey = $repository->getHydrator()->getPrimaryKey();
-        $replicated->set($idKey, null);
+        $replicated->setRaw($idKey, null);
 
         $newAt = $repository->getHydrator()->getCreatedAt();
         if ($newAt) {
-            $replicated->set($newAt, null);
+            $replicated->setRaw($newAt, null);
         }
         $modAt = $repository->getHydrator()->getUpdatedAt();
         if ($newAt) {
-            $replicated->set($modAt, null);
+            $replicated->setRaw($modAt, null);
         }
         return $replicated;
     }

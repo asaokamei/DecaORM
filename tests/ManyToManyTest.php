@@ -46,7 +46,7 @@ class ManyToManyTest extends TestCase
         $roles = $this->userRepo->load($user, 'roles');
 
         $this->assertCount(2, $roles);
-        $userRoles = $user->get('roles');
+        $userRoles = $user->getRaw('roles');
         $this->assertIsArray($userRoles);
         $this->assertCount(2, $userRoles);
         $this->assertContains($admin->getId(), $roles->getIds());
@@ -98,8 +98,8 @@ class ManyToManyTest extends TestCase
 
         $roles = $this->userRepo->load([$user1, $user2], 'roles');
         $this->assertGreaterThanOrEqual(3, count($roles));
-        $this->assertCount(2, $user1->get('roles'));
-        $this->assertCount(2, $user2->get('roles'));
+        $this->assertCount(2, $user1->getRaw('roles'));
+        $this->assertCount(2, $user2->getRaw('roles'));
     }
 
     public function testSyncAddRoles(): void
@@ -111,7 +111,7 @@ class ManyToManyTest extends TestCase
         $role2 = $this->roleRepo->create(['name' => 'editor']);
         $this->roleRepo->save($role2);
 
-        $user->set('roles', [$role1, $role2]);
+        $user->setRaw('roles', [$role1, $role2]);
         $this->userRepo->syncManyToMany($user, 'roles');
 
         $stmt = $this->pdo->prepare("SELECT role_id FROM user_role WHERE user_id = ?");
@@ -135,7 +135,7 @@ class ManyToManyTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Entity must have an ID to sync relations');
 
-        $user->set('roles', [$role]);
+        $user->setRaw('roles', [$role]);
         $this->userRepo->syncManyToMany($user, 'roles');
     }
 
@@ -162,7 +162,7 @@ class ManyToManyTest extends TestCase
         $role = $roleRepo->create(['name' => 'admin']);
         $roleRepo->save($role);
 
-        $user->set('roles', [$role]);
+        $user->setRaw('roles', [$role]);
         $userRepo->syncManyToMany($user, 'roles');
 
         EntityCache::clear();

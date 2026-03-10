@@ -32,7 +32,7 @@ class HasOneTest extends TestCase
         $this->userRepo->save($user);
 
         $this->assertNotNull($user->getId());
-        $this->assertEquals('John Doe', $user->get('name'));
+        $this->assertEquals('John Doe', $user->getRaw('name'));
 
         // Create posts for the user
         $profile = $this->profileRepo->create([
@@ -65,9 +65,9 @@ class HasOneTest extends TestCase
         $user = $this->userRepo->findById($userId);
         $this->userRepo->loadProfile($user);
 
-        $profile = $user->get('profile');
+        $profile = $user->getRaw('profile');
         $this->assertInstanceOf(Profile::class, $profile);
-        $this->assertEquals('Test Taro', $profile->get('nickname'));
+        $this->assertEquals('Test Taro', $profile->getRaw('nickname'));
     }
 
     public function testFillUserFromProfile(): void
@@ -100,17 +100,17 @@ class HasOneTest extends TestCase
         $this->assertCount(1, $users);
 
         // Verify user is set on profile
-        $loadedUser = $profile->get('user');
+        $loadedUser = $profile->getRaw('user');
         $this->assertInstanceOf(User::class, $loadedUser);
         $this->assertEquals($user->getId(), $loadedUser->getId());
-        $this->assertEquals('Jane Doe', $loadedUser->get('name'));
-        $this->assertEquals('jane@example.com', $loadedUser->get('email'));
+        $this->assertEquals('Jane Doe', $loadedUser->getRaw('name'));
+        $this->assertEquals('jane@example.com', $loadedUser->getRaw('email'));
 
         // Verify bidirectional link - user should have profile set
-        $userProfile = $loadedUser->get('profile');
+        $userProfile = $loadedUser->getRaw('profile');
         $this->assertInstanceOf(Profile::class, $userProfile);
         $this->assertEquals($profile->getId(), $userProfile->getId());
-        $this->assertEquals('Jane Profile', $userProfile->get('nickname'));
+        $this->assertEquals('Jane Profile', $userProfile->getRaw('nickname'));
     }
 
     public function testBatchLoadUserFromProfiles(): void
@@ -155,26 +155,26 @@ class HasOneTest extends TestCase
        $this->assertCount(2, $users);
 
         // Verify users are set on profiles
-        $profile1User = $profiles[0]->get('user');
+        $profile1User = $profiles[0]->getRaw('user');
         $this->assertInstanceOf(User::class, $profile1User);
         $this->assertEquals($user1->getId(), $profile1User->getId());
-        $this->assertEquals('User One', $profile1User->get('name'));
+        $this->assertEquals('User One', $profile1User->getRaw('name'));
 
-        $profile2User = $profiles[1]->get('user');
+        $profile2User = $profiles[1]->getRaw('user');
         $this->assertInstanceOf(User::class, $profile2User);
         $this->assertEquals($user2->getId(), $profile2User->getId());
-        $this->assertEquals('User Two', $profile2User->get('name'));
+        $this->assertEquals('User Two', $profile2User->getRaw('name'));
 
         // Verify bidirectional links - users should have profiles set
-        $user1Profile = $profile1User->get('profile');
+        $user1Profile = $profile1User->getRaw('profile');
         $this->assertInstanceOf(Profile::class, $user1Profile);
         $this->assertEquals($profile1->getId(), $user1Profile->getId());
-        $this->assertEquals('Profile One', $user1Profile->get('nickname'));
+        $this->assertEquals('Profile One', $user1Profile->getRaw('nickname'));
 
-        $user2Profile = $profile2User->get('profile');
+        $user2Profile = $profile2User->getRaw('profile');
         $this->assertInstanceOf(Profile::class, $user2Profile);
         $this->assertEquals($profile2->getId(), $user2Profile->getId());
-        $this->assertEquals('Profile Two', $user2Profile->get('nickname'));
+        $this->assertEquals('Profile Two', $user2Profile->getRaw('nickname'));
     }
 
     public function testFillUserFromProfileWithNoUser(): void
@@ -193,7 +193,7 @@ class HasOneTest extends TestCase
         $this->assertCount(0, $users);
 
         // Should be null if user doesn't exist
-        $loadedUser = $profile->get('user');
+        $loadedUser = $profile->getRaw('user');
         $this->assertNull($loadedUser);
     }
 }

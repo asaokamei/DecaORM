@@ -47,8 +47,8 @@ class AttributeHydratorTest extends TestCase
 
         $this->assertInstanceOf(User::class, $entity);
         $this->assertEquals(1, $entity->getId());
-        $this->assertEquals('Test User', $entity->get('name'));
-        $this->assertEquals('test@example.com', $entity->get('email'));
+        $this->assertEquals('Test User', $entity->getRaw('name'));
+        $this->assertEquals('test@example.com', $entity->getRaw('email'));
     }
 
     public function testDehydrate(): void
@@ -56,9 +56,9 @@ class AttributeHydratorTest extends TestCase
         $hydrator = new AttributeHydrator(User::class);
 
         $entity = new User();
-        $entity->set('id', 1);
-        $entity->set('name', 'Test User');
-        $entity->set('email', 'test@example.com');
+        $entity->setRaw('id', 1);
+        $entity->setRaw('name', 'Test User');
+        $entity->setRaw('email', 'test@example.com');
 
         $data = $hydrator->dehydrate($entity);
 

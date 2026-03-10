@@ -202,16 +202,16 @@ class HasManyLoaderTest extends TestCase
         // Verify return value
         $this->assertCount(1, $tasks);
         $this->assertInstanceOf(TaskWithDate::class, $tasks[0]);
-        $this->assertEquals('Recent Task', $tasks[0]->get('title'));
+        $this->assertEquals('Recent Task', $tasks[0]->getRaw('title'));
 
         // Verify recentTasks are set on entity
-        $recentTasks = $project->get('recentTasks');
+        $recentTasks = $project->getRaw('recentTasks');
         $this->assertIsArray($recentTasks);
         $this->assertCount(1, $recentTasks);
-        $this->assertEquals('Recent Task', $recentTasks[0]->get('title'));
+        $this->assertEquals('Recent Task', $recentTasks[0]->getRaw('title'));
 
         // Verify bidirectional link
-        $this->assertSame($project, $recentTasks[0]->get('project'));
+        $this->assertSame($project, $recentTasks[0]->getRaw('project'));
     }
 
     public function testHasManyLoaderWithMultipleEntities(): void
@@ -272,23 +272,23 @@ class HasManyLoaderTest extends TestCase
         $this->assertCount(3, $tasks); // 2 from project1, 1 from project2
 
         // Verify recentTasks are set on entities
-        $project1Tasks = $projects[0]->get('recentTasks');
+        $project1Tasks = $projects[0]->getRaw('recentTasks');
         $this->assertIsArray($project1Tasks);
         $this->assertCount(2, $project1Tasks);
-        $this->assertEquals('Project 1 Recent Task 2', $project1Tasks[0]->get('title')); // Ordered by created_at DESC
-        $this->assertEquals('Project 1 Recent Task 1', $project1Tasks[1]->get('title'));
+        $this->assertEquals('Project 1 Recent Task 2', $project1Tasks[0]->getRaw('title')); // Ordered by created_at DESC
+        $this->assertEquals('Project 1 Recent Task 1', $project1Tasks[1]->getRaw('title'));
 
-        $project2Tasks = $projects[1]->get('recentTasks');
+        $project2Tasks = $projects[1]->getRaw('recentTasks');
         $this->assertIsArray($project2Tasks);
         $this->assertCount(1, $project2Tasks);
-        $this->assertEquals('Project 2 Recent Task', $project2Tasks[0]->get('title'));
+        $this->assertEquals('Project 2 Recent Task', $project2Tasks[0]->getRaw('title'));
 
         // Verify bidirectional links
         foreach ($project1Tasks as $task) {
-            $this->assertSame($projects[0], $task->get('project'));
+            $this->assertSame($projects[0], $task->getRaw('project'));
         }
         foreach ($project2Tasks as $task) {
-            $this->assertSame($projects[1], $task->get('project'));
+            $this->assertSame($projects[1], $task->getRaw('project'));
         }
     }
 
@@ -326,7 +326,7 @@ class HasManyLoaderTest extends TestCase
         $this->assertCount(0, $tasks);
 
         // Verify empty array is set on entity
-        $recentTasks = $project->get('recentTasks');
+        $recentTasks = $project->getRaw('recentTasks');
         $this->assertIsArray($recentTasks);
         $this->assertCount(0, $recentTasks);
     }
@@ -350,7 +350,7 @@ class HasManyLoaderTest extends TestCase
         $this->assertCount(0, $tasks);
 
         // Verify empty array is set on entity
-        $recentTasks = $project->get('recentTasks');
+        $recentTasks = $project->getRaw('recentTasks');
         $this->assertIsArray($recentTasks);
         $this->assertCount(0, $recentTasks);
     }
@@ -409,8 +409,8 @@ class HasManyLoaderTest extends TestCase
         $this->assertNotContains('Very Old', $titles);
 
         // Verify tasks are ordered by created_at DESC
-        $this->assertEquals('Very Recent', $tasks[0]->get('title'));
-        $this->assertEquals('Recent', $tasks[1]->get('title'));
+        $this->assertEquals('Very Recent', $tasks[0]->getRaw('title'));
+        $this->assertEquals('Recent', $tasks[1]->getRaw('title'));
     }
 }
 

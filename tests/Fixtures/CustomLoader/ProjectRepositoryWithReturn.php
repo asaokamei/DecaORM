@@ -27,7 +27,7 @@ class ProjectRepositoryWithReturn extends AbstractRepository
 
         if (empty($projectIds)) {
             foreach ($entities as $entity) {
-                $entity->set('tasks', []);
+                $entity->setRaw('tasks', []);
             }
             return [];
         }
@@ -39,7 +39,7 @@ class ProjectRepositoryWithReturn extends AbstractRepository
 
         $tasksByProjectId = [];
         foreach ($tasks as $task) {
-            $projectId = $task->get('project_id');
+            $projectId = $task->getRaw('project_id');
             if ($projectId !== null) {
                 if (!isset($tasksByProjectId[$projectId])) {
                     $tasksByProjectId[$projectId] = [];
@@ -50,7 +50,7 @@ class ProjectRepositoryWithReturn extends AbstractRepository
 
         foreach ($entities as $entity) {
             $projectId = $entity->getId();
-            $entity->set('tasks', $tasksByProjectId[$projectId] ?? []);
+            $entity->setRaw('tasks', $tasksByProjectId[$projectId] ?? []);
         }
 
         return $tasks;

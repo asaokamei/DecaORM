@@ -48,7 +48,7 @@ class LoadManyToMany
         $entityId = $entity->getId();
         
         if ($entityId === null) {
-            $entity->set($propertyName, []);
+            $entity->setRaw($propertyName, []);
             return [];
         }
 
@@ -60,7 +60,7 @@ class LoadManyToMany
         );
 
         if (empty($relatedIds)) {
-            $entity->set($propertyName, []);
+            $entity->setRaw($propertyName, []);
             return [];
         }
 
@@ -78,7 +78,7 @@ class LoadManyToMany
         // would be misleading, as it would not represent the complete relationship.
         // Users should explicitly call load() on the inverse side if needed.
 
-        $entity->set($propertyName, $targetEntities);
+        $entity->setRaw($propertyName, $targetEntities);
         return $targetEntities;
     }
 
@@ -109,7 +109,7 @@ class LoadManyToMany
         if (empty($entityIds)) {
             // Set empty arrays for all entities
             foreach ($entities as $entity) {
-                $entity->set($propertyName, []);
+                $entity->setRaw($propertyName, []);
             }
             return [];
         }
@@ -124,7 +124,7 @@ class LoadManyToMany
         if (empty($allRelatedIds)) {
             // Set empty arrays for all entities
             foreach ($entities as $entity) {
-                $entity->set($propertyName, []);
+                $entity->setRaw($propertyName, []);
             }
             return [];
         }
@@ -166,14 +166,14 @@ class LoadManyToMany
             // Users should explicitly call load() on the inverse side if needed.
 
             // Set targets for all entities with this ID
-            $entity->set($propertyName, $targetsForEntity);
+            $entity->setRaw($propertyName, $targetsForEntity);
 
             $allTargetEntities = array_merge($allTargetEntities, $targetsForEntity);
         }
 
         // Set empty arrays for entities that had no related entities
-        if (!$entity->get($propertyName)) {
-            $entity->set($propertyName, []);
+        if (!$entity->getRaw($propertyName)) {
+            $entity->setRaw($propertyName, []);
         }
 
         // Remove duplicates based on entity ID

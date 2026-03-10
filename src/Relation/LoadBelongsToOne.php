@@ -117,7 +117,7 @@ class LoadBelongsToOne
 
         if ($parentRelation instanceof HasOne) {
             // Set as single entity (not array)
-            $parentEntity->set($parentPropertyName, $childEntity);
+            $parentEntity->setRaw($parentPropertyName, $childEntity);
         }
     }
 }

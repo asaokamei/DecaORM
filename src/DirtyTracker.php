@@ -59,7 +59,7 @@ final class DirtyTracker
             if ($column === $pkColumn) {
                 continue; // PKはUPDATE対象にしない
             }
-            $data[$column] = $entity->get($property);
+            $data[$column] = $entity->getRaw($property);
         }
 
         return $data;

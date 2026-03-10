@@ -17,10 +17,10 @@ interface EntityInterface
     /**
      * Retrieves the property value of the name.
      */
-    public function get(string $name): mixed;
+    public function getRaw(string $name): mixed;
 
     /**
      * Sets the property value of the name.
      */
-    public function set(string $name, mixed $value): void;
+    public function setRaw(string $name, mixed $value): void;
 }

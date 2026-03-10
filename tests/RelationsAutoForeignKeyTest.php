@@ -36,15 +36,15 @@ class RelationsAutoForeignKeyTest extends TestCase
         ]);
 
         $post1 = new Post();
-        $post1->set('title', 'p1');
-        $post1->set('content', 'c1');
+        $post1->setRaw('title', 'p1');
+        $post1->setRaw('content', 'c1');
 
         $post2 = new Post();
-        $post2->set('title', 'p2');
-        $post2->set('content', 'c2');
+        $post2->setRaw('title', 'p2');
+        $post2->setRaw('content', 'c2');
 
         // Assign children via HasMany property
-        $user->set('posts', [$post1, $post2]);
+        $user->setRaw('posts', [$post1, $post2]);
 
         // Save parent (insert). This should trigger filling children's back-reference and FK
         $this->userRepo->save($user);
@@ -55,8 +55,8 @@ class RelationsAutoForeignKeyTest extends TestCase
         foreach ([$post1, $post2] as $i => $post) {
             $msg = "post#" . ($i + 1);
             // user_id may be stored as string; compare with == to ignore type
-            $this->assertEquals($user->getId(), $post->get('user_id'), $msg . ' should get user_id filled');
-            $this->assertSame($user, $post->get('user'), $msg . ' should get user back-reference filled');
+            $this->assertEquals($user->getId(), $post->getRaw('user_id'), $msg . ' should get user_id filled');
+            $this->assertSame($user, $post->getRaw('user'), $msg . ' should get user back-reference filled');
         }
     }
 
@@ -73,7 +73,7 @@ class RelationsAutoForeignKeyTest extends TestCase
         $profile->setNickname('nick');
 
         // Assign child via HasOne property
-        $user->set('profile', $profile);
+        $user->setRaw('profile', $profile);
 
         // Save parent (insert). This should trigger filling child's back-reference and FK (profile.id)
         $this->userRepo->save($user);

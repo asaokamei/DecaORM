@@ -158,10 +158,10 @@ trait RepositoryTrait
             }
         }
         if ($this->hydrator->getCreatedAt() !== null) {
-            $entity->set($this->hydrator->getCreatedAt(), $this->now->format('Y-m-d H:i:s'));
+            $entity->setRaw($this->hydrator->getCreatedAt(), $this->now->format('Y-m-d H:i:s'));
         }
         if ($this->hydrator->getUpdatedAt() !== null) {
-            $entity->set($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
+            $entity->setRaw($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
         }
         $data = $this->hydrator->dehydrate($entity);
         $stmt = $this->sqlInsert($data)->execute();
@@ -171,7 +171,7 @@ trait RepositoryTrait
         }
         if ($this->hydrator->isPkAutoNumber()) {
             $pKey = $this->hydrator->getPrimaryKey();
-            $entity->set($pKey, $this->db->lastInsertId());
+            $entity->setRaw($pKey, $this->db->lastInsertId());
         }
         EntityCache::cache($entity);
 
@@ -198,7 +198,7 @@ trait RepositoryTrait
                 continue;
             }
 
-            $children = $entity->get($relation->propertyName);
+            $children = $entity->getRaw($relation->propertyName);
             if ($children === null) {
                 continue;
             }
@@ -230,11 +230,11 @@ trait RepositoryTrait
                 if (!$child instanceof EntityInterface) {
                     continue; // ignore invalid child
                 }
-                $child->set($childBackRefProperty, $entity);
+                $child->setRaw($childBackRefProperty, $entity);
 
                 // Set child's foreign key to parent's id when known
                 if ($childForeignKey !== null) {
-                    $child->set($childForeignKey, $entity->getId());
+                    $child->setRaw($childForeignKey, $entity->getId());
                 }
             }
         }
@@ -265,9 +265,9 @@ trait RepositoryTrait
         $updatedAtProp = $this->hydrator->getUpdatedAt();
         if ($updatedAtProp !== null) {
             $updatedAtCol = $this->hydrator->getColumnNameForProperty($updatedAtProp);
-            $entity->set($updatedAtProp, $this->now->format('Y-m-d H:i:s'));
+            $entity->setRaw($updatedAtProp, $this->now->format('Y-m-d H:i:s'));
             if ($updatedAtCol !== null && $updatedAtCol !== '') {
-                $data[$updatedAtCol] = $entity->get($updatedAtProp);
+                $data[$updatedAtCol] = $entity->getRaw($updatedAtProp);
             }
         }
 

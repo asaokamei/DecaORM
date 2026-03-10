@@ -66,7 +66,7 @@ class OneToManyTest extends TestCase
         $this->userRepo->save($user);
 
         $this->assertNotNull($user->getId());
-        $this->assertEquals('John Doe', $user->get('name'));
+        $this->assertEquals('John Doe', $user->getRaw('name'));
 
         // Create posts for the user
         $post1 = $this->postsRepo->create([
@@ -85,8 +85,8 @@ class OneToManyTest extends TestCase
 
         $this->assertNotNull($post1->getId());
         $this->assertNotNull($post2->getId());
-        $this->assertEquals('First Post', $post1->get('title'));
-        $this->assertEquals('Second Post', $post2->get('title'));
+        $this->assertEquals('First Post', $post1->getRaw('title'));
+        $this->assertEquals('Second Post', $post2->getRaw('title'));
     }
 
     public function testLoadUserForPost(): void
@@ -110,7 +110,7 @@ class OneToManyTest extends TestCase
         $this->postsRepo->loadUser($post);
 
         // Verify the user is loaded
-        $loadedUser = $post->get('user');
+        $loadedUser = $post->getRaw('user');
         $this->assertInstanceOf(User::class, $loadedUser);
         $this->assertEquals($user->getId(), $loadedUser->getId());
         $this->assertEquals('Jane Doe', $loadedUser->getName());
@@ -131,7 +131,7 @@ class OneToManyTest extends TestCase
         $this->userRepo->loadPosts($user);
 
         // Verify posts are loaded
-        $posts = $user->get('posts');
+        $posts = $user->getRaw('posts');
         $this->assertIsArray($posts);
         $this->assertCount(3, $posts);
 
@@ -144,7 +144,7 @@ class OneToManyTest extends TestCase
         // Verify bidirectional link - each post should have the user
         foreach ($posts as $post) {
             $this->assertInstanceOf(Post::class, $post);
-            $postUser = $post->get('user');
+            $postUser = $post->getRaw('user');
             $this->assertInstanceOf(User::class, $postUser);
             $this->assertEquals($user->getId(), $postUser->getId());
         }
@@ -163,7 +163,7 @@ class OneToManyTest extends TestCase
         $this->userRepo->loadPosts($user);
 
         // Verify empty array is set
-        $posts = $user->get('posts');
+        $posts = $user->getRaw('posts');
         $this->assertIsArray($posts);
         $this->assertCount(0, $posts);
     }
@@ -179,19 +179,19 @@ class OneToManyTest extends TestCase
         $this->userRepo->loadPosts($user);
 
         // Verify user -> posts
-        $posts = $user->get('posts');
+        $posts = $user->getRaw('posts');
         $this->assertCount(2, $posts);
 
         // Verify posts -> user (bidirectional link)
         foreach ($posts as $post) {
-            $postUser = $post->get('user');
+            $postUser = $post->getRaw('user');
             $this->assertInstanceOf(User::class, $postUser);
             $this->assertEquals($user->getId(), $postUser->getId());
         }
 
         // Also test loading user for individual post
         $this->postsRepo->loadUser($post1);
-        $loadedUser = $post1->get('user');
+        $loadedUser = $post1->getRaw('user');
         $this->assertEquals($user->getId(), $loadedUser->getId());
     }
 
@@ -207,23 +207,23 @@ class OneToManyTest extends TestCase
 
         // Load posts for user1
         $this->userRepo->loadPosts($user1);
-        $user1Posts = $user1->get('posts');
+        $user1Posts = $user1->getRaw('posts');
         $this->assertCount(2, $user1Posts);
-        $this->assertEquals('User 1 Post 1', $user1Posts[0]->get('title'));
-        $this->assertEquals('User 1 Post 2', $user1Posts[1]->get('title'));
+        $this->assertEquals('User 1 Post 1', $user1Posts[0]->getRaw('title'));
+        $this->assertEquals('User 1 Post 2', $user1Posts[1]->getRaw('title'));
 
         // Load posts for user2
         $this->userRepo->loadPosts($user2);
-        $user2Posts = $user2->get('posts');
+        $user2Posts = $user2->getRaw('posts');
         $this->assertCount(1, $user2Posts);
-        $this->assertEquals('User 2 Post 3', $user2Posts[0]->get('title'));
+        $this->assertEquals('User 2 Post 3', $user2Posts[0]->getRaw('title'));
 
         // Verify posts belong to correct users
         foreach ($user1Posts as $post) {
-            $this->assertEquals($user1->getId(), $post->get('user_id'));
+            $this->assertEquals($user1->getId(), $post->getRaw('user_id'));
         }
         foreach ($user2Posts as $post) {
-            $this->assertEquals($user2->getId(), $post->get('user_id'));
+            $this->assertEquals($user2->getId(), $post->getRaw('user_id'));
         }
     }
 
@@ -239,7 +239,7 @@ class OneToManyTest extends TestCase
         // Try to load user (should handle gracefully)
         $this->postsRepo->loadUser($post);
 
-        $loadedUser = $post->get('user');
+        $loadedUser = $post->getRaw('user');
         // Should be null if user doesn't exist
         $this->assertNull($loadedUser);
     }
@@ -262,15 +262,15 @@ class OneToManyTest extends TestCase
 
         // Load user for post
         $this->postsRepo->loadUser($post);
-        $this->assertInstanceOf(User::class, $post->get('user'));
+        $this->assertInstanceOf(User::class, $post->getRaw('user'));
 
         // Update post
-        $post->set('title', 'Updated Title');
+        $post->setRaw('title', 'Updated Title');
         $this->postsRepo->save($post);
 
         // Reload user (should still work)
         $this->postsRepo->loadUser($post);
-        $loadedUser = $post->get('user');
+        $loadedUser = $post->getRaw('user');
         $this->assertInstanceOf(User::class, $loadedUser);
         $this->assertEquals($user->getId(), $loadedUser->getId());
     }
@@ -291,16 +291,16 @@ class OneToManyTest extends TestCase
         $user2 = $this->userRepo->findById(2);
         $this->userRepo->loadPosts($user1);
         $this->userRepo->loadPosts($user2);
-        $this->assertCount(2, $user1->get('posts'));
-        $this->assertCount(1, $user2->get('posts'));
+        $this->assertCount(2, $user1->getRaw('posts'));
+        $this->assertCount(1, $user2->getRaw('posts'));
 
         // move post from user1 to user2.
         $postMoved = $user1->getPosts()[0];
         $postMoved->setTitle('Moved from User 1 to User 2');
         $postMoved->setUser($user2);
         // check post is moved from original user as well.
-        $this->assertCount(1, $user1->get('posts'));
-        $this->assertCount(2, $user2->get('posts'));
+        $this->assertCount(1, $user1->getRaw('posts'));
+        $this->assertCount(2, $user2->getRaw('posts'));
         $this->postsRepo->save($postMoved);
 
         // check saved entities.
@@ -309,11 +309,11 @@ class OneToManyTest extends TestCase
         $user2 = $this->userRepo->findById(2);
         $this->userRepo->loadPosts($user1);
         $this->userRepo->loadPosts($user2);
-        $this->assertCount(1, $user1->get('posts'));
-        $this->assertCount(2, $user2->get('posts'));
+        $this->assertCount(1, $user1->getRaw('posts'));
+        $this->assertCount(2, $user2->getRaw('posts'));
 
         // verify post moved to user2.
-        foreach ($user2->get('posts') as $post) {
+        foreach ($user2->getRaw('posts') as $post) {
             if ($post->getId() == $postMoved->getId()) {
                 $this->assertEquals('Moved from User 1 to User 2', $post->getTitle());
             }
@@ -340,7 +340,7 @@ class OneToManyTest extends TestCase
         EntityCache::clear();
         $user = $this->userRepo->findById($user2->getId());
         $this->userRepo->loadPosts($user);
-        $this->assertCount(3, $user->get('posts'));
+        $this->assertCount(3, $user->getRaw('posts'));
     }
 
     public function testLoadCommentsForPost(): void
@@ -359,7 +359,7 @@ class OneToManyTest extends TestCase
         $post = $this->postsRepo->findById($post->getId());
         $this->postsRepo->loadComments($post);
 
-        $comments = $post->get('comments');
+        $comments = $post->getRaw('comments');
         $this->assertIsArray($comments);
         $this->assertCount(2, $comments);
         $this->assertInstanceOf(Comment::class, $comments[0]);

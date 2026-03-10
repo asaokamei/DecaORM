@@ -73,9 +73,9 @@ final class DirtyTrackingTest extends TestCase
 
         // new で作ってIDだけ持たせる（DirtyTrackerスナップショット無し）
         $entity = new User();
-        $entity->set('id', $id);
-        $entity->set('name', 'A2');
-        $entity->set('email', 'a@example.com');
+        $entity->setRaw('id', $id);
+        $entity->setRaw('name', 'A2');
+        $entity->setRaw('email', 'a@example.com');
 
         $this->assertFalse(DirtyTracker::has($entity));
 

@@ -79,18 +79,18 @@ class BatchLoadingTest extends TestCase
         $this->assertEquals(3, $posts->count());
 
         // Verify posts are set on entities
-        $user1Posts = $users[0]->get('posts');
+        $user1Posts = $users[0]->getRaw('posts');
         $this->assertIsArray($user1Posts);
         $this->assertCount(2, $user1Posts);
 
-        $user2Posts = $users[1]->get('posts');
+        $user2Posts = $users[1]->getRaw('posts');
         $this->assertIsArray($user2Posts);
         $this->assertCount(1, $user2Posts);
 
         // Verify bidirectional links
         foreach ($user1Posts as $post) {
             $this->assertInstanceOf(Post::class, $post);
-            $this->assertEquals($user1->getId(), $post->get('user_id'));
+            $this->assertEquals($user1->getId(), $post->getRaw('user_id'));
         }
     }
 
@@ -137,13 +137,13 @@ class BatchLoadingTest extends TestCase
         $this->assertCount(2, $profiles->getEntities());
 
         // Verify profiles are set on entities
-        $user1Profile = $users[0]->get('profile');
+        $user1Profile = $users[0]->getRaw('profile');
         $this->assertInstanceOf(Profile::class, $user1Profile);
-        $this->assertEquals('Nickname 1', $user1Profile->get('nickname'));
+        $this->assertEquals('Nickname 1', $user1Profile->getRaw('nickname'));
 
-        $user2Profile = $users[1]->get('profile');
+        $user2Profile = $users[1]->getRaw('profile');
         $this->assertInstanceOf(Profile::class, $user2Profile);
-        $this->assertEquals('Nickname 2', $user2Profile->get('nickname'));
+        $this->assertEquals('Nickname 2', $user2Profile->getRaw('nickname'));
     }
 
     public function testBatchLoadBelongsTo(): void
@@ -189,11 +189,11 @@ class BatchLoadingTest extends TestCase
         $this->assertCount(2, $users->getEntities());
 
         // Verify users are set on entities
-        $post1User = $posts[0]->get('user');
+        $post1User = $posts[0]->getRaw('user');
         $this->assertInstanceOf(User::class, $post1User);
         $this->assertEquals($user1->getId(), $post1User->getId());
 
-        $post2User = $posts[1]->get('user');
+        $post2User = $posts[1]->getRaw('user');
         $this->assertInstanceOf(User::class, $post2User);
         $this->assertEquals($user2->getId(), $post2User->getId());
     }
@@ -235,11 +235,11 @@ class BatchLoadingTest extends TestCase
         $this->assertCount(0, $posts->getEntities());
 
         // Verify empty arrays are set on entities
-        $user1Posts = $users[0]->get('posts');
+        $user1Posts = $users[0]->getRaw('posts');
         $this->assertIsArray($user1Posts);
         $this->assertCount(0, $user1Posts);
 
-        $user2Posts = $users[1]->get('posts');
+        $user2Posts = $users[1]->getRaw('posts');
         $this->assertIsArray($user2Posts);
         $this->assertCount(0, $user2Posts);
     }
@@ -284,16 +284,16 @@ class BatchLoadingTest extends TestCase
         $this->assertCount(2, $posts);
 
         // Verify posts are set on users
-        $this->assertCount(1, $users[0]->get('posts'));
-        $this->assertCount(1, $users[1]->get('posts'));
+        $this->assertCount(1, $users[0]->getRaw('posts'));
+        $this->assertCount(1, $users[1]->getRaw('posts'));
 
         // Now load users for posts (this is the chaining use case)
         $loadedUsers = $posts->load('user');
         $this->assertCount(2, $loadedUsers);
 
         // Verify users are set on posts
-        $this->assertInstanceOf(User::class, $posts[0]->get('user'));
-        $this->assertInstanceOf(User::class, $posts[1]->get('user'));
+        $this->assertInstanceOf(User::class, $posts[0]->getRaw('user'));
+        $this->assertInstanceOf(User::class, $posts[1]->getRaw('user'));
     }
 
     public function testSingleEntityStillWorks(): void
@@ -329,7 +329,7 @@ class BatchLoadingTest extends TestCase
         $this->assertCount(2, $posts->getEntities());
 
         // Verify posts are set on entity
-        $userPosts = $user->get('posts');
+        $userPosts = $user->getRaw('posts');
         $this->assertIsArray($userPosts);
         $this->assertCount(2, $userPosts);
     }
