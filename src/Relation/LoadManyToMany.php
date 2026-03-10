@@ -66,7 +66,7 @@ class LoadManyToMany
 
         // Load target entities
         $query = $targetRepository->sqlQuery()
-            ->whereIn($targetRepository->getPrimaryKeyColumn(), $relatedIds);
+            ->whereIn($targetRepository->getHydrator()->getPrimaryKeyColumn(), $relatedIds);
         if ($relation->orderBy !== null) {
             $query->orderBy($relation->orderBy);
         }
@@ -132,7 +132,7 @@ class LoadManyToMany
         // Load all target entities
         $uniqueRelatedIds = array_unique($allRelatedIds);
         $query = $targetRepository->sqlQuery()
-            ->whereIn($targetRepository->getPrimaryKeyColumn(), $uniqueRelatedIds);
+            ->whereIn($targetRepository->getHydrator()->getPrimaryKeyColumn(), $uniqueRelatedIds);
         if ($relation->orderBy !== null) {
             $query->orderBy($relation->orderBy);
         }

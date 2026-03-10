@@ -11,7 +11,7 @@ class Insert
     private array $data = [];
     public function __construct(private RepositoryInterface $repository)
     {
-        $this->table = $this->repository->getTableName();
+        $this->table = $this->repository->getHydrator()->getTableName();
     }
 
     public function execute(): bool|PDOStatement

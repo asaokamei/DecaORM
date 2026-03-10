@@ -12,8 +12,9 @@ class Update extends UpdateBuilder
 
     public function __construct(private RepositoryInterface $repository)
     {
-        $this->table($this->repository->getTableName());
-        $this->pkColumn = $this->repository->getPrimaryKeyColumn();
+        $hydrator = $this->repository->getHydrator();
+        $this->table($hydrator->getTableName());
+        $this->pkColumn = $hydrator->getPrimaryKeyColumn();
     }
 
     /**

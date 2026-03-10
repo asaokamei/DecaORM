@@ -26,20 +26,6 @@ interface RepositoryInterface
      */
     public function getDb(): PDO;
 
-    /**
-     * returns the database table name of this repository.
-     *
-     * @return string
-     */
-    public function getTableName(): string;
-
-    /**
-     * returns the primary key column name of this table.
-     *
-     * @return string
-     */
-    public function getPrimaryKeyColumn(): string;
-
     public function sqlQuery(): Query;
 
     public function sqlInsert(array $data): Insert;
@@ -127,22 +113,6 @@ interface RepositoryInterface
      * @return EntityInterface
      */
     public function createEntity(array $data): EntityInterface;
-
-    /**
-     * Inserts an entity into the database.
-     * 
-     * @param EntityInterface $entity
-     * @return void
-     */
-    public function insertEntity(EntityInterface $entity): void;
-
-    /**
-     * Updates an entity in the database.
-     * 
-     * @param EntityInterface $entity
-     * @return void
-     */
-    public function updateEntity(EntityInterface $entity): void;
 
     /**
      * Saves an entity (insert or update).

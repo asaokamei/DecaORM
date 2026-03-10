@@ -73,7 +73,7 @@ class LoadBelongsTo
         // Batch load all parents using WHERE IN
         $parents = $targetRepository
             ->sqlQuery()
-            ->whereIn($targetRepository->getPrimaryKeyColumn(), $parentIds)
+            ->whereIn($targetRepository->getHydrator()->getPrimaryKeyColumn(), $parentIds)
             ->getCollection();
         $allParents = self::getParents($parents, $childRelation, $childEntities);
 

@@ -16,7 +16,7 @@ class Query extends QueryBuilder
 
     public function __construct(private RepositoryInterface $repository)
     {
-        $table = $this->repository->getTableName();
+        $table = $this->repository->getHydrator()->getTableName();
         $this->from($table);
         $this->select("{$table}.*");
     }
