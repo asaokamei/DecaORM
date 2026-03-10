@@ -14,7 +14,7 @@ use WScore\DecaORM\Tests\Fixtures\CustomLoader\ProjectRepositoryWithReturn;
 use WScore\DecaORM\Tests\Fixtures\CustomLoader\Task;
 use WScore\DecaORM\Tests\Fixtures\CustomLoader\TaskRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
-use WScore\DecaORM\RepositoryManager;
+use WScore\DecaORM\OrmManager;
 
 class CustomLoaderTest extends TestCase
 {
@@ -52,7 +52,7 @@ class CustomLoaderTest extends TestCase
 
         $container = new TestContainer();
         $container->set(PDO::class, $this->pdo);
-        $manager = RepositoryManager::initialize($container);
+        $manager = OrmManager::initialize($container);
         $this->projectRepo = new ProjectRepository($manager);
         $this->taskRepo = new TaskRepository($manager);
         $container->set(ProjectRepository::class, $this->projectRepo);
@@ -190,7 +190,7 @@ class CustomLoaderTest extends TestCase
     {
         $container = new TestContainer();
         $container->set(PDO::class, $this->pdo);
-        $manager = RepositoryManager::initialize($container);
+        $manager = OrmManager::initialize($container);
         $taskRepo = new TaskRepository($manager);
         $invalidRepo = new InvalidProjectRepository($manager);
         $container->set(InvalidProjectRepository::class, $invalidRepo);
@@ -220,7 +220,7 @@ class CustomLoaderTest extends TestCase
     {
         $container = new TestContainer();
         $container->set(PDO::class, $this->pdo);
-        $manager = RepositoryManager::initialize($container);
+        $manager = OrmManager::initialize($container);
         $taskRepo = new TaskRepository($manager);
         $repo = new ProjectRepositoryWithReturn($manager);
         $container->set(ProjectRepositoryWithReturn::class, $repo);

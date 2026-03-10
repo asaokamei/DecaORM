@@ -8,7 +8,7 @@ use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Contracts\RepositoryInterface;
-use WScore\DecaORM\RepositoryManager;
+use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Fixtures\Relations\PostRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
 use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
@@ -124,7 +124,7 @@ class EntityCollectionTest extends TestCase
         // prepare repositories
         $container = new TestContainer();
         $container->set(PDO::class, $pdo);
-        $manager = RepositoryManager::initialize($container);
+        $manager = OrmManager::initialize($container);
         $userRepo = new UserRepository($manager);
         $postsRepo = new PostRepository($manager);
         $container->set(UserRepository::class, $userRepo);

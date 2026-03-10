@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace WScore\DecaORM\Tests\Fixtures\EntityActions;
 
 use WScore\DecaORM\AbstractRepository;
-use WScore\DecaORM\RepositoryManager;
+use WScore\DecaORM\OrmManager;
 
 /**
  * @extends AbstractRepository<ActionUser>
  */
 class ActionUserRepository extends AbstractRepository
 {
-    public function __construct(RepositoryManager $manager)
+    public function __construct(OrmManager $manager)
     {
         $this->setUpRepository($manager, null, ActionUser::class);
     }

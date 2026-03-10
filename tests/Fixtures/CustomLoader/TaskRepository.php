@@ -3,11 +3,11 @@
 namespace WScore\DecaORM\Tests\Fixtures\CustomLoader;
 
 use WScore\DecaORM\AbstractRepository;
-use WScore\DecaORM\RepositoryManager;
+use WScore\DecaORM\OrmManager;
 
 class TaskRepository extends AbstractRepository
 {
-    public function __construct(RepositoryManager $manager)
+    public function __construct(OrmManager $manager)
     {
         $this->setUpRepository($manager, null, Task::class);
     }

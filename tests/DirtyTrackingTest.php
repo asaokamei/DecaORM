@@ -8,7 +8,7 @@ use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\DirtyTracker;
 use WScore\DecaORM\EntityCache;
-use WScore\DecaORM\RepositoryManager;
+use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Support\SpyUserRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\User;
 use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
@@ -37,7 +37,7 @@ final class DirtyTrackingTest extends TestCase
 
         $container = new TestContainer();
         $container->set(PDO::class, $this->pdo);
-        $manager = RepositoryManager::initialize($container);
+        $manager = OrmManager::initialize($container);
         $this->repo = new SpyUserRepository($manager);
         $container->set(SpyUserRepository::class, $this->repo);
     }

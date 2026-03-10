@@ -75,7 +75,7 @@ class TaskWithDate implements EntityInterface
 #[Repository(ProjectWithLoader::class)]
 class ProjectWithLoaderRepository extends \WScore\DecaORM\AbstractRepository
 {
-    public function __construct(\WScore\DecaORM\RepositoryManager $manager)
+    public function __construct(\WScore\DecaORM\OrmManager $manager)
     {
         $this->setUpRepository($manager, null, ProjectWithLoader::class);
     }
@@ -115,7 +115,7 @@ class ProjectWithLoaderRepository extends \WScore\DecaORM\AbstractRepository
 #[Repository(TaskWithDate::class)]
 class TaskWithDateRepository extends \WScore\DecaORM\AbstractRepository
 {
-    public function __construct(\WScore\DecaORM\RepositoryManager $manager)
+    public function __construct(\WScore\DecaORM\OrmManager $manager)
     {
         $this->setUpRepository($manager, null, TaskWithDate::class);
     }
@@ -157,7 +157,7 @@ class HasManyLoaderTest extends TestCase
 
         $container = new TestContainer();
         $container->set(PDO::class, $this->pdo);
-        $manager = \WScore\DecaORM\RepositoryManager::initialize($container);
+        $manager = \WScore\DecaORM\OrmManager::initialize($container);
         $this->projectRepo = new ProjectWithLoaderRepository($manager);
         $this->taskRepo = new TaskWithDateRepository($manager);
         $container->set(ProjectWithLoaderRepository::class, $this->projectRepo);

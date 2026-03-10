@@ -24,12 +24,12 @@ abstract class AbstractRepository implements RepositoryInterface
      * set entityClass to create generic attribute hydrator for the entity class.
      * Or, set specific hydrator before calling this method.
      * 
-     * @param RepositoryManager $manager
+     * @param OrmManager $manager
      * @param PDO|null $pdo
      * @param string|null $entityClass
      * @return void
      */
-    protected function setUpRepository(RepositoryManager $manager, ?PDO $pdo = null, ?string $entityClass = null): void
+    protected function setUpRepository(OrmManager $manager, ?PDO $pdo = null, ?string $entityClass = null): void
     {
         $this->manager = $manager;
         $this->db = $pdo ?? $manager->getPDO();

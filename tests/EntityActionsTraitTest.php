@@ -8,7 +8,7 @@ use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityHandler;
-use WScore\DecaORM\RepositoryManager;
+use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Fixtures\EntityActions\ActionUser;
 use WScore\DecaORM\Tests\Fixtures\EntityActions\ActionUserRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
@@ -18,7 +18,7 @@ final class EntityActionsTraitTest extends TestCase
 {
     private PDO $pdo;
     private TestContainer $container;
-    private RepositoryManager $manager;
+    private OrmManager $manager;
     private SpyActionUserRepository $repo;
 
     protected function setUp(): void
@@ -37,7 +37,7 @@ final class EntityActionsTraitTest extends TestCase
 
         $this->container = new TestContainer();
         $this->container->set(PDO::class, $this->pdo);
-        $this->manager = RepositoryManager::initialize($this->container);
+        $this->manager = OrmManager::initialize($this->container);
 
         $this->repo = new SpyActionUserRepository($this->manager);
         $this->container->set(ActionUserRepository::class, $this->repo);

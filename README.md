@@ -402,8 +402,8 @@ try {
 ### デフォルトコンテナの設定（アプリ起動時に1回）
 
 ```php
-use WScore\DecaORM\RepositoryManager;
-$manager = RepositoryManager::initialize($container);
+use WScore\DecaORM\OrmManager;
+$manager = OrmManager::initialize($container);
 ```
 
 ### スコープ実行（テナントごとのコンテナ切り替え）
@@ -412,7 +412,7 @@ Webアプリで「1リクエスト = 1テナント」のように扱う場合は
 テナント確定後に `runWithContainer()` で処理全体を包むのが安全です。
 
 ```php
-use WScore\DecaORM\RepositoryManager;
+use WScore\DecaORM\OrmManager;
 // tenantContainer は tenantId に対応するPDO/Repository群を持つコンテナ
 return $manager->runWithContainer($tenantContainer, 
     function () use ($handler, $request) { // PSR-15想定なら: 

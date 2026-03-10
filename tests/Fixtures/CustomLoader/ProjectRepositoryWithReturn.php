@@ -4,11 +4,11 @@ namespace WScore\DecaORM\Tests\Fixtures\CustomLoader;
 
 use WScore\DecaORM\AbstractRepository;
 use WScore\DecaORM\Contracts\EntityInterface;
-use WScore\DecaORM\RepositoryManager;
+use WScore\DecaORM\OrmManager;
 
 class ProjectRepositoryWithReturn extends AbstractRepository
 {
-    public function __construct(RepositoryManager $manager)
+    public function __construct(OrmManager $manager)
     {
         $this->setUpRepository($manager, null, Project::class);
     }

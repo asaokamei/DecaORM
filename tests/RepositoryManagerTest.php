@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use WScore\DecaORM\AbstractRepository;
 use WScore\DecaORM\AttributeHydrator;
-use WScore\DecaORM\RepositoryManager;
+use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Fixtures\Relations\User;
 use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
 
@@ -24,7 +24,7 @@ class RepositoryManagerTest extends TestCase
                 'RepositoryManager is not initialized. Call RepositoryManager::initialize() first.'
             );
 
-            RepositoryManager::getRepository(UserRepository::class);
+            OrmManager::getRepository(UserRepository::class);
         } finally {
             $this->replaceRepositoryManager($previous);
         }
@@ -40,7 +40,7 @@ class RepositoryManagerTest extends TestCase
                 'RepositoryManager is not initialized. Call RepositoryManager::initialize() first.'
             );
 
-            RepositoryManager::transaction(static fn() => true);
+            OrmManager::transaction(static fn() => true);
         } finally {
             $this->replaceRepositoryManager($previous);
         }
@@ -85,9 +85,9 @@ class RepositoryManagerTest extends TestCase
         };
     }
 
-    private function replaceRepositoryManager(?RepositoryManager $manager): ?RepositoryManager
+    private function replaceRepositoryManager(?OrmManager $manager): ?OrmManager
     {
-        $property = new \ReflectionProperty(RepositoryManager::class, '_self');
+        $property = new \ReflectionProperty(OrmManager::class, '_self');
         $previous = $property->getValue();
         $property->setValue(null, $manager);
 

@@ -5,7 +5,7 @@ namespace WScore\DecaORM\Tests\Fixtures\Relations;
 use PDO;
 use Psr\Log\LoggerInterface;
 use WScore\DecaORM\EntityCache;
-use WScore\DecaORM\RepositoryManager;
+use WScore\DecaORM\OrmManager;
 
 class RelationsFixture
 {
@@ -16,7 +16,7 @@ class RelationsFixture
     public CommentRepository $comments;
     public ProfileRepository $profiles;
     public RoleRepository $roles;
-    private RepositoryManager $manager;
+    private OrmManager $manager;
 
     public static function create(?LoggerInterface $logger = null, int $slowQueryThresholdMs = 100): self
     {
@@ -25,7 +25,7 @@ class RelationsFixture
         $fixture->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $fixture->container = new TestContainer();
         $fixture->container->set(PDO::class, $fixture->pdo);
-        $fixture->manager = RepositoryManager::initialize($fixture->container);
+        $fixture->manager = OrmManager::initialize($fixture->container);
         if ($logger !== null) {
             $fixture->manager->setLogger($logger);
         }

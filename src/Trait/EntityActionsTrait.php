@@ -6,7 +6,7 @@ use WScore\DecaORM\Collection;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\EntityHandler;
 use WScore\DecaORM\Contracts\EntityInterface;
-use WScore\DecaORM\RepositoryManager;
+use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Contracts\RepositoryInterface;
 
 /**
@@ -22,7 +22,7 @@ trait EntityActionsTrait
      */
     protected static function _repository(): RepositoryInterface
     {
-        return RepositoryManager::getRepository(self::getRepositoryClass());
+        return OrmManager::getRepository(self::getRepositoryClass());
     }
 
     /**

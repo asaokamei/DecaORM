@@ -30,7 +30,7 @@ use WScore\DecaORM\Relation\LoadHasOne;
 use WScore\DecaORM\Relation\LoadManyToMany;
 use WScore\DecaORM\Relation\RelationTrait;
 use WScore\DecaORM\Contracts\RepositoryInterface;
-use WScore\DecaORM\RepositoryManager;
+use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Sql\Insert;
 use WScore\DecaORM\Sql\Query;
 use WScore\DecaORM\Sql\Update;
@@ -43,7 +43,7 @@ trait RepositoryTrait
 {
     use RelationTrait;
     
-    protected RepositoryManager $manager;
+    protected OrmManager $manager;
     protected PDO $db;
     protected HydratorInterface $hydrator;
     protected DateTimeInterface $now;
@@ -125,7 +125,7 @@ trait RepositoryTrait
         return $this->getManager()->getRepository($repoName);
     }
 
-    protected function getManager(): RepositoryManager
+    protected function getManager(): OrmManager
     {
         if (!isset($this->manager)) {
             throw new RuntimeException('Repository manager is not set. Call setUpRepository() in the repository constructor.');

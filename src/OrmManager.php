@@ -13,9 +13,9 @@ use RuntimeException;
 use Throwable;
 use WScore\DecaORM\Contracts\RepositoryInterface;
 
-class RepositoryManager
+class OrmManager
 {
-    private static ?RepositoryManager $_self = null;
+    private static ?OrmManager $_self = null;
 
     /**
      * Scoped containers stack (per request/job/tenant).

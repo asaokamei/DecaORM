@@ -5,7 +5,7 @@ namespace WScore\DecaORM\Trait;
 use ReflectionClass;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Contracts\EntityInterface;
-use WScore\DecaORM\RepositoryManager;
+use WScore\DecaORM\OrmManager;
 
 trait EntityTrait
 {
@@ -65,7 +65,7 @@ trait EntityTrait
      */
     public function fill(array $data): static
     {
-        $repo = RepositoryManager::getRepository(self::getRepositoryClass());
+        $repo = OrmManager::getRepository(self::getRepositoryClass());
         $hydrator = $repo->getHydrator();
         if ($hydrator === null) {
             throw new \RuntimeException('Hydrator is not available.');
@@ -110,7 +110,7 @@ trait EntityTrait
      */
     public function toArray(): array
     {
-        $repo = RepositoryManager::getRepository(self::getRepositoryClass());
+        $repo = OrmManager::getRepository(self::getRepositoryClass());
         $hydrator = $repo->getHydrator();
         if ($hydrator === null) {
             throw new \RuntimeException('Hydrator is not available.');

@@ -5,7 +5,7 @@ namespace WScore\DecaORM\Tests;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
-use WScore\DecaORM\RepositoryManager;
+use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Fixtures\ArrayLogger;
 use WScore\DecaORM\Tests\Fixtures\Relations\User;
 use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
@@ -44,7 +44,7 @@ class DecaOrmTest extends TestCase
 
         $container = new TestContainer();
         $container->set(PDO::class, $this->pdo);
-        $manager = RepositoryManager::initialize($container);
+        $manager = OrmManager::initialize($container);
         $this->repo = new UserRepository($manager);
         $container->set(UserRepository::class, $this->repo);
     }
@@ -165,7 +165,7 @@ class DecaOrmTest extends TestCase
         $container = new TestContainer();
         $container->set(PDO::class, $pdo);
         $logger = new ArrayLogger();
-        $manager = RepositoryManager::initialize($container)
+        $manager = OrmManager::initialize($container)
             ->setLogger($logger)
             ->setSlowQueryThresholdMs(0);
         $repo = new UserRepository($manager);
@@ -202,7 +202,7 @@ class DecaOrmTest extends TestCase
 
         $container = new TestContainer();
         $container->set(PDO::class, $pdo);
-        $manager = RepositoryManager::initialize($container)
+        $manager = OrmManager::initialize($container)
             ->setLogger(null);
         $repo = new UserRepository($manager);
 
