@@ -74,9 +74,8 @@ trait EntityTrait
         $idProp = $hydrator->getPrimaryKey();
         $createdProp = $hydrator->getCreatedAt();
         $updatedProp = $hydrator->getUpdatedAt();
-
-        $fillable = property_exists(static::class, 'fillable') ? static::$fillable : null;
-        $guarded = property_exists(static::class, 'guarded') ? static::$guarded : [];
+        $fillable = property_exists($this, 'fillable') ? $this->fillable : null;
+        $guarded = property_exists($this, 'guarded') ? $this->guarded : [];
 
         foreach ($data as $key => $value) {
             if ($key === $idProp || $key === $createdProp || $key === $updatedProp) {
