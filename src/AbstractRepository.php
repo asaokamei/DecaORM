@@ -3,8 +3,8 @@
 namespace WScore\DecaORM;
 
 use PDO;
-use WScore\DecaORM\Contacts\EntityInterface;
-use WScore\DecaORM\Contacts\RepositoryInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 use WScore\DecaORM\Trait\RepositoryTrait;
 
 /**

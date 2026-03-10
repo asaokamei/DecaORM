@@ -4,8 +4,8 @@ namespace WScore\DecaORM\Relation;
 
 use PDO;
 use WScore\DecaORM\Attribute\ManyToMany;
-use WScore\DecaORM\Contacts\EntityInterface;
-use WScore\DecaORM\Contacts\RepositoryInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 use WScore\DecaORM\Sql\QueryBuilder;
 
 class LoadManyToMany
@@ -15,11 +15,11 @@ class LoadManyToMany
     /**
      * Load ManyToMany relation for single entity or multiple entities.
      * 
-     * @param EntityInterface|array<\WScore\DecaORM\Contacts\EntityInterface> $entities
+     * @param EntityInterface|array<\WScore\DecaORM\Contracts\EntityInterface> $entities
      * @param ManyToMany $relation
-     * @param \WScore\DecaORM\Contacts\RepositoryInterface $sourceRepository The repository for the source entities
-     * @param \WScore\DecaORM\Contacts\RepositoryInterface $targetRepository The repository for the target entities
-     * @return \WScore\DecaORM\Contacts\EntityInterface[] All loaded target entities
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $sourceRepository The repository for the source entities
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository The repository for the target entities
+     * @return \WScore\DecaORM\Contracts\EntityInterface[] All loaded target entities
      */
     public static function load(
         EntityInterface|array $entities,
@@ -85,11 +85,11 @@ class LoadManyToMany
     /**
      * Batch load ManyToMany relations for multiple entities.
      * 
-     * @param array<\WScore\DecaORM\Contacts\EntityInterface> $entities
+     * @param array<\WScore\DecaORM\Contracts\EntityInterface> $entities
      * @param ManyToMany $relation
      * @param RepositoryInterface $sourceRepository The repository for the source entities
-     * @param \WScore\DecaORM\Contacts\RepositoryInterface $targetRepository The repository for the target entities
-     * @return \WScore\DecaORM\Contacts\EntityInterface[] All loaded target entities
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository The repository for the target entities
+     * @return \WScore\DecaORM\Contracts\EntityInterface[] All loaded target entities
      */
     public static function loadBatch(
         array $entities,
@@ -184,7 +184,7 @@ class LoadManyToMany
     /**
      * Get related IDs from join table for a single entity.
      * 
-     * @param \WScore\DecaORM\Contacts\RepositoryInterface $sourceRepository
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $sourceRepository
      * @param ManyToMany $relation
      * @param int|string $entityId
      * @return array<int|string>
@@ -215,7 +215,7 @@ class LoadManyToMany
     /**
      * Get all related IDs from join table for multiple entities.
      * 
-     * @param \WScore\DecaORM\Contacts\RepositoryInterface $sourceRepository
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $sourceRepository
      * @param ManyToMany $relation
      * @param array<int|string> $entityIds
      * @return array<int|string> All related IDs (may contain duplicates)
@@ -250,7 +250,7 @@ class LoadManyToMany
     /**
      * Group related IDs by entity ID.
      * 
-     * @param \WScore\DecaORM\Contacts\RepositoryInterface $sourceRepository
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $sourceRepository
      * @param ManyToMany $relation
      * @param array<int|string> $entityIds
      * @return array<int|string, array<int|string>> Map of entityId => [relatedIds]

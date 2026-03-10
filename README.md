@@ -56,7 +56,7 @@ use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
-use WScore\DecaORM\Contacts\EntityInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Trait\EntityTrait;
 
 #[Table(name: 'users')]
@@ -90,7 +90,7 @@ use WScore\DecaORM\Attribute\GeneratedValue;
 use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
-use WScore\DecaORM\Contacts\EntityInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Trait\EntityTrait;
 
 #[Table(name: 'posts')]

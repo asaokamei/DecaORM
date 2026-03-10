@@ -6,8 +6,8 @@ use RuntimeException;
 use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\EntityCollection;
-use WScore\DecaORM\Contacts\EntityInterface;
-use WScore\DecaORM\Contacts\RepositoryInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 
 trait RelationBelongsToTrait
 {

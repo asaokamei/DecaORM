@@ -4,7 +4,7 @@ namespace WScore\DecaORM\Sql;
 
 use PDOStatement;
 use RuntimeException;
-use WScore\DecaORM\Contacts\RepositoryInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class Update extends UpdateBuilder
 {

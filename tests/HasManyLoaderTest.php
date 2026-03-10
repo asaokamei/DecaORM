@@ -13,7 +13,7 @@ use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\EntityCache;
-use WScore\DecaORM\Contacts\EntityInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Trait\EntityTrait;
 use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
 

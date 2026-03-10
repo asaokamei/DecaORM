@@ -6,8 +6,8 @@ use RuntimeException;
 use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\EntityCollection;
-use WScore\DecaORM\Contacts\EntityInterface;
-use WScore\DecaORM\Contacts\RepositoryInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class LoadBelongsToOne
 {
@@ -17,9 +17,9 @@ class LoadBelongsToOne
     /**
      * Load BelongsToOne relation for a single entity or multiple entities.
      * 
-     * @param EntityInterface|array<\WScore\DecaORM\Contacts\EntityInterface> $entities
+     * @param EntityInterface|array<\WScore\DecaORM\Contracts\EntityInterface> $entities
      * @param BelongsToOne $childRelation
-     * @param \WScore\DecaORM\Contacts\RepositoryInterface $targetRepository
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
      * @return EntityInterface[] All loaded parent entities (array with 0 or 1 elements per child)
      */
     public static function load(
@@ -56,9 +56,9 @@ class LoadBelongsToOne
     /**
      * Batch load BelongsToOne relations for multiple entities.
      * 
-     * @param array<\WScore\DecaORM\Contacts\EntityInterface> $childEntities
+     * @param array<\WScore\DecaORM\Contracts\EntityInterface> $childEntities
      * @param BelongsToOne $childRelation
-     * @param \WScore\DecaORM\Contacts\RepositoryInterface $targetRepository
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
      * @return EntityInterface[] All loaded parent entities (array with 0 or 1 elements per child)
      */
     public static function loadBatch(

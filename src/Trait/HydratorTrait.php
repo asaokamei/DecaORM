@@ -3,7 +3,7 @@
 namespace WScore\DecaORM\Trait;
 
 use WScore\DecaORM\EntityCache;
-use WScore\DecaORM\Contacts\EntityInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
 
 trait HydratorTrait
 {

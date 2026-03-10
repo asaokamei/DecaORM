@@ -5,8 +5,8 @@ namespace WScore\DecaORM\Relation;
 use RuntimeException;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
-use WScore\DecaORM\Contacts\EntityInterface;
-use WScore\DecaORM\Contacts\RepositoryInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 
 /**
  * Common utilities for relation loading.
@@ -17,7 +17,7 @@ trait RelationTrait
      * Collect entity IDs and create a map of ID => [entities with this ID].
      * Skips entities with null IDs.
      * 
-     * @param array<\WScore\DecaORM\Contacts\EntityInterface> $entities
+     * @param array<\WScore\DecaORM\Contracts\EntityInterface> $entities
      * @return array{0: array<int|string>, 1: array<int|string, array<EntityInterface>>}
      *         Returns [ids, idMap] where ids is array of unique IDs and idMap is ID => [entities]
      */
@@ -87,7 +87,7 @@ trait RelationTrait
      * 
      * @param array<EntityInterface> $entities
      * @param string $foreignKeyProperty The property name to use for grouping
-     * @return array<int|string, array<\WScore\DecaORM\Contacts\EntityInterface>> Map of foreignKeyValue => [entities]
+     * @return array<int|string, array<\WScore\DecaORM\Contracts\EntityInterface>> Map of foreignKeyValue => [entities]
      */
     protected static function groupEntitiesByForeignKey(
         array $entities,

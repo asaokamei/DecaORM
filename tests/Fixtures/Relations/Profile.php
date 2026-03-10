@@ -7,7 +7,7 @@ use WScore\DecaORM\Attribute\Column;
 use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
-use WScore\DecaORM\Contacts\EntityInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Trait\EntityTrait;
 
 #[Table(name: 'profiles')]

@@ -5,9 +5,9 @@ namespace WScore\DecaORM\Trait;
 use WScore\DecaORM\Collection;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\EntityHandler;
-use WScore\DecaORM\Contacts\EntityInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\RepositoryManager;
-use WScore\DecaORM\Contacts\RepositoryInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 
 /**
  * @mixin EntityInterface

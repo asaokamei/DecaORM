@@ -3,7 +3,7 @@
 namespace WScore\DecaORM\Sql;
 
 use PDOStatement;
-use WScore\DecaORM\Contacts\RepositoryInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class Insert
 {

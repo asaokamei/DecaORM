@@ -4,8 +4,8 @@ namespace WScore\DecaORM\Relation;
 
 use RuntimeException;
 use WScore\DecaORM\Attribute\HasOne;
-use WScore\DecaORM\Contacts\EntityInterface;
-use WScore\DecaORM\Contacts\RepositoryInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class LoadHasOne
 {
@@ -13,11 +13,11 @@ class LoadHasOne
     /**
      * Load HasOne relation for single entity or multiple entities.
      * 
-     * @param \WScore\DecaORM\Contacts\EntityInterface|array<\WScore\DecaORM\Contacts\EntityInterface> $entities
+     * @param \WScore\DecaORM\Contracts\EntityInterface|array<\WScore\DecaORM\Contracts\EntityInterface> $entities
      * @param HasOne $parentRelation
-     * @param \WScore\DecaORM\Contacts\RepositoryInterface $targetRepository
-     * @param \WScore\DecaORM\Contacts\RepositoryInterface|null $sourceRepository The repository for the source entities (needed for loader)
-     * @return \WScore\DecaORM\Contacts\EntityInterface[] All loaded children entities (array with 0 or 1 element per parent)
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface|null $sourceRepository The repository for the source entities (needed for loader)
+     * @return \WScore\DecaORM\Contracts\EntityInterface[] All loaded children entities (array with 0 or 1 element per parent)
      */
     public static function load(
         EntityInterface|array $entities,
@@ -72,11 +72,11 @@ class LoadHasOne
     /**
      * Batch load HasOne relations for multiple entities.
      *
-     * @param array<\WScore\DecaORM\Contacts\EntityInterface> $parentEntities
+     * @param array<\WScore\DecaORM\Contracts\EntityInterface> $parentEntities
      * @param HasOne $parentRelation
-     * @param \WScore\DecaORM\Contacts\RepositoryInterface $targetRepository
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
      * @param callable|null $loader
-     * @return \WScore\DecaORM\Contacts\EntityInterface[] All loaded children entities (array with 0 or 1 element per parent)
+     * @return \WScore\DecaORM\Contracts\EntityInterface[] All loaded children entities (array with 0 or 1 element per parent)
      */
     public static function loadBatch(
         array $parentEntities,
@@ -110,11 +110,11 @@ class LoadHasOne
      * Apply loader result for HasOne relation.
      * Groups loaded entities by parent ID using foreign key and set them on parent entities.
      * 
-     * @param EntityInterface|array<\WScore\DecaORM\Contacts\EntityInterface> $parentEntities
-     * @param array<\WScore\DecaORM\Contacts\EntityInterface> $loadedChildren
+     * @param EntityInterface|array<\WScore\DecaORM\Contracts\EntityInterface> $parentEntities
+     * @param array<\WScore\DecaORM\Contracts\EntityInterface> $loadedChildren
      * @param HasOne $relation
-     * @param \WScore\DecaORM\Contacts\RepositoryInterface $targetRepository
-     * @return \WScore\DecaORM\Contacts\EntityInterface[] All loaded children entities
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
+     * @return \WScore\DecaORM\Contracts\EntityInterface[] All loaded children entities
      */
     public static function applyLoaderResult(
         EntityInterface|array $parentEntities,

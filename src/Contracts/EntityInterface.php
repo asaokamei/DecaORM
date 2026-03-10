@@ -1,6 +1,6 @@
 <?php
 
-namespace WScore\DecaORM\Contacts;
+namespace WScore\DecaORM\Contracts;
 
 interface EntityInterface
 {
