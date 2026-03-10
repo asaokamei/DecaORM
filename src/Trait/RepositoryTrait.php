@@ -116,17 +116,6 @@ trait RepositoryTrait
         return $this->fetch($sql, $data) ?? [];
     }
 
-    public function listColumnsToProperties(): array
-    {
-        $list = [];
-        foreach ($this->hydrator->listProperties() as $property) {
-            $column = $this->hydrator->getColumnNameForProperty($property);
-            $list[$column] = $property;
-        }
-
-        return $list;
-    }
-
     public function getRepository(string|EntityInterface $entity): ?RepositoryInterface
     {
         if (!method_exists($entity, 'getRepositoryClass')) {

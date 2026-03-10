@@ -63,13 +63,6 @@ interface RepositoryInterface
     public function find(int|string $id, ?string $column = null, ?string $orderBy = null): array;
 
     /**
-     * get an array of column and property names;
-     *
-     * @return array<string,string>   array of column name to property name mapping (e.g. ['user_id' => 'id', 'user_name' => 'name'])
-     */
-    public function listColumnsToProperties(): array;
-
-    /**
      * Gets the repository for the given entity.
      */
     public function getRepository(string|EntityInterface $entity): ?RepositoryInterface;
