@@ -110,7 +110,7 @@ trait RepositoryTrait
         return $this->fetch($sql, $data);
     }
 
-    public function getRepository(string|EntityInterface $entity): ?RepositoryInterface
+    public function getRepository(string|EntityInterface $entity): RepositoryInterface
     {
         if (!method_exists($entity, 'getRepositoryClass')) {
             throw new RuntimeException('no repository class defined for entity: ' . $entity);

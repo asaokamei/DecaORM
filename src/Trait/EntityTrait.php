@@ -111,9 +111,6 @@ trait EntityTrait
     {
         $repo = OrmManager::getRepository(self::getRepositoryClass());
         $hydrator = $repo->getHydrator();
-        if ($hydrator === null) {
-            throw new \RuntimeException('Hydrator is not available.');
-        }
         if (!$this instanceof EntityInterface) {
             throw new \RuntimeException('Entity must implement EntityInterface to use toArray().');
         }

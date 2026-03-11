@@ -36,14 +36,14 @@ interface RepositoryInterface
      * This should be available for all concrete repositories; nullable is for flexibility
      * (e.g., custom repositories that do not use AttributeHydrator).
      */
-    public function getHydrator(): ?HydratorInterface;
+    public function getHydrator(): HydratorInterface;
 
     /**
      * Gets the repository for the given entity (or entity class).
      *
      * Typical use: relation loader resolves target repository from entity metadata.
      */
-    public function getRepository(string|EntityInterface $entity): ?RepositoryInterface;
+    public function getRepository(string|EntityInterface $entity): RepositoryInterface;
 
     /**
      * ### SQL builders
