@@ -3,7 +3,7 @@
 namespace WScore\DecaORM\Trait;
 
 use WScore\DecaORM\EntityCache;
-use WScore\DecaORM\EntityInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
 
 trait HydratorTrait
 {
@@ -35,7 +35,7 @@ trait HydratorTrait
             $columnName = $this->getColumnNameForProperty($propertyName);
             if (isset($data[$columnName])) {
                 // set Column value as string; this is for compatibility with the EntityTrait
-                $targetEntity->set($propertyName, (string) $data[$columnName]);
+                $targetEntity->setRaw($propertyName, (string) $data[$columnName]);
             }
         }
         return $targetEntity;
@@ -50,7 +50,7 @@ trait HydratorTrait
         // Get column names from listProperties() and map to property names for entity access
         foreach ($this->listProperties() as $propertyName) {
             $columnName = $this->getColumnNameForProperty($propertyName);
-            $data[$columnName] = $entity->get($propertyName);
+            $data[$columnName] = $entity->getRaw($propertyName);
         }
         return $data;
     }

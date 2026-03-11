@@ -4,19 +4,19 @@ namespace WScore\DecaORM\Sql;
 
 use Countable;
 use WScore\DecaORM\EntityCollection;
-use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class Query extends QueryBuilder
 {
     /**
-     * @var EntityInterface[]
+     * @var \WScore\DecaORM\Contracts\EntityInterface[]
      */
     private array $found;
 
     public function __construct(private RepositoryInterface $repository)
     {
-        $table = $this->repository->getTableName();
+        $table = $this->repository->getHydrator()->getTableName();
         $this->from($table);
         $this->select("{$table}.*");
     }
@@ -27,7 +27,7 @@ class Query extends QueryBuilder
     }
 
     /**
-     * @return EntityInterface[]
+     * @return \WScore\DecaORM\Contracts\EntityInterface[]
      */
     public function getResult(): array
     {

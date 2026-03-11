@@ -4,8 +4,8 @@ namespace WScore\DecaORM\Relation;
 
 use RuntimeException;
 use WScore\DecaORM\Attribute\HasOne;
-use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class LoadHasOne
 {
@@ -13,11 +13,11 @@ class LoadHasOne
     /**
      * Load HasOne relation for single entity or multiple entities.
      * 
-     * @param EntityInterface|array<EntityInterface> $entities
+     * @param \WScore\DecaORM\Contracts\EntityInterface|array<\WScore\DecaORM\Contracts\EntityInterface> $entities
      * @param HasOne $parentRelation
-     * @param RepositoryInterface $targetRepository
-     * @param RepositoryInterface|null $sourceRepository The repository for the source entities (needed for loader)
-     * @return EntityInterface[] All loaded children entities (array with 0 or 1 element per parent)
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface|null $sourceRepository The repository for the source entities (needed for loader)
+     * @return \WScore\DecaORM\Contracts\EntityInterface[] All loaded children entities (array with 0 or 1 element per parent)
      */
     public static function load(
         EntityInterface|array $entities,
@@ -57,26 +57,26 @@ class LoadHasOne
         }
 
         if (empty($children)) {
-            $parentEntity->set($parentProperty, null);
+            $parentEntity->setRaw($parentProperty, null);
             return [];
         }
         if (count($children) > 1) {
             throw new RuntimeException('HasOne relation must have only one child.');
         }
         $child = $children[0];
-        $child->set($childProperty, $parentEntity);
-        $parentEntity->set($parentProperty, $child);
+        $child->setRaw($childProperty, $parentEntity);
+        $parentEntity->setRaw($parentProperty, $child);
         return [$child];
     }
 
     /**
      * Batch load HasOne relations for multiple entities.
      *
-     * @param array<EntityInterface> $parentEntities
+     * @param array<\WScore\DecaORM\Contracts\EntityInterface> $parentEntities
      * @param HasOne $parentRelation
-     * @param RepositoryInterface $targetRepository
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
      * @param callable|null $loader
-     * @return EntityInterface[] All loaded children entities (array with 0 or 1 element per parent)
+     * @return \WScore\DecaORM\Contracts\EntityInterface[] All loaded children entities (array with 0 or 1 element per parent)
      */
     public static function loadBatch(
         array $parentEntities,
@@ -110,11 +110,11 @@ class LoadHasOne
      * Apply loader result for HasOne relation.
      * Groups loaded entities by parent ID using foreign key and set them on parent entities.
      * 
-     * @param EntityInterface|array<EntityInterface> $parentEntities
-     * @param array<EntityInterface> $loadedChildren
+     * @param EntityInterface|array<\WScore\DecaORM\Contracts\EntityInterface> $parentEntities
+     * @param array<\WScore\DecaORM\Contracts\EntityInterface> $loadedChildren
      * @param HasOne $relation
-     * @param RepositoryInterface $targetRepository
-     * @return EntityInterface[] All loaded children entities
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
+     * @return \WScore\DecaORM\Contracts\EntityInterface[] All loaded children entities
      */
     public static function applyLoaderResult(
         EntityInterface|array $parentEntities,
@@ -132,7 +132,7 @@ class LoadHasOne
         
         if (empty($parentIds)) {
             foreach ($parentEntities as $parentEntity) {
-                $parentEntity->set($parentProperty, null);
+                $parentEntity->setRaw($parentProperty, null);
             }
             return [];
         }
@@ -152,10 +152,10 @@ class LoadHasOne
             
             $child = $childrenForParent[0] ?? null;
 
-            $child?->set($childProperty, $entity);
+            $child?->setRaw($childProperty, $entity);
             
             // Set child for all parent entities with this ID
-            $entity->set($parentProperty, $child);
+            $entity->setRaw($parentProperty, $child);
             
             if ($child !== null) {
                 $allChildren[] = $child;
@@ -164,8 +164,8 @@ class LoadHasOne
         
         // Set null for entities that had no children
         foreach ($parentEntities as $parentEntity) {
-            if ($parentEntity->get($parentProperty) === null && !isset($parentMap[$parentEntity->getId()])) {
-                $parentEntity->set($parentProperty, null);
+            if ($parentEntity->getRaw($parentProperty) === null && !isset($parentMap[$parentEntity->getId()])) {
+                $parentEntity->setRaw($parentProperty, null);
             }
         }
         

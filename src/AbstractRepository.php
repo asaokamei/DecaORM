@@ -2,6 +2,9 @@
 
 namespace WScore\DecaORM;
 
+use PDO;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 use WScore\DecaORM\Trait\RepositoryTrait;
 
 /**
@@ -10,6 +13,34 @@ use WScore\DecaORM\Trait\RepositoryTrait;
 abstract class AbstractRepository implements RepositoryInterface
 {
     use RepositoryTrait;
+
+    /**
+     * Sets up the repository.
+     * This method is called by the constructor of the repository.
+     * 
+     * set pdo to use specific database connection.
+     * Or, use container/RepositoryManager to get the database connection.
+     * 
+     * set entityClass to create generic attribute hydrator for the entity class.
+     * Or, set specific hydrator before calling this method.
+     * 
+     * @param OrmManager $manager
+     * @param PDO|null $pdo
+     * @param string|null $entityClass
+     * @return void
+     */
+    protected function setUpRepository(OrmManager $manager, ?PDO $pdo = null, ?string $entityClass = null): void
+    {
+        $this->manager = $manager;
+        $this->db = $pdo ?? $manager->getPDO();
+        if ($entityClass !== null) {
+            $this->hydrator = new AttributeHydrator($entityClass);
+        }
+        $this->now = $manager->getDateTimeImmutable() ?? new \DateTimeImmutable();
+        if (!isset($this->hydrator)) {
+            throw new \RuntimeException('Hydrator is not set');
+        }
+    }
 
     /**
      * IDに基づいてUserエンティティを取得
@@ -28,25 +59,8 @@ abstract class AbstractRepository implements RepositoryInterface
         $class = $this->hydrator->getEntityClass();
         $entity = new $class();
         foreach ($this->hydrator->listProperties() as $property) {
-            $entity->set($property, $data[$property] ?? null);
+            $entity->setRaw($property, $data[$property] ?? null);
         }
-        return $entity;
-    }
-
-    /**
-     * Creates and saves a new entity from data.
-     * 
-     * This is a convenience method that calls createEntity() and insertEntity().
-     * For more flexible entity creation (e.g., with additional parameters),
-     * implement a custom method in your repository class (e.g., PostRepository::create).
-     * 
-     * @param array $data
-     * @return T|null
-     */
-    public function createAndSave(array $data): ?EntityInterface
-    {
-        $entity = $this->createEntity($data);
-        $this->insertEntity($entity);
         return $entity;
     }
 
@@ -73,16 +87,9 @@ abstract class AbstractRepository implements RepositoryInterface
         }
     }
 
-    /**
-     * Deletes an entity (alias for deleteEntity for backward compatibility).
-     * 
-     * @param EntityInterface $entity
-     * @return void
-     * @deprecated Use deleteEntity() instead. This method is kept for backward compatibility.
-     */
     public function delete(EntityInterface $entity): void
     {
-        $this->deleteEntity($entity);
+        $this->forceDelete($entity);
     }
 
     public function makeHandler(EntityInterface $entity): EntityHandler

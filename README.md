@@ -56,7 +56,7 @@ use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
-use WScore\DecaORM\EntityInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Trait\EntityTrait;
 
 #[Table(name: 'users')]
@@ -90,7 +90,7 @@ use WScore\DecaORM\Attribute\GeneratedValue;
 use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
-use WScore\DecaORM\EntityInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Trait\EntityTrait;
 
 #[Table(name: 'posts')]
@@ -153,7 +153,8 @@ class UserRepository extends AbstractRepository
 
 ```php
 $pdo = new PDO('mysql:host=localhost;dbname=test', 'user', 'pass');
-$userRepo = new UserRepository($pdo);
+$manager = RepositoryManager::getInstance($container);
+$userRepo = new UserRepository($pdo, $manager);
 
 // --- 作成 (Create) ---
 $user = new User();
@@ -397,6 +398,28 @@ try {
     throw $e;
 }
 ```
+
+### デフォルトコンテナの設定（アプリ起動時に1回）
+
+```php
+use WScore\DecaORM\OrmManager;
+$manager = OrmManager::initialize($container);
+```
+
+### スコープ実行（テナントごとのコンテナ切り替え）
+
+Webアプリで「1リクエスト = 1テナント」のように扱う場合は、ミドルウェア（またはフロントコントローラ）で、
+テナント確定後に `runWithContainer()` で処理全体を包むのが安全です。
+
+```php
+use WScore\DecaORM\OrmManager;
+// tenantContainer は tenantId に対応するPDO/Repository群を持つコンテナ
+return $manager->runWithContainer($tenantContainer, 
+    function () use ($handler, $request) { // PSR-15想定なら: 
+        return $handler->handle(request);
+    });
+```
+
 
 ## 制限事項と注意点
 

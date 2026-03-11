@@ -5,7 +5,7 @@ namespace WScore\DecaORM\Trait;
 use PDO;
 use RuntimeException;
 use WScore\DecaORM\Attribute\ManyToMany;
-use WScore\DecaORM\EntityInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
 
 /**
  * Trait for repositories that need ManyToMany relationship synchronization.
@@ -85,13 +85,13 @@ trait ManyToManyTrait
     /**
      * Extract target entity IDs from the entity's relation property.
      * 
-     * @param EntityInterface $entity
+     * @param \WScore\DecaORM\Contracts\EntityInterface $entity
      * @param string $relationName
      * @return array<int|string>
      */
     private function extractTargetIdsFromRelation(EntityInterface $entity, string $relationName): array
     {
-        $relationValue = $entity->get($relationName);
+        $relationValue = $entity->getRaw($relationName);
         
         // Handle null or empty
         if ($relationValue === null) {
@@ -135,8 +135,7 @@ trait ManyToManyTrait
                 FROM {$relation->joinTable} 
                 WHERE {$relation->foreignKey} = :entity_id";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['entity_id' => $entityId]);
+        $stmt = $this->execute($sql, ['entity_id' => $entityId]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return array_column($rows, $relation->inverseForeignKey);
@@ -168,8 +167,7 @@ trait ManyToManyTrait
         $sql .= implode(', ', $values);
         $params['entity_id'] = $entityId;
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
+        $this->execute($sql, $params);
     }
 
     /**
@@ -198,8 +196,7 @@ trait ManyToManyTrait
                 WHERE {$relation->foreignKey} = :entity_id 
                 AND {$relation->inverseForeignKey} IN (" . implode(', ', $placeholders) . ")";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
+        $this->execute($sql, $params);
     }
 }
 

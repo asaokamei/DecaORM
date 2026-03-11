@@ -3,7 +3,7 @@
 namespace WScore\DecaORM\Sql;
 
 use PDOStatement;
-use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class Insert
 {
@@ -11,7 +11,7 @@ class Insert
     private array $data = [];
     public function __construct(private RepositoryInterface $repository)
     {
-        $this->table = $this->repository->getTableName();
+        $this->table = $this->repository->getHydrator()->getTableName();
     }
 
     public function execute(): bool|PDOStatement

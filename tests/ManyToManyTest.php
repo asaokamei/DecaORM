@@ -5,482 +5,185 @@ namespace WScore\DecaORM\Tests;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
-use WScore\DecaORM\Tests\Users\Container;
-use WScore\DecaORM\Tests\Users\Course;
-use WScore\DecaORM\Tests\Users\CourseRepository;
-use WScore\DecaORM\Tests\Users\Student;
-use WScore\DecaORM\Tests\Users\StudentRepository;
+use WScore\DecaORM\Tests\Fixtures\ArrayLogger;
+use WScore\DecaORM\Tests\Fixtures\Relations\RelationsFixture;
+use WScore\DecaORM\Tests\Fixtures\Relations\Role;
+use WScore\DecaORM\Tests\Fixtures\Relations\RoleRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\User;
+use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
 
 class ManyToManyTest extends TestCase
 {
     private PDO $pdo;
-    private StudentRepository $studentRepo;
-    private CourseRepository $courseRepo;
+    private UserRepository $userRepo;
+    private RoleRepository $roleRepo;
 
     protected function setUp(): void
     {
-        // In-memory SQLite database for testing
-        $this->pdo = new PDO('sqlite::memory:');
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        // Create students table
-        $this->pdo->exec(
-            "CREATE TABLE students (
-            student_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            student_name TEXT NOT NULL
-        )"
-        );
-
-        // Create courses table
-        $this->pdo->exec(
-            "CREATE TABLE courses (
-            course_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            course_name TEXT NOT NULL
-        )"
-        );
-
-        // Create join table
-        $this->pdo->exec(
-            "CREATE TABLE student_course (
-            student_id INTEGER NOT NULL,
-            course_id INTEGER NOT NULL,
-            PRIMARY KEY (student_id, course_id),
-            FOREIGN KEY (student_id) REFERENCES students(student_id),
-            FOREIGN KEY (course_id) REFERENCES courses(course_id)
-        )"
-        );
-
-        // Clear cache before each test
-        EntityCache::clear();
-
-        $container = new Container();
-        $this->studentRepo = new StudentRepository($this->pdo, $container);
-        $this->courseRepo = new CourseRepository($this->pdo, $container);
-        $container->set(StudentRepository::class, $this->studentRepo);
-        $container->set(CourseRepository::class, $this->courseRepo);
+        $fixture = RelationsFixture::create();
+        $this->pdo = $fixture->pdo;
+        $this->userRepo = $fixture->users;
+        $this->roleRepo = $fixture->roles;
     }
 
-    public function testFillCoursesForStudent(): void
+    public function testFillRolesForUser(): void
     {
-        // Create a student
-        $student = $this->studentRepo->createAndSave([
-            'name' => 'John Doe'
+        $user = $this->userRepo->create([
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
         ]);
+        $this->userRepo->save($user);
+        $admin = $this->roleRepo->create(['name' => 'admin']);
+        $this->roleRepo->save($admin);
+        $editor = $this->roleRepo->create(['name' => 'editor']);
+        $this->roleRepo->save($editor);
 
-        // Create courses
-        $course1 = $this->courseRepo->createAndSave([
-            'name' => 'Mathematics'
-        ]);
-
-        $course2 = $this->courseRepo->createAndSave([
-            'name' => 'Physics'
-        ]);
-
-        // Link student to courses in join table
-        $this->pdo->exec("INSERT INTO student_course (student_id, course_id) VALUES ({$student->getId()}, {$course1->getId()})");
-        $this->pdo->exec("INSERT INTO student_course (student_id, course_id) VALUES ({$student->getId()}, {$course2->getId()})");
+        $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user->getId()}, {$admin->getId()})");
+        $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user->getId()}, {$editor->getId()})");
 
         EntityCache::clear();
+        $user = $this->userRepo->findById($user->getId());
+        $roles = $this->userRepo->load($user, 'roles');
 
-        // Reload student
-        $student = $this->studentRepo->findById($student->getId());
-        $this->assertNotNull($student);
-
-        // Fill courses for student
-        $courses = $this->studentRepo->load($student, 'courses');
-
-        // Verify return value
-        $this->assertCount(2, $courses);
-
-        // Verify courses are set on student
-        $studentCourses = $student->get('courses');
-        $this->assertIsArray($studentCourses);
-        $this->assertCount(2, $studentCourses);
-
-        // Verify course details
-        $courseIds = $courses->getIds();
-        $this->assertContains($course1->getId(), $courseIds);
-        $this->assertContains($course2->getId(), $courseIds);
-
-        $courseNames = $courses->getValues('name');
-        $this->assertContains('Mathematics', $courseNames);
-        $this->assertContains('Physics', $courseNames);
+        $this->assertCount(2, $roles);
+        $userRoles = $user->getRaw('roles');
+        $this->assertIsArray($userRoles);
+        $this->assertCount(2, $userRoles);
+        $this->assertContains($admin->getId(), $roles->getIds());
+        $this->assertContains($editor->getId(), $roles->getIds());
     }
 
-    public function testFillStudentsForCourse(): void
+    public function testFillUsersForRole(): void
     {
-        // Create courses
-        $course = $this->courseRepo->createAndSave([
-            'name' => 'Mathematics'
-        ]);
+        $role = $this->roleRepo->create(['name' => 'viewer']);
+        $this->roleRepo->save($role);
+        $user1 = $this->userRepo->create(['name' => 'A', 'email' => 'a@example.com']);
+        $this->userRepo->save($user1);
+        $user2 = $this->userRepo->create(['name' => 'B', 'email' => 'b@example.com']);
+        $this->userRepo->save($user2);
 
-        // Create students
-        $student1 = $this->studentRepo->createAndSave([
-            'name' => 'John Doe'
-        ]);
-
-        $student2 = $this->studentRepo->createAndSave([
-            'name' => 'Jane Smith'
-        ]);
-
-        // Link students to course in join table
-        $this->pdo->exec("INSERT INTO student_course (student_id, course_id) VALUES ({$student1->getId()}, {$course->getId()})");
-        $this->pdo->exec("INSERT INTO student_course (student_id, course_id) VALUES ({$student2->getId()}, {$course->getId()})");
+        $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user1->getId()}, {$role->getId()})");
+        $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user2->getId()}, {$role->getId()})");
 
         EntityCache::clear();
+        $role = $this->roleRepo->findById($role->getId());
+        $users = $this->roleRepo->load($role, 'users');
 
-        // Reload course
-        $course = $this->courseRepo->findById($course->getId());
-        $this->assertNotNull($course);
-
-        // Fill students for course
-        $students = $this->courseRepo->load($course, 'students');
-
-        // Verify return value
-        $this->assertCount(2, $students);
-
-        // Verify students are set on course
-        $courseStudents = $course->get('students');
-        $this->assertIsArray($courseStudents);
-        $this->assertCount(2, $courseStudents);
-
-        // Verify student details
-        $studentIds = $students->getIds();
-        $this->assertContains($student1->getId(), $studentIds);
-        $this->assertContains($student2->getId(), $studentIds);
+        $this->assertCount(2, $users);
+        $this->assertContains($user1->getId(), $users->getIds());
+        $this->assertContains($user2->getId(), $users->getIds());
     }
 
-    public function testFillCoursesForStudentWithNoCourses(): void
+    public function testBatchLoadRolesForUsers(): void
     {
-        // Create a student with no courses
-        $student = $this->studentRepo->createAndSave([
-            'name' => 'Empty Student'
-        ]);
+        $user1 = $this->userRepo->create(['name' => 'User One', 'email' => 'u1@example.com']);
+        $this->userRepo->save($user1);
+        $user2 = $this->userRepo->create(['name' => 'User Two', 'email' => 'u2@example.com']);
+        $this->userRepo->save($user2);
+        $role1 = $this->roleRepo->create(['name' => 'admin']);
+        $this->roleRepo->save($role1);
+        $role2 = $this->roleRepo->create(['name' => 'editor']);
+        $this->roleRepo->save($role2);
+        $role3 = $this->roleRepo->create(['name' => 'viewer']);
+        $this->roleRepo->save($role3);
 
-        // Fill courses for student
-        $courses = $this->studentRepo->load($student, 'courses');
-
-        // Verify empty array is returned
-        $this->assertCount(0, $courses);
-
-        // Verify empty array is set on student
-        $studentCourses = $student->get('courses');
-        $this->assertIsArray($studentCourses);
-        $this->assertCount(0, $studentCourses);
-    }
-
-    public function testBidirectionalRelationshipNotSetAutomatically(): void
-    {
-        // Create student and courses
-        $student = $this->studentRepo->createAndSave([
-            'name' => 'John Doe'
-        ]);
-
-        $course1 = $this->courseRepo->createAndSave([
-            'name' => 'Mathematics'
-        ]);
-
-        $course2 = $this->courseRepo->createAndSave([
-            'name' => 'Physics'
-        ]);
-
-        // Link student to courses
-        $this->pdo->exec("INSERT INTO student_course (student_id, course_id) VALUES ({$student->getId()}, {$course1->getId()})");
-        $this->pdo->exec("INSERT INTO student_course (student_id, course_id) VALUES ({$student->getId()}, {$course2->getId()})");
+        $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user1->getId()}, {$role1->getId()})");
+        $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user1->getId()}, {$role2->getId()})");
+        $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user2->getId()}, {$role2->getId()})");
+        $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user2->getId()}, {$role3->getId()})");
 
         EntityCache::clear();
+        $user1 = $this->userRepo->findById($user1->getId());
+        $user2 = $this->userRepo->findById($user2->getId());
 
-        // Reload student
-        $student = $this->studentRepo->findById($student->getId());
-
-        // Fill courses for student
-        $this->studentRepo->load($student, 'courses');
-
-        // Verify student -> courses
-        $courses = $student->get('courses');
-        $this->assertCount(2, $courses);
-
-        // Verify courses -> student is NOT automatically set
-        // (ManyToMany does not set bidirectional links automatically because
-        // it would only contain partial data - other students may also be linked to the course)
-        foreach ($courses as $course) {
-            $this->assertInstanceOf(Course::class, $course);
-            $courseStudents = $course->get('students');
-            // Should be null or empty, not automatically set
-            $this->assertTrue($courseStudents === null || (is_array($courseStudents) && count($courseStudents) === 0));
-        }
-
-        // If bidirectional link is needed, explicitly fill it
-        $this->courseRepo->load($courses, 'students');
-        
-        // Now verify bidirectional link is set
-        foreach ($courses as $course) {
-            $courseStudents = $course->get('students');
-            $this->assertIsArray($courseStudents);
-            $this->assertGreaterThanOrEqual(1, count($courseStudents));
-            
-            // Check if student is in the array
-            $studentIds = array_map(fn($s) => $s->getId(), $courseStudents);
-            $this->assertContains($student->getId(), $studentIds);
-        }
+        $roles = $this->userRepo->load([$user1, $user2], 'roles');
+        $this->assertGreaterThanOrEqual(3, count($roles));
+        $this->assertCount(2, $user1->getRaw('roles'));
+        $this->assertCount(2, $user2->getRaw('roles'));
     }
 
-    public function testBatchLoadCoursesForStudents(): void
+    public function testSyncAddRoles(): void
     {
-        // Create multiple students
-        $student1 = $this->studentRepo->createAndSave([
-            'name' => 'Student One'
-        ]);
+        $user = $this->userRepo->create(['name' => 'John', 'email' => 'john@example.com']);
+        $this->userRepo->save($user);
+        $role1 = $this->roleRepo->create(['name' => 'admin']);
+        $this->roleRepo->save($role1);
+        $role2 = $this->roleRepo->create(['name' => 'editor']);
+        $this->roleRepo->save($role2);
 
-        $student2 = $this->studentRepo->createAndSave([
-            'name' => 'Student Two'
-        ]);
+        $user->setRaw('roles', [$role1, $role2]);
+        $this->userRepo->syncManyToMany($user, 'roles');
 
-        // Create courses
-        $course1 = $this->courseRepo->createAndSave([
-            'name' => 'Mathematics'
-        ]);
+        $stmt = $this->pdo->prepare("SELECT role_id FROM user_role WHERE user_id = ?");
+        $stmt->execute([$user->getId()]);
+        $roleIds = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
 
-        $course2 = $this->courseRepo->createAndSave([
-            'name' => 'Physics'
-        ]);
-
-        $course3 = $this->courseRepo->createAndSave([
-            'name' => 'Chemistry'
-        ]);
-
-        // Link student1 to course1 and course2
-        $this->pdo->exec("INSERT INTO student_course (student_id, course_id) VALUES ({$student1->getId()}, {$course1->getId()})");
-        $this->pdo->exec("INSERT INTO student_course (student_id, course_id) VALUES ({$student1->getId()}, {$course2->getId()})");
-
-        // Link student2 to course2 and course3
-        $this->pdo->exec("INSERT INTO student_course (student_id, course_id) VALUES ({$student2->getId()}, {$course2->getId()})");
-        $this->pdo->exec("INSERT INTO student_course (student_id, course_id) VALUES ({$student2->getId()}, {$course3->getId()})");
-
-        EntityCache::clear();
-
-        // Reload students
-        $student1 = $this->studentRepo->findById($student1->getId());
-        $student2 = $this->studentRepo->findById($student2->getId());
-
-        // Batch load courses for students
-        $courses = $this->studentRepo->load([$student1, $student2], 'courses');
-
-        // Verify return value contains all courses
-        $this->assertGreaterThanOrEqual(3, count($courses)); // At least 3 unique courses
-
-        // Verify student1 has correct courses
-        $student1Courses = $student1->get('courses');
-        $this->assertIsArray($student1Courses);
-        $this->assertCount(2, $student1Courses);
-        $student1CourseIds = array_map(fn($c) => $c->getId(), $student1Courses);
-        $this->assertContains($course1->getId(), $student1CourseIds);
-        $this->assertContains($course2->getId(), $student1CourseIds);
-
-        // Verify student2 has correct courses
-        $student2Courses = $student2->get('courses');
-        $this->assertIsArray($student2Courses);
-        $this->assertCount(2, $student2Courses);
-        $student2CourseIds = array_map(fn($c) => $c->getId(), $student2Courses);
-        $this->assertContains($course2->getId(), $student2CourseIds);
-        $this->assertContains($course3->getId(), $student2CourseIds);
-    }
-
-    public function testSyncAddCourses(): void
-    {
-        // Create student
-        $student = $this->studentRepo->createAndSave([
-            'name' => 'John Doe'
-        ]);
-
-        // Create courses
-        $course1 = $this->courseRepo->createAndSave([
-            'name' => 'Mathematics'
-        ]);
-
-        $course2 = $this->courseRepo->createAndSave([
-            'name' => 'Physics'
-        ]);
-
-        // Sync: add courses (set relation property first)
-        $student->set('courses', [$course1, $course2]);
-        $this->studentRepo->syncManyToMany($student, 'courses');
-
-        // Verify in database
-        $stmt = $this->pdo->prepare("SELECT course_id FROM student_course WHERE student_id = ?");
-        $stmt->execute([$student->getId()]);
-        $courseIds = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
-        
-        $this->assertCount(2, $courseIds);
-        $this->assertContains($course1->getId(), $courseIds);
-        $this->assertContains($course2->getId(), $courseIds);
-    }
-
-    public function testSyncRemoveCourses(): void
-    {
-        // Create student
-        $student = $this->studentRepo->createAndSave([
-            'name' => 'John Doe'
-        ]);
-
-        // Create courses
-        $course1 = $this->courseRepo->createAndSave([
-            'name' => 'Mathematics'
-        ]);
-
-        $course2 = $this->courseRepo->createAndSave([
-            'name' => 'Physics'
-        ]);
-
-        $course3 = $this->courseRepo->createAndSave([
-            'name' => 'Chemistry'
-        ]);
-
-        // Initially link all courses
-        $this->pdo->exec("INSERT INTO student_course (student_id, course_id) VALUES ({$student->getId()}, {$course1->getId()})");
-        $this->pdo->exec("INSERT INTO student_course (student_id, course_id) VALUES ({$student->getId()}, {$course2->getId()})");
-        $this->pdo->exec("INSERT INTO student_course (student_id, course_id) VALUES ({$student->getId()}, {$course3->getId()})");
-
-        // Sync: remove course2 and course3, keep course1
-        $student->set('courses', [$course1]);
-        $this->studentRepo->syncManyToMany($student, 'courses');
-
-        // Verify in database
-        $stmt = $this->pdo->prepare("SELECT course_id FROM student_course WHERE student_id = ?");
-        $stmt->execute([$student->getId()]);
-        $courseIds = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
-        
-        $this->assertCount(1, $courseIds);
-        $this->assertContains($course1->getId(), $courseIds);
-        $this->assertNotContains($course2->getId(), $courseIds);
-        $this->assertNotContains($course3->getId(), $courseIds);
-    }
-
-    public function testSyncUpdateCourses(): void
-    {
-        // Create student
-        $student = $this->studentRepo->createAndSave([
-            'name' => 'John Doe'
-        ]);
-
-        // Create courses
-        $course1 = $this->courseRepo->createAndSave([
-            'name' => 'Mathematics'
-        ]);
-
-        $course2 = $this->courseRepo->createAndSave([
-            'name' => 'Physics'
-        ]);
-
-        $course3 = $this->courseRepo->createAndSave([
-            'name' => 'Chemistry'
-        ]);
-
-        // Initially link course1 and course2
-        $this->pdo->exec("INSERT INTO student_course (student_id, course_id) VALUES ({$student->getId()}, {$course1->getId()})");
-        $this->pdo->exec("INSERT INTO student_course (student_id, course_id) VALUES ({$student->getId()}, {$course2->getId()})");
-
-        // Sync: replace with course2 and course3
-        $student->set('courses', [$course2, $course3]);
-        $this->studentRepo->syncManyToMany($student, 'courses');
-
-        // Verify in database
-        $stmt = $this->pdo->prepare("SELECT course_id FROM student_course WHERE student_id = ? ORDER BY course_id");
-        $stmt->execute([$student->getId()]);
-        $courseIds = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
-        
-        $this->assertCount(2, $courseIds);
-        $this->assertContains($course2->getId(), $courseIds);
-        $this->assertContains($course3->getId(), $courseIds);
-        $this->assertNotContains($course1->getId(), $courseIds);
-    }
-
-    public function testSyncEmptyCourses(): void
-    {
-        // Create student
-        $student = $this->studentRepo->createAndSave([
-            'name' => 'John Doe'
-        ]);
-
-        // Create course
-        $course = $this->courseRepo->createAndSave([
-            'name' => 'Mathematics'
-        ]);
-
-        // Initially link course
-        $this->pdo->exec("INSERT INTO student_course (student_id, course_id) VALUES ({$student->getId()}, {$course->getId()})");
-
-        // Sync: remove all courses
-        $student->set('courses', []);
-        $this->studentRepo->syncManyToMany($student, 'courses');
-
-        // Verify in database
-        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM student_course WHERE student_id = ?");
-        $stmt->execute([$student->getId()]);
-        $count = $stmt->fetchColumn();
-        
-        $this->assertEquals(0, $count);
-    }
-
-    public function testSyncWithNonExistentCourse(): void
-    {
-        // Create student
-        $student = $this->studentRepo->createAndSave([
-            'name' => 'John Doe'
-        ]);
-
-        // Sync with non-existent course ID
-        // Create a fake course entity with ID 999 (not saved to DB)
-        $fakeCourse = $this->courseRepo->createEntity(['name' => 'Fake']);
-        $fakeCourse->set('id', '999');
-        
-        // This should not throw an error, but the relationship won't be created
-        // (foreign key constraint would fail in real DB, but SQLite allows it)
-        $student->set('courses', [$fakeCourse]);
-        $this->studentRepo->syncManyToMany($student, 'courses');
-
-        // Verify in database (should have attempted to insert)
-        $stmt = $this->pdo->prepare("SELECT course_id FROM student_course WHERE student_id = ?");
-        $stmt->execute([$student->getId()]);
-        $courseIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        
-        // SQLite doesn't enforce foreign keys by default, so this might succeed
-        // In a real database with FK constraints, this would fail
-        $this->assertIsArray($courseIds);
+        $this->assertCount(2, $roleIds);
+        $this->assertContains($role1->getId(), $roleIds);
+        $this->assertContains($role2->getId(), $roleIds);
     }
 
     public function testSyncRequiresEntityId(): void
     {
-        // Create student without saving (no ID)
-        $student = $this->studentRepo->createEntity([
-            'name' => 'John Doe'
+        $user = $this->userRepo->createEntity([
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
         ]);
+        $role = $this->roleRepo->create(['name' => 'admin']);
+        $this->roleRepo->save($role);
 
-        // Create course
-        $course = $this->courseRepo->createAndSave([
-            'name' => 'Mathematics'
-        ]);
-
-        // Sync should fail because student has no ID
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Entity must have an ID to sync relations');
-        
-        $student->set('courses', [$course]);
-        $this->studentRepo->syncManyToMany($student, 'courses');
+
+        $user->setRaw('roles', [$role]);
+        $this->userRepo->syncManyToMany($user, 'roles');
     }
 
     public function testSyncRequiresManyToManyRelation(): void
     {
-        // Create student
-        $student = $this->studentRepo->createAndSave([
-            'name' => 'John Doe'
-        ]);
+        $user = $this->userRepo->create(['name' => 'John Doe', 'email' => 'john@example.com']);
+        $this->userRepo->save($user);
 
-        // Try to sync a non-existent relation
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage("Relation 'nonexistent' is not a ManyToMany relationship");
-        
-        $this->studentRepo->syncManyToMany($student, 'nonexistent');
+
+        $this->userRepo->syncManyToMany($user, 'nonexistent');
+    }
+
+    public function testManyToManyQueriesAreLogged(): void
+    {
+        $logger = new ArrayLogger();
+        $fixture = RelationsFixture::create($logger, 0);
+        $userRepo = $fixture->users;
+        $roleRepo = $fixture->roles;
+
+        $user = $userRepo->create(['name' => 'John Doe', 'email' => 'john@example.com']);
+        $userRepo->save($user);
+        $role = $roleRepo->create(['name' => 'admin']);
+        $roleRepo->save($role);
+
+        $user->setRaw('roles', [$role]);
+        $userRepo->syncManyToMany($user, 'roles');
+
+        EntityCache::clear();
+        $user = $userRepo->findById($user->getId());
+        $userRepo->load($user, 'roles');
+
+        $messages = array_column($logger->records, 'message');
+        $sqlList = array_map(
+            static fn(array $record): string => $record['context']['sql'] ?? '',
+            $logger->records
+        );
+
+        $this->assertContains('SQL executed.', $messages);
+        $this->assertTrue(
+            in_array(
+                'SELECT role_id 
+                FROM user_role 
+                WHERE user_id = :entity_id',
+                $sqlList,
+                true
+            )
+        );
     }
 }
-

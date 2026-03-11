@@ -2,6 +2,9 @@
 
 namespace WScore\DecaORM;
 
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\HydratorInterface;
+
 final class DirtyTracker
 {
     /**
@@ -56,7 +59,7 @@ final class DirtyTracker
             if ($column === $pkColumn) {
                 continue; // PKはUPDATE対象にしない
             }
-            $data[$column] = $entity->get($property);
+            $data[$column] = $entity->getRaw($property);
         }
 
         return $data;

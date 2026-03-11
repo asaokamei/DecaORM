@@ -5,7 +5,8 @@ namespace WScore\DecaORM\Tests\Sql;
 use PDOStatement;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\Contracts\HydratorInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 use WScore\DecaORM\Sql\Delete;
 use WScore\DecaORM\Sql\Insert;
 use WScore\DecaORM\Sql\Query;
@@ -15,17 +16,18 @@ class UpdateTest extends TestCase
 {
     private function repoStub(array &$captured): RepositoryInterface
     {
+        $hydrator = $this->createMock(HydratorInterface::class);
+        $hydrator->method('getTableName')->willReturn('users');
+        $hydrator->method('getPrimaryKeyColumn')->willReturn('user_id');
+
         $repo = $this->createMock(RepositoryInterface::class);
-        
-        // Methods used by Update class
-        $repo->method('getTableName')->willReturn('users');
-        $repo->method('getPrimaryKeyColumn')->willReturn('user_id');
+        $repo->method('getHydrator')->willReturn($hydrator);
         $repo->method('execute')->willReturnCallback(function (string $sql, array $data) use (&$captured) {
             $captured['sql'] = $sql;
             $captured['data'] = $data;
             return true;
         });
-        
+
         return $repo;
     }
 

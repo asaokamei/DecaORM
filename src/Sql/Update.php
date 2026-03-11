@@ -4,7 +4,7 @@ namespace WScore\DecaORM\Sql;
 
 use PDOStatement;
 use RuntimeException;
-use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class Update extends UpdateBuilder
 {
@@ -12,8 +12,9 @@ class Update extends UpdateBuilder
 
     public function __construct(private RepositoryInterface $repository)
     {
-        $this->table($this->repository->getTableName());
-        $this->pkColumn = $this->repository->getPrimaryKeyColumn();
+        $hydrator = $this->repository->getHydrator();
+        $this->table($hydrator->getTableName());
+        $this->pkColumn = $hydrator->getPrimaryKeyColumn();
     }
 
     /**

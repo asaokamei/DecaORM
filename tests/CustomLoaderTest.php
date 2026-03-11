@@ -6,14 +6,15 @@ use PDO;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use WScore\DecaORM\EntityCache;
-use WScore\DecaORM\Tests\CustomLoader\InvalidProject;
-use WScore\DecaORM\Tests\CustomLoader\InvalidProjectRepository;
-use WScore\DecaORM\Tests\CustomLoader\Project;
-use WScore\DecaORM\Tests\CustomLoader\ProjectRepository;
-use WScore\DecaORM\Tests\CustomLoader\ProjectRepositoryWithReturn;
-use WScore\DecaORM\Tests\CustomLoader\Task;
-use WScore\DecaORM\Tests\CustomLoader\TaskRepository;
-use WScore\DecaORM\Tests\Users\Container;
+use WScore\DecaORM\Tests\Fixtures\CustomLoader\InvalidProject;
+use WScore\DecaORM\Tests\Fixtures\CustomLoader\InvalidProjectRepository;
+use WScore\DecaORM\Tests\Fixtures\CustomLoader\Project;
+use WScore\DecaORM\Tests\Fixtures\CustomLoader\ProjectRepository;
+use WScore\DecaORM\Tests\Fixtures\CustomLoader\ProjectRepositoryWithReturn;
+use WScore\DecaORM\Tests\Fixtures\CustomLoader\Task;
+use WScore\DecaORM\Tests\Fixtures\CustomLoader\TaskRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
+use WScore\DecaORM\OrmManager;
 
 class CustomLoaderTest extends TestCase
 {
@@ -49,9 +50,11 @@ class CustomLoaderTest extends TestCase
         // Clear cache before each test
         EntityCache::clear();
 
-        $container = new Container();
-        $this->projectRepo = new ProjectRepository($this->pdo, $container);
-        $this->taskRepo = new TaskRepository($this->pdo, $container);
+        $container = new TestContainer();
+        $container->set(PDO::class, $this->pdo);
+        $manager = OrmManager::initialize($container);
+        $this->projectRepo = new ProjectRepository($manager);
+        $this->taskRepo = new TaskRepository($manager);
         $container->set(ProjectRepository::class, $this->projectRepo);
         $container->set(TaskRepository::class, $this->taskRepo);
     }
@@ -59,22 +62,25 @@ class CustomLoaderTest extends TestCase
     public function testCustomLoaderWithSingleEntity(): void
     {
         // Create a project
-        $project = $this->projectRepo->createAndSave([
+        $project = $this->projectRepo->create([
             'name' => 'Project 1'
         ]);
+        $this->projectRepo->save($project);
 
         // Create tasks for the project
-        $task1 = $this->taskRepo->createAndSave([
+        $task1 = $this->taskRepo->create([
             'project_id' => $project->getId(),
             'user_id' => 1,
             'title' => 'Task 1'
         ]);
+        $this->taskRepo->save($task1);
 
-        $task2 = $this->taskRepo->createAndSave([
+        $task2 = $this->taskRepo->create([
             'project_id' => $project->getId(),
             'user_id' => 2,
             'title' => 'Task 2'
         ]);
+        $this->taskRepo->save($task2);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -84,45 +90,50 @@ class CustomLoaderTest extends TestCase
         $tasks = $this->projectRepo->load($project, 'tasks');
 
         // Verify tasks are set on entity
-        $projectTasks = $project->get('tasks');
+        $projectTasks = $project->getRaw('tasks');
         $this->assertIsArray($projectTasks);
         $this->assertCount(2, $projectTasks);
         $this->assertInstanceOf(Task::class, $projectTasks[0]);
         $this->assertInstanceOf(Task::class, $projectTasks[1]);
-        $this->assertEquals('Task 1', $projectTasks[0]->get('title'));
-        $this->assertEquals('Task 2', $projectTasks[1]->get('title'));
+        $this->assertEquals('Task 1', $projectTasks[0]->getRaw('title'));
+        $this->assertEquals('Task 2', $projectTasks[1]->getRaw('title'));
     }
 
     public function testCustomLoaderWithMultipleEntities(): void
     {
         // Create multiple projects
-        $project1 = $this->projectRepo->createAndSave([
+        $project1 = $this->projectRepo->create([
             'name' => 'Project 1'
         ]);
+        $this->projectRepo->save($project1);
 
-        $project2 = $this->projectRepo->createAndSave([
+        $project2 = $this->projectRepo->create([
             'name' => 'Project 2'
         ]);
+        $this->projectRepo->save($project2);
 
         // Create tasks for project1
-        $task1 = $this->taskRepo->createAndSave([
+        $task1 = $this->taskRepo->create([
             'project_id' => $project1->getId(),
             'user_id' => 1,
             'title' => 'Project 1 Task 1'
         ]);
+        $this->taskRepo->save($task1);
 
-        $task2 = $this->taskRepo->createAndSave([
+        $task2 = $this->taskRepo->create([
             'project_id' => $project1->getId(),
             'user_id' => 2,
             'title' => 'Project 1 Task 2'
         ]);
+        $this->taskRepo->save($task2);
 
         // Create tasks for project2
-        $task3 = $this->taskRepo->createAndSave([
+        $task3 = $this->taskRepo->create([
             'project_id' => $project2->getId(),
             'user_id' => 1,
             'title' => 'Project 2 Task 1'
         ]);
+        $this->taskRepo->save($task3);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -135,24 +146,25 @@ class CustomLoaderTest extends TestCase
         $tasks = $this->projectRepo->load($projects, 'tasks');
 
         // Verify tasks are set on entities
-        $project1Tasks = $projects[0]->get('tasks');
+        $project1Tasks = $projects[0]->getRaw('tasks');
         $this->assertIsArray($project1Tasks);
         $this->assertCount(2, $project1Tasks);
-        $this->assertEquals('Project 1 Task 1', $project1Tasks[0]->get('title'));
-        $this->assertEquals('Project 1 Task 2', $project1Tasks[1]->get('title'));
+        $this->assertEquals('Project 1 Task 1', $project1Tasks[0]->getRaw('title'));
+        $this->assertEquals('Project 1 Task 2', $project1Tasks[1]->getRaw('title'));
 
-        $project2Tasks = $projects[1]->get('tasks');
+        $project2Tasks = $projects[1]->getRaw('tasks');
         $this->assertIsArray($project2Tasks);
         $this->assertCount(1, $project2Tasks);
-        $this->assertEquals('Project 2 Task 1', $project2Tasks[0]->get('title'));
+        $this->assertEquals('Project 2 Task 1', $project2Tasks[0]->getRaw('title'));
     }
 
     public function testCustomLoaderWithNoRelations(): void
     {
         // Create a project without tasks
-        $project = $this->projectRepo->createAndSave([
+        $project = $this->projectRepo->create([
             'name' => 'Project 1'
         ]);
+        $this->projectRepo->save($project);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -162,24 +174,27 @@ class CustomLoaderTest extends TestCase
         $tasks = $this->projectRepo->load($project, 'tasks');
 
         // Verify empty array is set on entity
-        $projectTasks = $project->get('tasks');
+        $projectTasks = $project->getRaw('tasks');
         $this->assertIsArray($projectTasks);
         $this->assertCount(0, $projectTasks);
     }
 
     public function testCustomLoaderWithEmptyArray(): void
     {
-        // Test with empty array - should return empty array without error
+        // Test with empty array - should return empty array without error (CustomLoader returns Collection for non-entity results)
         $result = $this->projectRepo->load([], 'tasks');
         $this->assertCount(0, $result->getItems());
     }
 
     public function testCustomLoaderWithInvalidMethod(): void
     {
-        $container = new Container();
-        $invalidRepo = new InvalidProjectRepository($this->pdo, $container);
+        $container = new TestContainer();
+        $container->set(PDO::class, $this->pdo);
+        $manager = OrmManager::initialize($container);
+        $taskRepo = new TaskRepository($manager);
+        $invalidRepo = new InvalidProjectRepository($manager);
         $container->set(InvalidProjectRepository::class, $invalidRepo);
-        $container->set(TaskRepository::class, $this->taskRepo);
+        $container->set(TaskRepository::class, $taskRepo);
 
         // Create table
         $this->pdo->exec(
@@ -189,9 +204,10 @@ class CustomLoaderTest extends TestCase
         )"
         );
 
-        $project = $invalidRepo->createAndSave([
+        $project = $invalidRepo->create([
             'name' => 'Project 1'
         ]);
+        $invalidRepo->save($project);
 
         // Expect RuntimeException when method doesn't exist
         $this->expectException(RuntimeException::class);
@@ -202,22 +218,27 @@ class CustomLoaderTest extends TestCase
 
     public function testCustomLoaderWithReturnValue(): void
     {
-        $container = new Container();
-        $repo = new ProjectRepositoryWithReturn($this->pdo, $container);
+        $container = new TestContainer();
+        $container->set(PDO::class, $this->pdo);
+        $manager = OrmManager::initialize($container);
+        $taskRepo = new TaskRepository($manager);
+        $repo = new ProjectRepositoryWithReturn($manager);
         $container->set(ProjectRepositoryWithReturn::class, $repo);
-        $container->set(TaskRepository::class, $this->taskRepo);
+        $container->set(TaskRepository::class, $taskRepo);
 
         // Create a project
-        $project = $repo->createAndSave([
+        $project = $repo->create([
             'name' => 'Project 1'
         ]);
+        $repo->save($project);
 
         // Create tasks
-        $task1 = $this->taskRepo->createAndSave([
+        $task1 = $this->taskRepo->create([
             'project_id' => $project->getId(),
             'user_id' => 1,
             'title' => 'Task 1'
         ]);
+        $this->taskRepo->save($task1);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -231,7 +252,7 @@ class CustomLoaderTest extends TestCase
         $this->assertInstanceOf(Task::class, $tasks[0]);
 
         // Verify tasks are set on entity
-        $projectTasks = $project->get('tasks');
+        $projectTasks = $project->getRaw('tasks');
         $this->assertIsArray($projectTasks);
         $this->assertCount(1, $projectTasks);
     }

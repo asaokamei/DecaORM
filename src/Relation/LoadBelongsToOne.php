@@ -6,8 +6,8 @@ use RuntimeException;
 use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\EntityCollection;
-use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class LoadBelongsToOne
 {
@@ -17,9 +17,9 @@ class LoadBelongsToOne
     /**
      * Load BelongsToOne relation for a single entity or multiple entities.
      * 
-     * @param EntityInterface|array<EntityInterface> $entities
+     * @param EntityInterface|array<\WScore\DecaORM\Contracts\EntityInterface> $entities
      * @param BelongsToOne $childRelation
-     * @param RepositoryInterface $targetRepository
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
      * @return EntityInterface[] All loaded parent entities (array with 0 or 1 elements per child)
      */
     public static function load(
@@ -56,9 +56,9 @@ class LoadBelongsToOne
     /**
      * Batch load BelongsToOne relations for multiple entities.
      * 
-     * @param array<EntityInterface> $childEntities
+     * @param array<\WScore\DecaORM\Contracts\EntityInterface> $childEntities
      * @param BelongsToOne $childRelation
-     * @param RepositoryInterface $targetRepository
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
      * @return EntityInterface[] All loaded parent entities (array with 0 or 1 elements per child)
      */
     public static function loadBatch(
@@ -79,7 +79,7 @@ class LoadBelongsToOne
         // Batch load all parents using WHERE IN
         $parents = $targetRepository
             ->sqlQuery()
-            ->whereIn($targetRepository->getPrimaryKeyColumn(), $parentIds)
+            ->whereIn($targetRepository->getHydrator()->getPrimaryKeyColumn(), $parentIds)
             ->getCollection();
         $allParents = self::getParents($parents, $childRelation, $childEntities);
 
@@ -117,7 +117,7 @@ class LoadBelongsToOne
 
         if ($parentRelation instanceof HasOne) {
             // Set as single entity (not array)
-            $parentEntity->set($parentPropertyName, $childEntity);
+            $parentEntity->setRaw($parentPropertyName, $childEntity);
         }
     }
 }

@@ -4,8 +4,8 @@ namespace WScore\DecaORM\Relation;
 
 use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\EntityCollection;
-use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class LoadBelongsTo
 {
@@ -15,9 +15,9 @@ class LoadBelongsTo
     /**
      * Load BelongsTo relation for single entity or multiple entities.
      * 
-     * @param EntityInterface|array<EntityInterface> $entities
+     * @param \WScore\DecaORM\Contracts\EntityInterface|array<EntityInterface> $entities
      * @param BelongsTo $childRelation
-     * @param RepositoryInterface $targetRepository
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
      * @return EntityInterface[] All loaded parent entities (array with 0 or 1 element per child)
      */
     public static function load(
@@ -50,10 +50,10 @@ class LoadBelongsTo
     /**
      * Batch load BelongsTo relations for multiple entities.
      * 
-     * @param array<EntityInterface> $childEntities
+     * @param array<\WScore\DecaORM\Contracts\EntityInterface> $childEntities
      * @param BelongsTo $childRelation
      * @param RepositoryInterface $targetRepository
-     * @return EntityInterface[] All loaded parent entities (array with 0 or 1 element per child)
+     * @return \WScore\DecaORM\Contracts\EntityInterface[] All loaded parent entities (array with 0 or 1 element per child)
      */
     public static function loadBatch(
         array $childEntities,
@@ -73,7 +73,7 @@ class LoadBelongsTo
         // Batch load all parents using WHERE IN
         $parents = $targetRepository
             ->sqlQuery()
-            ->whereIn($targetRepository->getPrimaryKeyColumn(), $parentIds)
+            ->whereIn($targetRepository->getHydrator()->getPrimaryKeyColumn(), $parentIds)
             ->getCollection();
         $allParents = self::getParents($parents, $childRelation, $childEntities);
 

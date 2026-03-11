@@ -8,8 +8,10 @@ use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\DirtyTracker;
 use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Support\SpyUserRepository;
-use WScore\DecaORM\Tests\Users\User;
+use WScore\DecaORM\Tests\Fixtures\Relations\User;
+use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
 
 final class DirtyTrackingTest extends TestCase
 {
@@ -33,16 +35,21 @@ final class DirtyTrackingTest extends TestCase
 
         EntityCache::clear();
 
-        $this->repo = new SpyUserRepository($this->pdo);
+        $container = new TestContainer();
+        $container->set(PDO::class, $this->pdo);
+        $manager = OrmManager::initialize($container);
+        $this->repo = new SpyUserRepository($manager);
+        $container->set(SpyUserRepository::class, $this->repo);
     }
 
     public function testSaveWithoutChangesDoesNotExecuteUpdate(): void
     {
         // insert（この時点でDirtyTracker::takeされる想定）
-        $user = $this->repo->createAndSave([
+        $user = $this->repo->create([
             'name' => 'No Change',
             'email' => 'nochange@example.com',
         ]);
+        $this->repo->save($user);
 
         // fetchしてスナップショットを確実に作る（FETCH_CLASSでもfetch()でtake）
         $loaded = $this->repo->findById($user->getId());
@@ -66,9 +73,9 @@ final class DirtyTrackingTest extends TestCase
 
         // new で作ってIDだけ持たせる（DirtyTrackerスナップショット無し）
         $entity = new User();
-        $entity->set('id', $id);
-        $entity->set('name', 'A2');
-        $entity->set('email', 'a@example.com');
+        $entity->setRaw('id', $id);
+        $entity->setRaw('name', 'A2');
+        $entity->setRaw('email', 'a@example.com');
 
         $this->assertFalse(DirtyTracker::has($entity));
 
@@ -92,10 +99,11 @@ final class DirtyTrackingTest extends TestCase
 
     public function testDeleteForgetsSnapshot(): void
     {
-        $user = $this->repo->createAndSave([
+        $user = $this->repo->create([
             'name' => 'To Delete',
             'email' => 'delete@example.com',
         ]);
+        $this->repo->save($user);
 
         $loaded = $this->repo->findById($user->getId());
         $this->assertInstanceOf(User::class, $loaded);

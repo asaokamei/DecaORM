@@ -3,8 +3,8 @@
 namespace WScore\DecaORM\Relation;
 
 use WScore\DecaORM\Attribute\HasMany;
-use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class LoadHasMany
 {
@@ -12,7 +12,7 @@ class LoadHasMany
     /**
      * Load HasMany relation for single entity or multiple entities.
      * 
-     * @param EntityInterface|array<EntityInterface> $entities
+     * @param EntityInterface|array<\WScore\DecaORM\Contracts\EntityInterface> $entities
      * @param HasMany $parentRelation
      * @param RepositoryInterface $targetRepository
      * @param RepositoryInterface|null $sourceRepository The repository for the source entities (needed for loader)
@@ -56,16 +56,16 @@ class LoadHasMany
             $children = $targetRepository->find($parentEntity->getId(), $foreignKey, $parentRelation->orderBy);
         }
         if (empty($children)) {
-            $parentEntity->set($parentProperty, []);
+            $parentEntity->setRaw($parentProperty, []);
             return [];
         }
 
         // Set the bidirectional link (post -> user)
         foreach ($children as $child) {
-            $child->set($childProperty, $parentEntity);
+            $child->setRaw($childProperty, $parentEntity);
         }
 
-        $parentEntity->set($parentProperty, $children);
+        $parentEntity->setRaw($parentProperty, $children);
         return $children;
     }
 
@@ -135,7 +135,7 @@ class LoadHasMany
         
         if (empty($parentIds)) {
             foreach ($parentEntities as $parentEntity) {
-                $parentEntity->set($parentProperty, []);
+                $parentEntity->setRaw($parentProperty, []);
             }
             return [];
         }
@@ -150,19 +150,19 @@ class LoadHasMany
             
             // Set bidirectional link (child -> parent)
             foreach ($childrenForParent as $child) {
-                $child->set($childProperty, $entity);
+                $child->setRaw($childProperty, $entity);
             }
             
             // Set children for all parent entities with this ID
-            $entity->set($parentProperty, $childrenForParent);
+            $entity->setRaw($parentProperty, $childrenForParent);
             
             $allChildren = array_merge($allChildren, $childrenForParent);
         }
         
         // Set empty arrays for entities that had no children
         foreach ($parentEntities as $parentEntity) {
-            if (!$parentEntity->get($parentProperty)) {
-                $parentEntity->set($parentProperty, []);
+            if (!$parentEntity->getRaw($parentProperty)) {
+                $parentEntity->setRaw($parentProperty, []);
             }
         }
         

@@ -2,72 +2,28 @@
 
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
-use WScore\DecaORM\Tests\Users\Container;
-use WScore\DecaORM\Tests\Users\Post;
-use WScore\DecaORM\Tests\Users\PostsRepository;
-use WScore\DecaORM\Tests\Users\Profile;
-use WScore\DecaORM\Tests\Users\ProfileRepository;
-use WScore\DecaORM\Tests\Users\User;
-use WScore\DecaORM\Tests\Users\UserRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\Post;
+use WScore\DecaORM\Tests\Fixtures\Relations\PostRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\Profile;
+use WScore\DecaORM\Tests\Fixtures\Relations\ProfileRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\RelationsFixture;
+use WScore\DecaORM\Tests\Fixtures\Relations\User;
+use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
 
 class RelationsAutoForeignKeyTest extends TestCase
 {
     private PDO $pdo;
     private UserRepository $userRepo;
-    private PostsRepository $postsRepo;
+    private PostRepository $postsRepo;
     private ProfileRepository $profileRepo;
 
     protected function setUp(): void
     {
-        // In-memory SQLite database for testing
-        $this->pdo = new PDO('sqlite::memory:');
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        // Create users table
-        $this->pdo->exec(
-            "CREATE TABLE users (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            created_at TEXT,
-            updated_at TEXT
-        )"
-        );
-
-        // Create posts table
-        $this->pdo->exec(
-            "CREATE TABLE posts (
-            post_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            title TEXT NOT NULL,
-            content TEXT NOT NULL,
-            created_at TEXT,
-            updated_at TEXT,
-            FOREIGN KEY (user_id) REFERENCES users(user_id)
-        )"
-        );
-
-        // Create profiles table (1:1 with users)
-        $this->pdo->exec(
-            "CREATE TABLE profiles (
-            profile_id INTEGER PRIMARY KEY,
-            nickname TEXT NOT NULL,
-            created_at TEXT,
-            updated_at TEXT,
-            FOREIGN KEY (profile_id) REFERENCES users(user_id)
-        )"
-        );
-
-        // Clear cache before each test
-        EntityCache::clear();
-
-        $container = new Container();
-        $this->userRepo = new UserRepository($this->pdo, $container);
-        $this->postsRepo = new PostsRepository($this->pdo, $container);
-        $this->profileRepo = new ProfileRepository($this->pdo, $container);
-        $container->set(UserRepository::class, $this->userRepo);
-        $container->set(PostsRepository::class, $this->postsRepo);
-        $container->set(ProfileRepository::class, $this->profileRepo);
+        $fixture = RelationsFixture::create();
+        $this->pdo = $fixture->pdo;
+        $this->userRepo = $fixture->users;
+        $this->postsRepo = $fixture->posts;
+        $this->profileRepo = $fixture->profiles;
     }
 
     public function testHasMany_childrenForeignKeysFilledOnParentInsert(): void
@@ -80,15 +36,15 @@ class RelationsAutoForeignKeyTest extends TestCase
         ]);
 
         $post1 = new Post();
-        $post1->set('title', 'p1');
-        $post1->set('content', 'c1');
+        $post1->setRaw('title', 'p1');
+        $post1->setRaw('content', 'c1');
 
         $post2 = new Post();
-        $post2->set('title', 'p2');
-        $post2->set('content', 'c2');
+        $post2->setRaw('title', 'p2');
+        $post2->setRaw('content', 'c2');
 
         // Assign children via HasMany property
-        $user->set('posts', [$post1, $post2]);
+        $user->setRaw('posts', [$post1, $post2]);
 
         // Save parent (insert). This should trigger filling children's back-reference and FK
         $this->userRepo->save($user);
@@ -99,8 +55,8 @@ class RelationsAutoForeignKeyTest extends TestCase
         foreach ([$post1, $post2] as $i => $post) {
             $msg = "post#" . ($i + 1);
             // user_id may be stored as string; compare with == to ignore type
-            $this->assertEquals($user->getId(), $post->get('user_id'), $msg . ' should get user_id filled');
-            $this->assertSame($user, $post->get('user'), $msg . ' should get user back-reference filled');
+            $this->assertEquals($user->getId(), $post->getRaw('user_id'), $msg . ' should get user_id filled');
+            $this->assertSame($user, $post->getRaw('user'), $msg . ' should get user back-reference filled');
         }
     }
 
@@ -117,7 +73,7 @@ class RelationsAutoForeignKeyTest extends TestCase
         $profile->setNickname('nick');
 
         // Assign child via HasOne property
-        $user->set('profile', $profile);
+        $user->setRaw('profile', $profile);
 
         // Save parent (insert). This should trigger filling child's back-reference and FK (profile.id)
         $this->userRepo->save($user);

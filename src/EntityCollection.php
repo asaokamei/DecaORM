@@ -3,6 +3,8 @@
 namespace WScore\DecaORM;
 
 use InvalidArgumentException;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 
 /**
  * Collection specifically for EntityInterface instances.
@@ -97,7 +99,7 @@ class EntityCollection extends Collection
     public function getValues(string $propertyName): array
     {
         $callback = function ($entity) use ($propertyName) {
-            return $entity->get($propertyName);
+            return $entity->getRaw($propertyName);
         };
         return $this->map($callback);
     }
@@ -138,7 +140,7 @@ class EntityCollection extends Collection
             // Property-based sorting
             $callback = function ($a, $b) use ($callback) {
                 foreach ($callback as $key) {
-                    $diff = $a->get($key) <=> $b->get($key);
+                    $diff = $a->getRaw($key) <=> $b->getRaw($key);
                     if ($diff) return $diff;
                 }
                 return 0;
@@ -159,7 +161,7 @@ class EntityCollection extends Collection
     {
         $group = [];
         foreach ($this->items as $entity) {
-            $key = $entity->get($foreignKey);
+            $key = $entity->getRaw($foreignKey);
             $group[$key][] = $entity;
         }
         return $group;

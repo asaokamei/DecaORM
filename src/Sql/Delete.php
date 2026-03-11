@@ -3,7 +3,7 @@
 namespace WScore\DecaORM\Sql;
 
 use PDOStatement;
-use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class Delete extends DeleteBuilder
 {
@@ -11,8 +11,9 @@ class Delete extends DeleteBuilder
 
     public function __construct(private RepositoryInterface $repository)
     {
-        $this->table($this->repository->getTableName());
-        $this->pkColumn = $this->repository->getPrimaryKeyColumn();
+        $hydrator = $this->repository->getHydrator();
+        $this->table($hydrator->getTableName());
+        $this->pkColumn = $hydrator->getPrimaryKeyColumn();
     }
 
     public function execute(): bool|PDOStatement

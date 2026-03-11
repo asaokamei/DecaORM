@@ -20,8 +20,8 @@ use WScore\DecaORM\Collection;
 use WScore\DecaORM\DirtyTracker;
 use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
-use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\HydratorInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\HydratorInterface;
 use WScore\DecaORM\Relation\LoadBelongsTo;
 use WScore\DecaORM\Relation\LoadBelongsToOne;
 use WScore\DecaORM\Relation\LoadCustomLoader;
@@ -29,7 +29,8 @@ use WScore\DecaORM\Relation\LoadHasMany;
 use WScore\DecaORM\Relation\LoadHasOne;
 use WScore\DecaORM\Relation\LoadManyToMany;
 use WScore\DecaORM\Relation\RelationTrait;
-use WScore\DecaORM\RepositoryInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
+use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Sql\Insert;
 use WScore\DecaORM\Sql\Query;
 use WScore\DecaORM\Sql\Update;
@@ -42,7 +43,7 @@ trait RepositoryTrait
 {
     use RelationTrait;
     
-    protected ?ContainerInterface $container;
+    protected OrmManager $manager;
     protected PDO $db;
     protected HydratorInterface $hydrator;
     protected DateTimeInterface $now;
@@ -78,11 +79,7 @@ trait RepositoryTrait
 
     public function execute(string $sql, array $data): bool|PDOStatement
     {
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($data);
-        $stmt->setFetchMode(PDO::FETCH_ASSOC);
-
-        return $stmt;
+        return $this->getManager()->getSqlExecutor()->execute($this->db, $sql, $data);
     }
 
     /**
@@ -119,30 +116,22 @@ trait RepositoryTrait
         return $this->fetch($sql, $data) ?? [];
     }
 
-    public function listColumnsToProperties(): array
-    {
-        $list = [];
-        foreach ($this->hydrator->listProperties() as $property) {
-            $column = $this->hydrator->getColumnNameForProperty($property);
-            $list[$column] = $property;
-        }
-
-        return $list;
-    }
-
     public function getRepository(string|EntityInterface $entity): ?RepositoryInterface
     {
         if (!method_exists($entity, 'getRepositoryClass')) {
             throw new RuntimeException('no repository class defined for entity: ' . $entity);
         }
         $repoName = $entity::getRepositoryClass();
-        try {
-            return $this->container->get($repoName);
-        } catch (NotFoundExceptionInterface) {
-            return null;
-        } catch (ContainerExceptionInterface $e) {
-            throw new RuntimeException('failed to get repository: ' . $repoName, 0, $e);
+        return $this->getManager()->getRepository($repoName);
+    }
+
+    protected function getManager(): OrmManager
+    {
+        if (!isset($this->manager)) {
+            throw new RuntimeException('Repository manager is not set. Call setUpRepository() in the repository constructor.');
         }
+
+        return $this->manager;
     }
 
     /**
@@ -169,10 +158,10 @@ trait RepositoryTrait
             }
         }
         if ($this->hydrator->getCreatedAt() !== null) {
-            $entity->set($this->hydrator->getCreatedAt(), $this->now->format('Y-m-d H:i:s'));
+            $entity->setRaw($this->hydrator->getCreatedAt(), $this->now->format('Y-m-d H:i:s'));
         }
         if ($this->hydrator->getUpdatedAt() !== null) {
-            $entity->set($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
+            $entity->setRaw($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
         }
         $data = $this->hydrator->dehydrate($entity);
         $stmt = $this->sqlInsert($data)->execute();
@@ -182,7 +171,7 @@ trait RepositoryTrait
         }
         if ($this->hydrator->isPkAutoNumber()) {
             $pKey = $this->hydrator->getPrimaryKey();
-            $entity->set($pKey, $this->db->lastInsertId());
+            $entity->setRaw($pKey, $this->db->lastInsertId());
         }
         EntityCache::cache($entity);
 
@@ -209,7 +198,7 @@ trait RepositoryTrait
                 continue;
             }
 
-            $children = $entity->get($relation->propertyName);
+            $children = $entity->getRaw($relation->propertyName);
             if ($children === null) {
                 continue;
             }
@@ -241,11 +230,11 @@ trait RepositoryTrait
                 if (!$child instanceof EntityInterface) {
                     continue; // ignore invalid child
                 }
-                $child->set($childBackRefProperty, $entity);
+                $child->setRaw($childBackRefProperty, $entity);
 
                 // Set child's foreign key to parent's id when known
                 if ($childForeignKey !== null) {
-                    $child->set($childForeignKey, $entity->getId());
+                    $child->setRaw($childForeignKey, $entity->getId());
                 }
             }
         }
@@ -276,9 +265,9 @@ trait RepositoryTrait
         $updatedAtProp = $this->hydrator->getUpdatedAt();
         if ($updatedAtProp !== null) {
             $updatedAtCol = $this->hydrator->getColumnNameForProperty($updatedAtProp);
-            $entity->set($updatedAtProp, $this->now->format('Y-m-d H:i:s'));
+            $entity->setRaw($updatedAtProp, $this->now->format('Y-m-d H:i:s'));
             if ($updatedAtCol !== null && $updatedAtCol !== '') {
-                $data[$updatedAtCol] = $entity->get($updatedAtProp);
+                $data[$updatedAtCol] = $entity->getRaw($updatedAtProp);
             }
         }
 
@@ -297,9 +286,9 @@ trait RepositoryTrait
     }
 
     /**
-     * Delete an entity
+     * Physically deletes an entity from the database.
      */
-    public function deleteEntity(EntityInterface $entity): void
+    public function forceDelete(EntityInterface $entity): void
     {
         $id = $entity->getId();
         if ($id === null) {

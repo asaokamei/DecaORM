@@ -6,11 +6,12 @@ use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
-use WScore\DecaORM\EntityInterface;
-use WScore\DecaORM\RepositoryInterface;
-use WScore\DecaORM\Tests\Users\Container;
-use WScore\DecaORM\Tests\Users\PostsRepository;
-use WScore\DecaORM\Tests\Users\UserRepository;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\RepositoryInterface;
+use WScore\DecaORM\OrmManager;
+use WScore\DecaORM\Tests\Fixtures\Relations\PostRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
+use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
 
 class EntityCollectionTest extends TestCase
 {
@@ -21,7 +22,7 @@ class EntityCollectionTest extends TestCase
     {
         $entity = $this->createMock(EntityInterface::class);
         $entity->method('getId')->willReturn($id);
-        $entity->method('get')->willReturnCallback(fn($key) => $data[$key] ?? null);
+        $entity->method('getRaw')->willReturnCallback(fn($key) => $data[$key] ?? null);
         return $entity;
     }
 
@@ -54,14 +55,14 @@ class EntityCollectionTest extends TestCase
         $collection = new EntityCollection([$e1, $e2], $repo);
 
         // map
-        $names = $collection->map(fn($e) => $e->get('name'));
+        $names = $collection->map(fn($e) => $e->getRaw('name'));
         $this->assertEquals(['Alice', 'Bob'], $names);
 
         // getValues
         $this->assertEquals(['Alice', 'Bob'], $collection->getValues('name'));
 
         // filter
-        $filtered = $collection->filter(fn($e) => $e->get('name') === 'Alice');
+        $filtered = $collection->filter(fn($e) => $e->getRaw('name') === 'Alice');
         $this->assertInstanceOf(EntityCollection::class, $filtered);
         $this->assertCount(1, $filtered);
         $this->assertEquals([1], $filtered->getIds());
@@ -113,29 +114,38 @@ class EntityCollectionTest extends TestCase
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         // Create users table
-        $sql = file_get_contents(__DIR__ . '/Users/users.sql');
+        $sql = file_get_contents(__DIR__ . '/Fixtures/Relations/Sql/users.sql');
         $pdo->exec($sql);
 
         // Create posts table
-        $sql = file_get_contents(__DIR__ . '/Users/posts.sql');
+        $sql = file_get_contents(__DIR__ . '/Fixtures/Relations/Sql/posts.sql');
         $pdo->exec($sql);
 
         // prepare repositories
-        $container = new Container();
-        $userRepo = new UserRepository($pdo, $container);
-        $postsRepo = new PostsRepository($pdo, $container);
+        $container = new TestContainer();
+        $container->set(PDO::class, $pdo);
+        $manager = OrmManager::initialize($container);
+        $userRepo = new UserRepository($manager);
+        $postsRepo = new PostRepository($manager);
         $container->set(UserRepository::class, $userRepo);
-        $container->set(PostsRepository::class, $postsRepo);
+        $container->set(PostRepository::class, $postsRepo);
 
         // Start TESTING!
 
-        $user1 = $userRepo->createAndSave(['name' => 'Alice', 'email' => 'alice@example.com']);
-        $user2 = $userRepo->createAndSave(['name' => 'Bob', 'email' => 'bob@example.com']);
-        $post1 = $postsRepo->createAndSave(['user_id' => $user1->getId(), 'title' => 'U1/P1', 'content' => 'Content 1']);
-        $post1 = $postsRepo->createAndSave(['user_id' => $user1->getId(), 'title' => 'U1/P2', 'content' => 'Content 2']);
-        $post1 = $postsRepo->createAndSave(['user_id' => $user2->getId(), 'title' => 'U2/P1', 'content' => 'Content 3']);
-        $post1 = $postsRepo->createAndSave(['user_id' => $user2->getId(), 'title' => 'U2/P2', 'content' => 'Content 4']);
-        $post1 = $postsRepo->createAndSave(['user_id' => $user2->getId(), 'title' => 'U2/P3', 'content' => 'Content 5']);
+        $user1 = $userRepo->create(['name' => 'Alice', 'email' => 'alice@example.com']);
+        $userRepo->save($user1);
+        $user2 = $userRepo->create(['name' => 'Bob', 'email' => 'bob@example.com']);
+        $userRepo->save($user2);
+        $post1 = $postsRepo->create(['user_id' => $user1->getId(), 'title' => 'U1/P1', 'content' => 'Content 1']);
+        $postsRepo->save($post1);
+        $post1 = $postsRepo->create(['user_id' => $user1->getId(), 'title' => 'U1/P2', 'content' => 'Content 2']);
+        $postsRepo->save($post1);
+        $post1 = $postsRepo->create(['user_id' => $user2->getId(), 'title' => 'U2/P1', 'content' => 'Content 3']);
+        $postsRepo->save($post1);
+        $post1 = $postsRepo->create(['user_id' => $user2->getId(), 'title' => 'U2/P2', 'content' => 'Content 4']);
+        $postsRepo->save($post1);
+        $post1 = $postsRepo->create(['user_id' => $user2->getId(), 'title' => 'U2/P3', 'content' => 'Content 5']);
+        $postsRepo->save($post1);
 
         EntityCache::clear();
 
@@ -148,22 +158,22 @@ class EntityCollectionTest extends TestCase
         $posts = $users->load('posts');
         $this->assertCount(5, $posts);
 
-        $posts1 = $users[0]->get('posts');
+        $posts1 = $users[0]->getRaw('posts');
         $this->assertCount(2, $posts1);
         $this->assertEquals(1, $posts1[0]->getId());
-        $this->assertEquals('U1/P1', $posts1[0]->get('title'));
+        $this->assertEquals('U1/P1', $posts1[0]->getRaw('title'));
 
         $this->assertEquals(2, $posts1[1]->getId());;
-        $this->assertEquals('U1/P2', $posts1[1]->get('title'));
+        $this->assertEquals('U1/P2', $posts1[1]->getRaw('title'));
 
-        $posts2 = $users[1]->get('posts');
+        $posts2 = $users[1]->getRaw('posts');
         $this->assertCount(3, $posts2);
         $this->assertEquals(3, $posts2[0]->getId());
-        $this->assertEquals('U2/P1', $posts2[0]->get('title'));
+        $this->assertEquals('U2/P1', $posts2[0]->getRaw('title'));
         $this->assertEquals(4, $posts2[1]->getId());
-        $this->assertEquals('U2/P2', $posts2[1]->get('title'));
+        $this->assertEquals('U2/P2', $posts2[1]->getRaw('title'));
         $this->assertEquals(5, $posts2[2]->getId());
-        $this->assertEquals('U2/P3', $posts2[2]->get('title'));
+        $this->assertEquals('U2/P3', $posts2[2]->getRaw('title'));
     }
 
     public function testSave()

@@ -13,9 +13,9 @@ use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\EntityCache;
-use WScore\DecaORM\EntityInterface;
+use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Trait\EntityTrait;
-use WScore\DecaORM\Tests\Users\Container;
+use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
 
 // Test entities for HasMany::loader
 #[Table('projects')]
@@ -75,11 +75,9 @@ class TaskWithDate implements EntityInterface
 #[Repository(ProjectWithLoader::class)]
 class ProjectWithLoaderRepository extends \WScore\DecaORM\AbstractRepository
 {
-    public function __construct(PDO $pdo, ?\Psr\Container\ContainerInterface $container = null, ?\WScore\DecaORM\HydratorInterface $hydrator = null)
+    public function __construct(\WScore\DecaORM\OrmManager $manager)
     {
-        $this->db = $pdo;
-        $this->hydrator = $hydrator ?? new \WScore\DecaORM\AttributeHydrator(ProjectWithLoader::class);
-        $this->container = $container;
+        $this->setUpRepository($manager, null, ProjectWithLoader::class);
     }
 
     /**
@@ -117,11 +115,9 @@ class ProjectWithLoaderRepository extends \WScore\DecaORM\AbstractRepository
 #[Repository(TaskWithDate::class)]
 class TaskWithDateRepository extends \WScore\DecaORM\AbstractRepository
 {
-    public function __construct(PDO $pdo, ?\Psr\Container\ContainerInterface $container = null, ?\WScore\DecaORM\HydratorInterface $hydrator = null)
+    public function __construct(\WScore\DecaORM\OrmManager $manager)
     {
-        $this->db = $pdo;
-        $this->hydrator = $hydrator ?? new \WScore\DecaORM\AttributeHydrator(TaskWithDate::class);
-        $this->container = $container;
+        $this->setUpRepository($manager, null, TaskWithDate::class);
     }
 }
 
@@ -159,9 +155,11 @@ class HasManyLoaderTest extends TestCase
         // Clear cache before each test
         EntityCache::clear();
 
-        $container = new Container();
-        $this->projectRepo = new ProjectWithLoaderRepository($this->pdo, $container);
-        $this->taskRepo = new TaskWithDateRepository($this->pdo, $container);
+        $container = new TestContainer();
+        $container->set(PDO::class, $this->pdo);
+        $manager = \WScore\DecaORM\OrmManager::initialize($container);
+        $this->projectRepo = new ProjectWithLoaderRepository($manager);
+        $this->taskRepo = new TaskWithDateRepository($manager);
         $container->set(ProjectWithLoaderRepository::class, $this->projectRepo);
         $container->set(TaskWithDateRepository::class, $this->taskRepo);
     }
@@ -169,23 +167,26 @@ class HasManyLoaderTest extends TestCase
     public function testHasManyLoaderWithSingleEntity(): void
     {
         // Create a project
-        $project = $this->projectRepo->createAndSave([
+        $project = $this->projectRepo->createEntity([
             'name' => 'Project 1'
         ]);
+        $this->projectRepo->save($project);
 
         // Create recent task (within 7 days) - use current timestamp format
-        $recentTask = $this->taskRepo->createAndSave([
+        $recentTask = $this->taskRepo->createEntity([
             'project_id' => $project->getId(),
             'title' => 'Recent Task',
             'created_at' => date('Y-m-d H:i:s', strtotime('-3 days'))
         ]);
+        $this->taskRepo->save($recentTask);
 
         // Create old task (more than 7 days ago)
-        $oldTask = $this->taskRepo->createAndSave([
+        $oldTask = $this->taskRepo->createEntity([
             'project_id' => $project->getId(),
             'title' => 'Old Task',
             'created_at' => date('Y-m-d H:i:s', strtotime('-10 days'))
         ]);
+        $this->taskRepo->save($oldTask);
 
         // Verify tasks were created
         $this->assertNotNull($recentTask->getId());
@@ -201,55 +202,61 @@ class HasManyLoaderTest extends TestCase
         // Verify return value
         $this->assertCount(1, $tasks);
         $this->assertInstanceOf(TaskWithDate::class, $tasks[0]);
-        $this->assertEquals('Recent Task', $tasks[0]->get('title'));
+        $this->assertEquals('Recent Task', $tasks[0]->getRaw('title'));
 
         // Verify recentTasks are set on entity
-        $recentTasks = $project->get('recentTasks');
+        $recentTasks = $project->getRaw('recentTasks');
         $this->assertIsArray($recentTasks);
         $this->assertCount(1, $recentTasks);
-        $this->assertEquals('Recent Task', $recentTasks[0]->get('title'));
+        $this->assertEquals('Recent Task', $recentTasks[0]->getRaw('title'));
 
         // Verify bidirectional link
-        $this->assertSame($project, $recentTasks[0]->get('project'));
+        $this->assertSame($project, $recentTasks[0]->getRaw('project'));
     }
 
     public function testHasManyLoaderWithMultipleEntities(): void
     {
         // Create multiple projects
-        $project1 = $this->projectRepo->createAndSave([
+        $project1 = $this->projectRepo->createEntity([
             'name' => 'Project 1'
         ]);
+        $this->projectRepo->save($project1);
 
-        $project2 = $this->projectRepo->createAndSave([
+        $project2 = $this->projectRepo->createEntity([
             'name' => 'Project 2'
         ]);
+        $this->projectRepo->save($project2);
 
         // Create recent tasks for project1
-        $task1 = $this->taskRepo->createAndSave([
+        $task1 = $this->taskRepo->createEntity([
             'project_id' => $project1->getId(),
             'title' => 'Project 1 Recent Task 1',
             'created_at' => date('Y-m-d H:i:s', strtotime('-2 days'))
         ]);
+        $this->taskRepo->save($task1);
 
-        $task2 = $this->taskRepo->createAndSave([
+        $task2 = $this->taskRepo->createEntity([
             'project_id' => $project1->getId(),
             'title' => 'Project 1 Recent Task 2',
             'created_at' => date('Y-m-d H:i:s', strtotime('-1 day'))
         ]);
+        $this->taskRepo->save($task2);
 
         // Create old task for project1 (should not be included)
-        $oldTask1 = $this->taskRepo->createAndSave([
+        $oldTask1 = $this->taskRepo->createEntity([
             'project_id' => $project1->getId(),
             'title' => 'Project 1 Old Task',
             'created_at' => date('Y-m-d H:i:s', strtotime('-10 days'))
         ]);
+        $this->taskRepo->save($oldTask1);
 
         // Create recent task for project2
-        $task3 = $this->taskRepo->createAndSave([
+        $task3 = $this->taskRepo->createEntity([
             'project_id' => $project2->getId(),
             'title' => 'Project 2 Recent Task',
             'created_at' => date('Y-m-d H:i:s', strtotime('-5 days'))
         ]);
+        $this->taskRepo->save($task3);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -265,45 +272,48 @@ class HasManyLoaderTest extends TestCase
         $this->assertCount(3, $tasks); // 2 from project1, 1 from project2
 
         // Verify recentTasks are set on entities
-        $project1Tasks = $projects[0]->get('recentTasks');
+        $project1Tasks = $projects[0]->getRaw('recentTasks');
         $this->assertIsArray($project1Tasks);
         $this->assertCount(2, $project1Tasks);
-        $this->assertEquals('Project 1 Recent Task 2', $project1Tasks[0]->get('title')); // Ordered by created_at DESC
-        $this->assertEquals('Project 1 Recent Task 1', $project1Tasks[1]->get('title'));
+        $this->assertEquals('Project 1 Recent Task 2', $project1Tasks[0]->getRaw('title')); // Ordered by created_at DESC
+        $this->assertEquals('Project 1 Recent Task 1', $project1Tasks[1]->getRaw('title'));
 
-        $project2Tasks = $projects[1]->get('recentTasks');
+        $project2Tasks = $projects[1]->getRaw('recentTasks');
         $this->assertIsArray($project2Tasks);
         $this->assertCount(1, $project2Tasks);
-        $this->assertEquals('Project 2 Recent Task', $project2Tasks[0]->get('title'));
+        $this->assertEquals('Project 2 Recent Task', $project2Tasks[0]->getRaw('title'));
 
         // Verify bidirectional links
         foreach ($project1Tasks as $task) {
-            $this->assertSame($projects[0], $task->get('project'));
+            $this->assertSame($projects[0], $task->getRaw('project'));
         }
         foreach ($project2Tasks as $task) {
-            $this->assertSame($projects[1], $task->get('project'));
+            $this->assertSame($projects[1], $task->getRaw('project'));
         }
     }
 
     public function testHasManyLoaderWithNoRecentTasks(): void
     {
         // Create a project
-        $project = $this->projectRepo->createAndSave([
+        $project = $this->projectRepo->createEntity([
             'name' => 'Project 1'
         ]);
+        $this->projectRepo->save($project);
 
         // Create only old tasks (more than 7 days ago)
-        $oldTask1 = $this->taskRepo->createAndSave([
+        $oldTask1 = $this->taskRepo->createEntity([
             'project_id' => $project->getId(),
             'title' => 'Old Task 1',
             'created_at' => date('Y-m-d H:i:s', strtotime('-10 days'))
         ]);
+        $this->taskRepo->save($oldTask1);
 
-        $oldTask2 = $this->taskRepo->createAndSave([
+        $oldTask2 = $this->taskRepo->createEntity([
             'project_id' => $project->getId(),
             'title' => 'Old Task 2',
             'created_at' => date('Y-m-d H:i:s', strtotime('-20 days'))
         ]);
+        $this->taskRepo->save($oldTask2);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -316,7 +326,7 @@ class HasManyLoaderTest extends TestCase
         $this->assertCount(0, $tasks);
 
         // Verify empty array is set on entity
-        $recentTasks = $project->get('recentTasks');
+        $recentTasks = $project->getRaw('recentTasks');
         $this->assertIsArray($recentTasks);
         $this->assertCount(0, $recentTasks);
     }
@@ -324,9 +334,10 @@ class HasManyLoaderTest extends TestCase
     public function testHasManyLoaderWithNoTasksAtAll(): void
     {
         // Create a project without any tasks
-        $project = $this->projectRepo->createAndSave([
+        $project = $this->projectRepo->createEntity([
             'name' => 'Project 1'
         ]);
+        $this->projectRepo->save($project);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -339,7 +350,7 @@ class HasManyLoaderTest extends TestCase
         $this->assertCount(0, $tasks);
 
         // Verify empty array is set on entity
-        $recentTasks = $project->get('recentTasks');
+        $recentTasks = $project->getRaw('recentTasks');
         $this->assertIsArray($recentTasks);
         $this->assertCount(0, $recentTasks);
     }
@@ -347,34 +358,39 @@ class HasManyLoaderTest extends TestCase
     public function testHasManyLoaderFiltersCorrectly(): void
     {
         // Create a project
-        $project = $this->projectRepo->createAndSave([
+        $project = $this->projectRepo->createEntity([
             'name' => 'Project 1'
         ]);
+        $this->projectRepo->save($project);
 
         // Create tasks with various dates
-        $veryRecent = $this->taskRepo->createAndSave([
+        $veryRecent = $this->taskRepo->createEntity([
             'project_id' => $project->getId(),
             'title' => 'Very Recent',
             'created_at' => date('Y-m-d H:i:s', strtotime('-1 day'))
         ]);
+        $this->taskRepo->save($veryRecent);
 
-        $recent = $this->taskRepo->createAndSave([
+        $recent = $this->taskRepo->createEntity([
             'project_id' => $project->getId(),
             'title' => 'Recent',
             'created_at' => date('Y-m-d H:i:s', strtotime('-5 days'))
         ]);
+        $this->taskRepo->save($recent);
 
-        $justOld = $this->taskRepo->createAndSave([
+        $justOld = $this->taskRepo->createEntity([
             'project_id' => $project->getId(),
             'title' => 'Just Old',
             'created_at' => date('Y-m-d H:i:s', strtotime('-8 days')) // Just over 7 days
         ]);
+        $this->taskRepo->save($justOld);
 
-        $veryOld = $this->taskRepo->createAndSave([
+        $veryOld = $this->taskRepo->createEntity([
             'project_id' => $project->getId(),
             'title' => 'Very Old',
             'created_at' => date('Y-m-d H:i:s', strtotime('-30 days'))
         ]);
+        $this->taskRepo->save($veryOld);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -393,8 +409,8 @@ class HasManyLoaderTest extends TestCase
         $this->assertNotContains('Very Old', $titles);
 
         // Verify tasks are ordered by created_at DESC
-        $this->assertEquals('Very Recent', $tasks[0]->get('title'));
-        $this->assertEquals('Recent', $tasks[1]->get('title'));
+        $this->assertEquals('Very Recent', $tasks[0]->getRaw('title'));
+        $this->assertEquals('Recent', $tasks[1]->getRaw('title'));
     }
 }
 

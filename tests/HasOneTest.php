@@ -2,11 +2,11 @@
 
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
-use WScore\DecaORM\Tests\Users\Container;
-use WScore\DecaORM\Tests\Users\Profile;
-use WScore\DecaORM\Tests\Users\ProfileRepository;
-use WScore\DecaORM\Tests\Users\User;
-use WScore\DecaORM\Tests\Users\UserRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\Profile;
+use WScore\DecaORM\Tests\Fixtures\Relations\ProfileRepository;
+use WScore\DecaORM\Tests\Fixtures\Relations\RelationsFixture;
+use WScore\DecaORM\Tests\Fixtures\Relations\User;
+use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
 
 class HasOneTest extends TestCase
 {
@@ -16,58 +16,30 @@ class HasOneTest extends TestCase
 
     protected function setUp(): void
     {
-        // In-memory SQLite database for testing
-        $this->pdo = new PDO('sqlite::memory:');
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        // Create users table
-        $this->pdo->exec(
-            "CREATE TABLE users (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            created_at TEXT,
-            updated_at TEXT
-        )"
-        );
-
-        // Create posts table
-        $this->pdo->exec(
-            "CREATE TABLE profiles (
-            profile_id INTEGER PRIMARY KEY,
-            nickname TEXT NOT NULL,
-            created_at TIMESTAMP,
-            updated_at TIMESTAMP,
-            FOREIGN KEY (profile_id) REFERENCES users(user_id)
-        )"
-        );
-
-        // Clear cache before each test
-        EntityCache::clear();
-
-        $container = new Container();
-        $this->userRepo = new UserRepository($this->pdo, $container);
-        $this->profileRepo = new ProfileRepository($this->pdo, $container);
-        $container->set(UserRepository::class, $this->userRepo);
-        $container->set(ProfileRepository::class, $this->profileRepo);
+        $fixture = RelationsFixture::create();
+        $this->pdo = $fixture->pdo;
+        $this->userRepo = $fixture->users;
+        $this->profileRepo = $fixture->profiles;
     }
 
     public function testCreateUserAndProfile(): void
     {
         // Create a user
-        $user = $this->userRepo->createAndSave([
+        $user = $this->userRepo->create([
                                                    'name' => 'John Doe',
                                                    'email' => 'john@example.com'
                                                ]);
+        $this->userRepo->save($user);
 
         $this->assertNotNull($user->getId());
-        $this->assertEquals('John Doe', $user->get('name'));
+        $this->assertEquals('John Doe', $user->getRaw('name'));
 
         // Create posts for the user
-        $profile = $this->profileRepo->createAndSave([
+        $profile = $this->profileRepo->create([
                                                      'id' => $user->getId(),
                                                      'nickname' => 'Test Taro',
                                                  ]);
+        $this->profileRepo->save($profile);
 
         $this->assertNotNull($profile->getId());
         $this->assertEquals($profile->getId(), $user->getId());
@@ -76,14 +48,16 @@ class HasOneTest extends TestCase
     public function testFillProfile(): void
     {
         // Create a user
-        $user = $this->userRepo->createAndSave([
+        $user = $this->userRepo->create([
                                                    'name' => 'John Doe',
                                                    'email' => 'john@example.com'
                                                ]);
-        $profile = $this->profileRepo->createAndSave([
+        $this->userRepo->save($user);
+        $profile = $this->profileRepo->create([
                                                          'id' => $user->getId(),
                                                          'nickname' => 'Test Taro',
                                                      ]);
+        $this->profileRepo->save($profile);
 
         $userId = $user->getId();
         EntityCache::clear();
@@ -91,24 +65,26 @@ class HasOneTest extends TestCase
         $user = $this->userRepo->findById($userId);
         $this->userRepo->loadProfile($user);
 
-        $profile = $user->get('profile');
+        $profile = $user->getRaw('profile');
         $this->assertInstanceOf(Profile::class, $profile);
-        $this->assertEquals('Test Taro', $profile->get('nickname'));
+        $this->assertEquals('Test Taro', $profile->getRaw('nickname'));
     }
 
     public function testFillUserFromProfile(): void
     {
         // Create a user
-        $user = $this->userRepo->createAndSave([
+        $user = $this->userRepo->create([
             'name' => 'Jane Doe',
             'email' => 'jane@example.com'
         ]);
+        $this->userRepo->save($user);
 
         // Create profile for the user
-        $profile = $this->profileRepo->createAndSave([
+        $profile = $this->profileRepo->create([
             'id' => $user->getId(),
             'nickname' => 'Jane Profile'
         ]);
+        $this->profileRepo->save($profile);
 
         $profileId = $profile->getId();
         EntityCache::clear();
@@ -124,42 +100,46 @@ class HasOneTest extends TestCase
         $this->assertCount(1, $users);
 
         // Verify user is set on profile
-        $loadedUser = $profile->get('user');
+        $loadedUser = $profile->getRaw('user');
         $this->assertInstanceOf(User::class, $loadedUser);
         $this->assertEquals($user->getId(), $loadedUser->getId());
-        $this->assertEquals('Jane Doe', $loadedUser->get('name'));
-        $this->assertEquals('jane@example.com', $loadedUser->get('email'));
+        $this->assertEquals('Jane Doe', $loadedUser->getRaw('name'));
+        $this->assertEquals('jane@example.com', $loadedUser->getRaw('email'));
 
         // Verify bidirectional link - user should have profile set
-        $userProfile = $loadedUser->get('profile');
+        $userProfile = $loadedUser->getRaw('profile');
         $this->assertInstanceOf(Profile::class, $userProfile);
         $this->assertEquals($profile->getId(), $userProfile->getId());
-        $this->assertEquals('Jane Profile', $userProfile->get('nickname'));
+        $this->assertEquals('Jane Profile', $userProfile->getRaw('nickname'));
     }
 
     public function testBatchLoadUserFromProfiles(): void
     {
         // Create multiple users
-        $user1 = $this->userRepo->createAndSave([
+        $user1 = $this->userRepo->create([
             'name' => 'User One',
             'email' => 'user1@example.com'
         ]);
+        $this->userRepo->save($user1);
 
-        $user2 = $this->userRepo->createAndSave([
+        $user2 = $this->userRepo->create([
             'name' => 'User Two',
             'email' => 'user2@example.com'
         ]);
+        $this->userRepo->save($user2);
 
         // Create profiles
-        $profile1 = $this->profileRepo->createAndSave([
+        $profile1 = $this->profileRepo->create([
             'id' => $user1->getId(),
             'nickname' => 'Profile One'
         ]);
+        $this->profileRepo->save($profile1);
 
-        $profile2 = $this->profileRepo->createAndSave([
+        $profile2 = $this->profileRepo->create([
             'id' => $user2->getId(),
             'nickname' => 'Profile Two'
         ]);
+        $this->profileRepo->save($profile2);
 
         // Clear cache and reload
         EntityCache::clear();
@@ -175,26 +155,26 @@ class HasOneTest extends TestCase
        $this->assertCount(2, $users);
 
         // Verify users are set on profiles
-        $profile1User = $profiles[0]->get('user');
+        $profile1User = $profiles[0]->getRaw('user');
         $this->assertInstanceOf(User::class, $profile1User);
         $this->assertEquals($user1->getId(), $profile1User->getId());
-        $this->assertEquals('User One', $profile1User->get('name'));
+        $this->assertEquals('User One', $profile1User->getRaw('name'));
 
-        $profile2User = $profiles[1]->get('user');
+        $profile2User = $profiles[1]->getRaw('user');
         $this->assertInstanceOf(User::class, $profile2User);
         $this->assertEquals($user2->getId(), $profile2User->getId());
-        $this->assertEquals('User Two', $profile2User->get('name'));
+        $this->assertEquals('User Two', $profile2User->getRaw('name'));
 
         // Verify bidirectional links - users should have profiles set
-        $user1Profile = $profile1User->get('profile');
+        $user1Profile = $profile1User->getRaw('profile');
         $this->assertInstanceOf(Profile::class, $user1Profile);
         $this->assertEquals($profile1->getId(), $user1Profile->getId());
-        $this->assertEquals('Profile One', $user1Profile->get('nickname'));
+        $this->assertEquals('Profile One', $user1Profile->getRaw('nickname'));
 
-        $user2Profile = $profile2User->get('profile');
+        $user2Profile = $profile2User->getRaw('profile');
         $this->assertInstanceOf(Profile::class, $user2Profile);
         $this->assertEquals($profile2->getId(), $user2Profile->getId());
-        $this->assertEquals('Profile Two', $user2Profile->get('nickname'));
+        $this->assertEquals('Profile Two', $user2Profile->getRaw('nickname'));
     }
 
     public function testFillUserFromProfileWithNoUser(): void
@@ -213,7 +193,7 @@ class HasOneTest extends TestCase
         $this->assertCount(0, $users);
 
         // Should be null if user doesn't exist
-        $loadedUser = $profile->get('user');
+        $loadedUser = $profile->getRaw('user');
         $this->assertNull($loadedUser);
     }
 }
