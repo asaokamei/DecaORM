@@ -91,7 +91,7 @@ class CustomLoaderTest extends TestCase
 
         // Verify tasks are set on entity
         $projectTasks = $project->getRaw('tasks');
-        $this->assertIsArray($projectTasks);
+        $this->assertInstanceOf(\WScore\DecaORM\EntityCollection::class, $projectTasks);
         $this->assertCount(2, $projectTasks);
         $this->assertInstanceOf(Task::class, $projectTasks[0]);
         $this->assertInstanceOf(Task::class, $projectTasks[1]);
@@ -147,13 +147,13 @@ class CustomLoaderTest extends TestCase
 
         // Verify tasks are set on entities
         $project1Tasks = $projects[0]->getRaw('tasks');
-        $this->assertIsArray($project1Tasks);
+        $this->assertInstanceOf(\WScore\DecaORM\EntityCollection::class, $project1Tasks);
         $this->assertCount(2, $project1Tasks);
         $this->assertEquals('Project 1 Task 1', $project1Tasks[0]->getRaw('title'));
         $this->assertEquals('Project 1 Task 2', $project1Tasks[1]->getRaw('title'));
 
         $project2Tasks = $projects[1]->getRaw('tasks');
-        $this->assertIsArray($project2Tasks);
+        $this->assertInstanceOf(\WScore\DecaORM\EntityCollection::class, $project2Tasks);
         $this->assertCount(1, $project2Tasks);
         $this->assertEquals('Project 2 Task 1', $project2Tasks[0]->getRaw('title'));
     }
@@ -175,7 +175,7 @@ class CustomLoaderTest extends TestCase
 
         // Verify empty array is set on entity
         $projectTasks = $project->getRaw('tasks');
-        $this->assertIsArray($projectTasks);
+        $this->assertInstanceOf(\WScore\DecaORM\EntityCollection::class, $projectTasks);
         $this->assertCount(0, $projectTasks);
     }
 
@@ -253,7 +253,7 @@ class CustomLoaderTest extends TestCase
 
         // Verify tasks are set on entity
         $projectTasks = $project->getRaw('tasks');
-        $this->assertIsArray($projectTasks);
+        $this->assertInstanceOf(\WScore\DecaORM\EntityCollection::class, $projectTasks);
         $this->assertCount(1, $projectTasks);
     }
 }

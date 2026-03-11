@@ -5,6 +5,7 @@ namespace WScore\DecaORM\Tests;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Tests\Fixtures\ArrayLogger;
 use WScore\DecaORM\Tests\Fixtures\Relations\RelationsFixture;
 use WScore\DecaORM\Tests\Fixtures\Relations\Role;
@@ -47,7 +48,7 @@ class ManyToManyTest extends TestCase
 
         $this->assertCount(2, $roles);
         $userRoles = $user->getRaw('roles');
-        $this->assertIsArray($userRoles);
+        $this->assertInstanceOf(EntityCollection::class, $userRoles);
         $this->assertCount(2, $userRoles);
         $this->assertContains($admin->getId(), $roles->getIds());
         $this->assertContains($editor->getId(), $roles->getIds());
@@ -111,7 +112,7 @@ class ManyToManyTest extends TestCase
         $role2 = $this->roleRepo->create(['name' => 'editor']);
         $this->roleRepo->save($role2);
 
-        $user->setRaw('roles', [$role1, $role2]);
+        $user->setRaw('roles', new EntityCollection([$role1, $role2]));
         $this->userRepo->syncManyToMany($user, 'roles');
 
         $stmt = $this->pdo->prepare("SELECT role_id FROM user_role WHERE user_id = ?");
@@ -135,7 +136,7 @@ class ManyToManyTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Entity must have an ID to sync relations');
 
-        $user->setRaw('roles', [$role]);
+        $user->setRaw('roles', new EntityCollection([$role]));
         $this->userRepo->syncManyToMany($user, 'roles');
     }
 
@@ -162,7 +163,7 @@ class ManyToManyTest extends TestCase
         $role = $roleRepo->create(['name' => 'admin']);
         $roleRepo->save($role);
 
-        $user->setRaw('roles', [$role]);
+        $user->setRaw('roles', new EntityCollection([$role]));
         $userRepo->syncManyToMany($user, 'roles');
 
         EntityCache::clear();

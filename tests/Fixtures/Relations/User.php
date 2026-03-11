@@ -14,6 +14,7 @@ use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\Attribute\UpdatedAt;
 use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Trait\EntityTrait;
 
 #[Table(name: 'users')]
@@ -39,21 +40,21 @@ class User implements EntityInterface
     #[UpdatedAt(name: 'updated_at')]
     private ?string $updated_at = null;
 
-    /** @var Post[]|null */
+    /** @var EntityCollection<Post>|null */
     #[HasMany(targetEntity: Post::class, mappedBy: 'user', orderBy: 'created_at DESC')]
-    private ?array $posts = null;
+    private ?EntityCollection $posts = null;
 
     #[HasOne(targetEntity: Profile::class, mappedBy: 'user')]
     private ?Profile $profile = null;
 
-    /** @var Role[]|null */
+    /** @var EntityCollection<Role>|null */
     #[ManyToMany(
         targetEntity: Role::class,
         joinTable: 'user_role',
         foreignKey: 'user_id',
         inverseForeignKey: 'role_id'
     )]
-    private ?array $roles = null;
+    private ?EntityCollection $roles = null;
 
     public function getId(): ?int
     {
@@ -90,15 +91,15 @@ class User implements EntityInterface
         $this->email = $email;
     }
 
-    public function getPosts(): ?array
+    public function getPosts(): ?EntityCollection
     {
         return $this->posts;
     }
 
     /**
-     * @param Post[]|null $posts
+     * @param EntityCollection<Post>|null $posts
      */
-    public function setPosts(?array $posts): void
+    public function setPosts(?EntityCollection $posts): void
     {
         $this->posts = $posts;
         foreach ($posts ?? [] as $post) {
@@ -118,15 +119,18 @@ class User implements EntityInterface
 
     public function addPost(Post $post): void
     {
-        if (!$this->posts) {
-            $this->posts = [];
+        if ($this->posts === null) {
+            $this->posts = new EntityCollection([]);
         }
-        if (in_array($post, $this->posts, true)) {
-            return;
+        foreach ($this->posts as $p) {
+            if ($p === $post) {
+                return;
+            }
         }
         $this->posts[] = $post;
         if ($post->getUser() !== $this) {
             $post->setUser($this);
+            return;
         }
     }
 
@@ -135,8 +139,15 @@ class User implements EntityInterface
         if ($post->getUser() === $this) {
             $post->setUser(null);
         }
-        $this->posts = array_filter($this->posts ?? [], static function (Post $p) use ($post) {
-            return $p->getId() !== $post->getId();
-        });
+        if ($this->posts === null) {
+            return;
+        }
+        $kept = [];
+        foreach ($this->posts as $p) {
+            if ($p->getId() !== $post->getId()) {
+                $kept[] = $p;
+            }
+        }
+        $this->posts = new EntityCollection($kept);
     }
 }

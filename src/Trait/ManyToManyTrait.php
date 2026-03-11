@@ -111,6 +111,20 @@ trait ManyToManyTrait
             }
             return $ids;
         }
+
+        // Handle iterable (EntityCollection/Collection/etc)
+        if ($relationValue instanceof \Traversable) {
+            $ids = [];
+            foreach ($relationValue as $targetEntity) {
+                if ($targetEntity instanceof EntityInterface) {
+                    $id = $targetEntity->getId();
+                    if ($id !== null) {
+                        $ids[] = $id;
+                    }
+                }
+            }
+            return $ids;
+        }
         
         // Handle single entity (shouldn't happen for ManyToMany, but handle gracefully)
         if ($relationValue instanceof EntityInterface) {

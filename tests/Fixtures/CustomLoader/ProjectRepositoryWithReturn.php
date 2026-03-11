@@ -4,6 +4,7 @@ namespace WScore\DecaORM\Tests\Fixtures\CustomLoader;
 
 use WScore\DecaORM\AbstractRepository;
 use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\OrmManager;
 
 class ProjectRepositoryWithReturn extends AbstractRepository
@@ -20,16 +21,16 @@ class ProjectRepositoryWithReturn extends AbstractRepository
         return $project;
     }
 
-    public function findTasks(EntityInterface|array $entities): array
+    public function findTasks(EntityInterface|array $entities): EntityCollection
     {
         $entities = is_array($entities) ? $entities : [$entities];
         $projectIds = array_filter(array_map(fn($e) => $e->getId(), $entities));
 
         if (empty($projectIds)) {
             foreach ($entities as $entity) {
-                $entity->setRaw('tasks', []);
+                $entity->setRaw('tasks', new EntityCollection([]));
             }
-            return [];
+            return new EntityCollection([]);
         }
 
         $taskRepo = $this->getRepository(Task::class);
@@ -50,7 +51,7 @@ class ProjectRepositoryWithReturn extends AbstractRepository
 
         foreach ($entities as $entity) {
             $projectId = $entity->getId();
-            $entity->setRaw('tasks', $tasksByProjectId[$projectId] ?? []);
+            $entity->setRaw('tasks', new EntityCollection($tasksByProjectId[$projectId] ?? [], $taskRepo));
         }
 
         return $tasks;

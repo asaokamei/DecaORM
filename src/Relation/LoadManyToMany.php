@@ -4,6 +4,7 @@ namespace WScore\DecaORM\Relation;
 
 use PDO;
 use WScore\DecaORM\Attribute\ManyToMany;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Contracts\RepositoryInterface;
 use WScore\DecaORM\Sql\QueryBuilder;
@@ -48,7 +49,7 @@ class LoadManyToMany
         $entityId = $entity->getId();
         
         if ($entityId === null) {
-            $entity->setRaw($propertyName, []);
+            $entity->setRaw($propertyName, new EntityCollection([], $targetRepository));
             return [];
         }
 
@@ -60,7 +61,7 @@ class LoadManyToMany
         );
 
         if (empty($relatedIds)) {
-            $entity->setRaw($propertyName, []);
+            $entity->setRaw($propertyName, new EntityCollection([], $targetRepository));
             return [];
         }
 
@@ -79,7 +80,7 @@ class LoadManyToMany
         // Users should explicitly call load() on the inverse side if needed.
 
         $entity->setRaw($propertyName, $targetEntities);
-        return $targetEntities;
+        return $targetEntities->getEntities();
     }
 
     /**
@@ -109,7 +110,7 @@ class LoadManyToMany
         if (empty($entityIds)) {
             // Set empty arrays for all entities
             foreach ($entities as $entity) {
-                $entity->setRaw($propertyName, []);
+                $entity->setRaw($propertyName, new EntityCollection([], $targetRepository));
             }
             return [];
         }
@@ -124,7 +125,7 @@ class LoadManyToMany
         if (empty($allRelatedIds)) {
             // Set empty arrays for all entities
             foreach ($entities as $entity) {
-                $entity->setRaw($propertyName, []);
+                $entity->setRaw($propertyName, new EntityCollection([], $targetRepository));
             }
             return [];
         }
@@ -139,7 +140,7 @@ class LoadManyToMany
         $targetEntities = $query->getResult();
 
         // Create a map of target entity ID => target entity
-        $targetEntityMap = self::createEntityMap($targetEntities);
+        $targetEntityMap = self::createEntityMap($targetEntities->getEntities());
 
         // Group target entities by source entity ID
         $relatedIdsByEntityId = self::groupRelatedIdsByEntityId(
@@ -166,14 +167,16 @@ class LoadManyToMany
             // Users should explicitly call load() on the inverse side if needed.
 
             // Set targets for all entities with this ID
-            $entity->setRaw($propertyName, $targetsForEntity);
+            $entity->setRaw($propertyName, new EntityCollection($targetsForEntity, $targetRepository));
 
             $allTargetEntities = array_merge($allTargetEntities, $targetsForEntity);
         }
 
-        // Set empty arrays for entities that had no related entities
-        if (!$entity->getRaw($propertyName)) {
-            $entity->setRaw($propertyName, []);
+        // Set empty collections for entities that had no related entities
+        foreach ($entities as $entity) {
+            if ($entity->getRaw($propertyName) === null) {
+                $entity->setRaw($propertyName, new EntityCollection([], $targetRepository));
+            }
         }
 
         // Remove duplicates based on entity ID

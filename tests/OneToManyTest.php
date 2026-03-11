@@ -6,6 +6,7 @@ use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Tests\Fixtures\Relations\Comment;
 use WScore\DecaORM\Tests\Fixtures\Relations\Post;
 use WScore\DecaORM\Tests\Fixtures\Relations\PostRepository;
@@ -132,11 +133,11 @@ class OneToManyTest extends TestCase
 
         // Verify posts are loaded
         $posts = $user->getRaw('posts');
-        $this->assertIsArray($posts);
+        $this->assertInstanceOf(EntityCollection::class, $posts);
         $this->assertCount(3, $posts);
 
         // Verify each post
-        $postIds = array_map(fn($post) => $post->getId(), $posts);
+        $postIds = array_map(fn($post) => $post->getId(), $posts->getEntities());
         $this->assertContains($post1->getId(), $postIds);
         $this->assertContains($post2->getId(), $postIds);
         $this->assertContains($post3->getId(), $postIds);
@@ -164,7 +165,7 @@ class OneToManyTest extends TestCase
 
         // Verify empty array is set
         $posts = $user->getRaw('posts');
-        $this->assertIsArray($posts);
+        $this->assertInstanceOf(EntityCollection::class, $posts);
         $this->assertCount(0, $posts);
     }
 
@@ -330,7 +331,7 @@ class OneToManyTest extends TestCase
         $posts[] = $this->createPost($user1, 2);
         $posts[] = $this->createPost($user1, 3);
 
-        $user2->setPosts($posts);
+        $user2->setPosts(new EntityCollection($posts));
         $this->postsRepo->save($user2);
         foreach ($posts as $post) {
             $this->assertEquals($user2->getId(), $post->getUser()->getId());
@@ -360,7 +361,7 @@ class OneToManyTest extends TestCase
         $this->postsRepo->loadComments($post);
 
         $comments = $post->getRaw('comments');
-        $this->assertIsArray($comments);
+        $this->assertInstanceOf(EntityCollection::class, $comments);
         $this->assertCount(2, $comments);
         $this->assertInstanceOf(Comment::class, $comments[0]);
     }

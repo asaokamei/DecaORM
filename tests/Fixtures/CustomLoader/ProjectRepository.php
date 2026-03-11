@@ -4,6 +4,7 @@ namespace WScore\DecaORM\Tests\Fixtures\CustomLoader;
 
 use WScore\DecaORM\AbstractRepository;
 use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\OrmManager;
 
 class ProjectRepository extends AbstractRepository
@@ -27,7 +28,7 @@ class ProjectRepository extends AbstractRepository
 
         if (empty($projectIds)) {
             foreach ($entities as $entity) {
-                $entity->setRaw('tasks', []);
+                $entity->setRaw('tasks', new EntityCollection([]));
             }
             return;
         }
@@ -50,7 +51,7 @@ class ProjectRepository extends AbstractRepository
 
         foreach ($entities as $entity) {
             $projectId = $entity->getId();
-            $entity->setRaw('tasks', $tasksByProjectId[$projectId] ?? []);
+            $entity->setRaw('tasks', new EntityCollection($tasksByProjectId[$projectId] ?? [], $taskRepo));
         }
     }
 }

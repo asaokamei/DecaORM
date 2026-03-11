@@ -6,6 +6,7 @@ use RuntimeException;
 use WScore\DecaORM\Attribute\CustomLoader;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Contracts\RepositoryInterface;
+use WScore\DecaORM\EntityCollection;
 
 /**
  * Handles CustomLoader relations.
@@ -39,8 +40,12 @@ class LoadCustomLoader
         // It can return EntityInterface[] or void (if mapping is done internally)
         $result = $repository->{$relation->method}($entities);
 
-        // If result is EntityInterface[], return it
-        // If result is void or null, return empty array (mapping was done in loader)
+        // If result is EntityCollection, unwrap to entities.
+        if ($result instanceof EntityCollection) {
+            return $result->getEntities();
+        }
+        // If result is EntityInterface[], return it.
+        // If result is void or null, return empty array (mapping was done in loader).
         if (is_array($result)) {
             return $result;
         }

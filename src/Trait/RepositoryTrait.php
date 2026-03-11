@@ -82,14 +82,11 @@ trait RepositoryTrait
         return $this->getManager()->getSqlExecutor()->execute($this->db, $sql, $data);
     }
 
-    /**
-     * @return T[]
-     */
-    public function fetch(string $sql, array $data = []): array
+    public function fetch(string $sql, array $data = []): EntityCollection
     {
         $stmt = $this->execute($sql, $data);
         if (!$stmt) {
-            return [];
+            return new EntityCollection([], $this);
         }
         $list = [];
         foreach ($stmt as $item) {
@@ -97,13 +94,10 @@ trait RepositoryTrait
             DirtyTracker::takeEntity($this->hydrator, $entity);
             $list[] = $entity;
         }
-        return $list;
+        return new EntityCollection($list, $this);
     }
 
-    /**
-     * @return T[]
-     */
-    public function find(int|string $id, string|null $column = null, string|null $orderBy = null): array
+    public function find(int|string $id, string|null $column = null, string|null $orderBy = null): EntityCollection
     {
         $column = $column ?? $this->hydrator->getPrimaryKeyColumn();
         $orderBy = $orderBy ?? $column;
@@ -113,7 +107,7 @@ trait RepositoryTrait
             ->orderBy($orderBy);
         $sql = $query->getSql();
         $data = $query->getParameters();
-        return $this->fetch($sql, $data) ?? [];
+        return $this->fetch($sql, $data);
     }
 
     public function getRepository(string|EntityInterface $entity): ?RepositoryInterface

@@ -3,6 +3,7 @@
 namespace WScore\DecaORM\Relation;
 
 use WScore\DecaORM\Attribute\HasMany;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Contracts\RepositoryInterface;
 
@@ -48,6 +49,7 @@ class LoadHasMany
 
         if ($loader !== null) {
             $children = call_user_func($loader, $parentEntity);
+            $children = $children instanceof EntityCollection ? $children : new EntityCollection((array)$children, $targetRepository);
         } else {
             // Find posts by foreign key
             $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
@@ -55,8 +57,8 @@ class LoadHasMany
                 ?? $childRelation->foreignKey;
             $children = $targetRepository->find($parentEntity->getId(), $foreignKey, $parentRelation->orderBy);
         }
-        if (empty($children)) {
-            $parentEntity->setRaw($parentProperty, []);
+        if (count($children) === 0) {
+            $parentEntity->setRaw($parentProperty, new EntityCollection([], $targetRepository));
             return [];
         }
 
@@ -66,7 +68,7 @@ class LoadHasMany
         }
 
         $parentEntity->setRaw($parentProperty, $children);
-        return $children;
+        return $children->getEntities();
     }
 
     /**
@@ -91,6 +93,7 @@ class LoadHasMany
         // If loader is specified, use it instead of WHERE IN query
         if ($loader !== null) {           
             $children = call_user_func($loader, $parentEntities);
+            $children = $children instanceof EntityCollection ? $children : new EntityCollection((array)$children, $targetRepository);
         } else {
             // Batch load all children using WHERE IN
             $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
@@ -121,7 +124,7 @@ class LoadHasMany
      */
     public static function applyLoaderResult(
         EntityInterface|array $parentEntities,
-        array $loadedChildren,
+        EntityCollection|array $loadedChildren,
         HasMany $relation,
         RepositoryInterface $targetRepository
     ): array {
@@ -129,19 +132,20 @@ class LoadHasMany
         $parentProperty = $relation->propertyName;
         $childProperty = $relation->mappedBy;
         $childRelation = $targetRepository->getRelation($relation->mappedBy);
+        $loadedChildren = $loadedChildren instanceof EntityCollection ? $loadedChildren : new EntityCollection($loadedChildren, $targetRepository);
         
         // Collect parent IDs
         [$parentIds, $parentMap] = self::collectEntityIds($parentEntities);
         
         if (empty($parentIds)) {
             foreach ($parentEntities as $parentEntity) {
-                $parentEntity->setRaw($parentProperty, []);
+                $parentEntity->setRaw($parentProperty, new EntityCollection([], $targetRepository));
             }
             return [];
         }
         
         // Group loaded children by parent ID using foreign key
-        $childrenByParentId = self::groupEntitiesByForeignKey($loadedChildren, $childRelation->foreignKey);
+        $childrenByParentId = self::groupEntitiesByForeignKey($loadedChildren->getEntities(), $childRelation->foreignKey);
         
         // Set children for each parent entity and set bidirectional links
         $allChildren = [];
@@ -154,15 +158,15 @@ class LoadHasMany
             }
             
             // Set children for all parent entities with this ID
-            $entity->setRaw($parentProperty, $childrenForParent);
+            $entity->setRaw($parentProperty, new EntityCollection($childrenForParent, $targetRepository));
             
             $allChildren = array_merge($allChildren, $childrenForParent);
         }
         
         // Set empty arrays for entities that had no children
         foreach ($parentEntities as $parentEntity) {
-            if (!$parentEntity->getRaw($parentProperty)) {
-                $parentEntity->setRaw($parentProperty, []);
+            if ($parentEntity->getRaw($parentProperty) === null) {
+                $parentEntity->setRaw($parentProperty, new EntityCollection([], $targetRepository));
             }
         }
         

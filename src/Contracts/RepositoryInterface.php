@@ -78,9 +78,9 @@ interface RepositoryInterface
      * 
      * @param string $sql
      * @param array $data
-     * @return EntityInterface[]
+     * @return EntityCollection
      */
-    public function fetch(string $sql, array $data = []): array;
+    public function fetch(string $sql, array $data = []): EntityCollection;
 
     /**
      * Finds entities for a simple condition (column = value).
@@ -88,9 +88,9 @@ interface RepositoryInterface
      * @param int|string $id
      * @param string|null $column
      * @param string|null $orderBy
-     * @return EntityInterface[]
+     * @return EntityCollection
      */
-    public function find(int|string $id, ?string $column = null, ?string $orderBy = null): array;
+    public function find(int|string $id, ?string $column = null, ?string $orderBy = null): EntityCollection;
 
     /**
      * Finds a single entity by ID.

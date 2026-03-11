@@ -2,6 +2,7 @@
 
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Tests\Fixtures\Relations\Post;
 use WScore\DecaORM\Tests\Fixtures\Relations\PostRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\Profile;
@@ -44,7 +45,7 @@ class RelationsAutoForeignKeyTest extends TestCase
         $post2->setRaw('content', 'c2');
 
         // Assign children via HasMany property
-        $user->setRaw('posts', [$post1, $post2]);
+        $user->setRaw('posts', new EntityCollection([$post1, $post2]));
 
         // Save parent (insert). This should trigger filling children's back-reference and FK
         $this->userRepo->save($user);

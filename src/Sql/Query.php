@@ -10,9 +10,9 @@ use WScore\DecaORM\Contracts\RepositoryInterface;
 class Query extends QueryBuilder
 {
     /**
-     * @var \WScore\DecaORM\Contracts\EntityInterface[]
+     * @var EntityCollection
      */
-    private array $found;
+    private EntityCollection $found;
 
     public function __construct(private RepositoryInterface $repository)
     {
@@ -26,10 +26,7 @@ class Query extends QueryBuilder
         return new static($this->repository);
     }
 
-    /**
-     * @return \WScore\DecaORM\Contracts\EntityInterface[]
-     */
-    public function getResult(): array
+    public function getResult(): EntityCollection
     {
         $sql = $this->getSql();
         $data = $this->getParameters();
@@ -50,13 +47,17 @@ class Query extends QueryBuilder
         $query->select('COUNT(*)');
         $query->limit(null);
         $query->offset(null);
-        return (int) $query->getResult()[0]['COUNT(*)'];
+        $stmt = $this->repository->execute($query->getSql(), $query->getParameters());
+        if (!$stmt) {
+            return 0;
+        }
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+        return (int)($row['COUNT(*)'] ?? 0);
     }
 
     public function getCollection(): EntityCollection
     {
-        $entities = $this->getResult();
-        return new EntityCollection($entities, $this->repository);
+        return $this->getResult();
     }
 
 }

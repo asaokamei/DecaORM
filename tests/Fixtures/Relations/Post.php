@@ -13,6 +13,7 @@ use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\Attribute\UpdatedAt;
 use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Trait\EntityTrait;
 
 #[Table(name: 'posts')]
@@ -44,9 +45,9 @@ class Post implements EntityInterface
     #[BelongsTo(targetEntity: User::class, foreignKey: 'user_id', inversedBy: 'posts')]
     private ?User $user = null;
 
-    /** @var Comment[]|null */
+    /** @var EntityCollection<Comment>|null */
     #[HasMany(targetEntity: Comment::class, mappedBy: 'post', orderBy: 'created_at DESC')]
-    private ?array $comments = null;
+    private ?EntityCollection $comments = null;
 
     public function getId(): ?int
     {

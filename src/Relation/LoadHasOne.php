@@ -4,6 +4,7 @@ namespace WScore\DecaORM\Relation;
 
 use RuntimeException;
 use WScore\DecaORM\Attribute\HasOne;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Contracts\RepositoryInterface;
 
@@ -50,20 +51,21 @@ class LoadHasOne
 
         if ($loader !== null) {
             $children = call_user_func($loader, $parentEntity);
+            $children = $children instanceof EntityCollection ? $children : new EntityCollection((array)$children, $targetRepository);
         } else {
             $foreignKey = $targetRepository->getHydrator()->getColumnNameForProperty($childRelation->foreignKey)
                 ?? $childRelation->foreignKey;
             $children = $targetRepository->find($parentEntity->getId(), $foreignKey);
         }
 
-        if (empty($children)) {
+        if (count($children) === 0) {
             $parentEntity->setRaw($parentProperty, null);
             return [];
         }
         if (count($children) > 1) {
             throw new RuntimeException('HasOne relation must have only one child.');
         }
-        $child = $children[0];
+        $child = $children->getEntities()[0];
         $child->setRaw($childProperty, $parentEntity);
         $parentEntity->setRaw($parentProperty, $child);
         return [$child];
@@ -91,6 +93,7 @@ class LoadHasOne
         // If loader is specified, use it instead of WHERE IN query
         if ($parentRelation->loader !== null) {
             $children = call_user_func($loader, $parentEntities);
+            $children = $children instanceof EntityCollection ? $children : new EntityCollection((array)$children, $targetRepository);
         } else {
             // Batch load all children using WHERE IN
             $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
@@ -118,7 +121,7 @@ class LoadHasOne
      */
     public static function applyLoaderResult(
         EntityInterface|array $parentEntities,
-        array $loadedChildren,
+        EntityCollection|array $loadedChildren,
         HasOne $relation,
         RepositoryInterface $targetRepository
     ): array {
@@ -137,8 +140,9 @@ class LoadHasOne
             return [];
         }
         
+        $loadedChildren = $loadedChildren instanceof EntityCollection ? $loadedChildren : new EntityCollection($loadedChildren, $targetRepository);
         // Group loaded children by parent ID using foreign key
-        $childrenByParentId = self::groupEntitiesByForeignKey($loadedChildren, $childRelation->foreignKey);
+        $childrenByParentId = self::groupEntitiesByForeignKey($loadedChildren->getEntities(), $childRelation->foreignKey);
         
         // Set child for each parent entity and set bidirectional links
         $allChildren = [];

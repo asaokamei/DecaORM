@@ -10,6 +10,7 @@ use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Trait\EntityTrait;
 
 #[Table('projects')]
@@ -28,7 +29,7 @@ class Project implements EntityInterface
     public string $name = '';
 
     #[CustomLoader(targetEntity: Task::class, method: 'findTasks')]
-    public array $tasks = [];
+    public ?EntityCollection $tasks = null;
 
     public function getId(): ?int
     {

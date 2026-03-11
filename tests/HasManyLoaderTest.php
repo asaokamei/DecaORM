@@ -13,6 +13,7 @@ use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Trait\EntityTrait;
 use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
@@ -34,7 +35,7 @@ class ProjectWithLoader implements EntityInterface
     public string $name = '';
 
     #[HasMany(targetEntity: TaskWithDate::class, mappedBy: 'project', loader: 'findRecentTasks')]
-    public array $recentTasks = [];
+    public ?EntityCollection $recentTasks = null;
 
     public function getId(): ?int
     {
@@ -85,13 +86,13 @@ class ProjectWithLoaderRepository extends \WScore\DecaORM\AbstractRepository
      * Returns tasks created within the last 7 days.
      * 
      * @param EntityInterface|array<EntityInterface> $projects Array of project IDs
-     * @return EntityInterface[] Array of TaskWithDate entities
+     * @return EntityCollection Array of TaskWithDate entities
      */
-    public function findRecentTasks(EntityInterface|array $projects): array
+    public function findRecentTasks(EntityInterface|array $projects): EntityCollection
     {
         $projects = is_array($projects) ? $projects : [$projects];
         if (empty($projects)) {
-            return [];
+            return new EntityCollection([], $this->getRepository(TaskWithDate::class));
         }
         $projectIds = array_filter(array_map(fn($p) => $p->getId(), $projects));
 
@@ -206,7 +207,7 @@ class HasManyLoaderTest extends TestCase
 
         // Verify recentTasks are set on entity
         $recentTasks = $project->getRaw('recentTasks');
-        $this->assertIsArray($recentTasks);
+        $this->assertInstanceOf(EntityCollection::class, $recentTasks);
         $this->assertCount(1, $recentTasks);
         $this->assertEquals('Recent Task', $recentTasks[0]->getRaw('title'));
 
@@ -273,13 +274,13 @@ class HasManyLoaderTest extends TestCase
 
         // Verify recentTasks are set on entities
         $project1Tasks = $projects[0]->getRaw('recentTasks');
-        $this->assertIsArray($project1Tasks);
+        $this->assertInstanceOf(EntityCollection::class, $project1Tasks);
         $this->assertCount(2, $project1Tasks);
         $this->assertEquals('Project 1 Recent Task 2', $project1Tasks[0]->getRaw('title')); // Ordered by created_at DESC
         $this->assertEquals('Project 1 Recent Task 1', $project1Tasks[1]->getRaw('title'));
 
         $project2Tasks = $projects[1]->getRaw('recentTasks');
-        $this->assertIsArray($project2Tasks);
+        $this->assertInstanceOf(EntityCollection::class, $project2Tasks);
         $this->assertCount(1, $project2Tasks);
         $this->assertEquals('Project 2 Recent Task', $project2Tasks[0]->getRaw('title'));
 
@@ -327,7 +328,7 @@ class HasManyLoaderTest extends TestCase
 
         // Verify empty array is set on entity
         $recentTasks = $project->getRaw('recentTasks');
-        $this->assertIsArray($recentTasks);
+        $this->assertInstanceOf(EntityCollection::class, $recentTasks);
         $this->assertCount(0, $recentTasks);
     }
 
@@ -351,7 +352,7 @@ class HasManyLoaderTest extends TestCase
 
         // Verify empty array is set on entity
         $recentTasks = $project->getRaw('recentTasks');
-        $this->assertIsArray($recentTasks);
+        $this->assertInstanceOf(EntityCollection::class, $recentTasks);
         $this->assertCount(0, $recentTasks);
     }
 

@@ -80,11 +80,11 @@ class BatchLoadingTest extends TestCase
 
         // Verify posts are set on entities
         $user1Posts = $users[0]->getRaw('posts');
-        $this->assertIsArray($user1Posts);
+        $this->assertInstanceOf(EntityCollection::class, $user1Posts);
         $this->assertCount(2, $user1Posts);
 
         $user2Posts = $users[1]->getRaw('posts');
-        $this->assertIsArray($user2Posts);
+        $this->assertInstanceOf(EntityCollection::class, $user2Posts);
         $this->assertCount(1, $user2Posts);
 
         // Verify bidirectional links
@@ -236,11 +236,11 @@ class BatchLoadingTest extends TestCase
 
         // Verify empty arrays are set on entities
         $user1Posts = $users[0]->getRaw('posts');
-        $this->assertIsArray($user1Posts);
+        $this->assertInstanceOf(EntityCollection::class, $user1Posts);
         $this->assertCount(0, $user1Posts);
 
         $user2Posts = $users[1]->getRaw('posts');
-        $this->assertIsArray($user2Posts);
+        $this->assertInstanceOf(EntityCollection::class, $user2Posts);
         $this->assertCount(0, $user2Posts);
     }
 
@@ -330,7 +330,7 @@ class BatchLoadingTest extends TestCase
 
         // Verify posts are set on entity
         $userPosts = $user->getRaw('posts');
-        $this->assertIsArray($userPosts);
+        $this->assertInstanceOf(EntityCollection::class, $userPosts);
         $this->assertCount(2, $userPosts);
     }
 }
