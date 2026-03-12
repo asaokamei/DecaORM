@@ -72,18 +72,10 @@ abstract class AbstractRepository implements RepositoryInterface
      */
     public function save(EntityInterface $entity): void
     {
-        if ($this->hydrator->isPkAutoNumber()) {
-            if ($entity->getId() === null) {
-                $this->insertEntity($entity);
-            } else {
-                $this->updateEntity($entity);
-            }
-            return;
-        }
-        if (EntityCache::has($this->hydrator->getEntityClass(), $entity->getId())) {
-            $this->updateEntity($entity);
-        } else {
+        if ($this->isNew($entity)) {
             $this->insertEntity($entity);
+        } else {
+            $this->updateEntity($entity);
         }
     }
 

@@ -112,6 +112,14 @@ interface RepositoryInterface
     public function createEntity(array $data): EntityInterface;
 
     /**
+     * Checks if an entity is new (not yet saved to the database).
+     *
+     * @param EntityInterface $entity
+     * @return bool
+     */
+    public function isNew(EntityInterface $entity): bool;
+
+    /**
      * ### Persistence
      */
 

@@ -63,6 +63,17 @@ trait RepositoryTrait
         return new Query($this);
     }
 
+    public function isNew(EntityInterface $entity): bool
+    {
+        if ($this->hydrator->isPkAutoNumber()) {
+            if ($entity->getId() === null) {
+                return true;
+            }
+            return false;
+        }
+        return !EntityCache::has($this->hydrator->getEntityClass(), $entity->getId());
+    }
+
     /**
      * Get the table name for the repository
      * Override this method in subclasses to dynamically change table names
