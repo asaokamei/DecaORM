@@ -112,7 +112,7 @@ class ManyToManyTest extends TestCase
         $role2 = $this->roleRepo->create(['name' => 'editor']);
         $this->roleRepo->save($role2);
 
-        $user->setRaw('roles', new EntityCollection([$role1, $role2]));
+        $user->setRoles(new EntityCollection([$role1, $role2]));
         $this->userRepo->syncManyToMany($user, 'roles');
 
         $stmt = $this->pdo->prepare("SELECT role_id FROM user_role WHERE user_id = ?");
@@ -163,7 +163,7 @@ class ManyToManyTest extends TestCase
         $role = $roleRepo->create(['name' => 'admin']);
         $roleRepo->save($role);
 
-        $user->setRaw('roles', new EntityCollection([$role]));
+        $user->setRoles(new EntityCollection([$role]));
         $userRepo->syncManyToMany($user, 'roles');
 
         EntityCache::clear();

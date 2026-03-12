@@ -38,10 +38,7 @@ class Profile implements EntityInterface
 
     public function setUser(?User $user): void
     {
-        if ($user) {
-            $this->id = $user->getId();
-        }
-        $this->user = $user;
+        $this->syncBelongsTo('user', $user);
     }
 
     public function getNickname(): string

@@ -101,10 +101,11 @@ class User implements EntityInterface
      */
     public function setPosts(?EntityCollection $posts): void
     {
-        $this->posts = $posts;
-        foreach ($posts ?? [] as $post) {
-            $post->setUser($this);
+        if ($posts === null) {
+            $this->posts = null;
+            return;
         }
+        $this->syncHasMany('posts', $posts);
     }
 
     public function getProfile(): ?Profile
@@ -114,27 +115,33 @@ class User implements EntityInterface
 
     public function setProfile(?Profile $profile): void
     {
-        $this->profile = $profile;
+        $this->syncHasOne('profile', $profile);
     }
 
     public function addPost(Post $post): void
     {
-        $posts = $this->load('posts');
-        if ($posts->hasEntity($post)) {
-            return;
-        }
-        $posts->add($post);
-        if ($post->getUser() !== $this) {
-            $post->setUser($this);
-        }
+        $this->addHasMany('posts', $post);
     }
 
     public function removePost(Post $post): void
     {
-        if ($post->getUser() === $this) {
-            $post->setUser(null);
+        $this->removeHasMany('posts', $post);
+    }
+
+    public function getRoles(): EntityCollection
+    {
+        return $this->load('roles');
+    }
+
+    /**
+     * @param EntityCollection<Role>|null $roles
+     */
+    public function setRoles(?EntityCollection $roles): void
+    {
+        if ($roles === null) {
+            $this->roles = null;
+            return;
         }
-        $posts = $this->load('posts');
-        $posts->delEntity($post);
+        $this->syncManyToMany('roles', $roles);
     }
 }
