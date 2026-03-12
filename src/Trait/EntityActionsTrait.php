@@ -47,6 +47,14 @@ trait EntityActionsTrait
      */
     public function load(string $relationName): Collection|EntityCollection
     {
+        $found = $this->getRaw($relationName);
+        if ($found !== null) {
+            return $found;
+        }
+        if ($this->isNew()) {
+            $this->setRaw($relationName, new EntityCollection([], self::_repository()));
+            return $this->getRaw($relationName);
+        }
         return self::_repository()->load($this, $relationName);
     }
 
@@ -58,6 +66,11 @@ trait EntityActionsTrait
     public function replicate(): EntityHandler
     {
         return $this->getHandler()->replicate();
+    }
+
+    public function isNew(): bool
+    {
+        return self::_repository()->isNew($this);
     }
 }
 
