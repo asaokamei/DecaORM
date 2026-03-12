@@ -12,7 +12,9 @@ use Attribute;
  * 
  * Example:
  * ```php
- * #[HasMany(targetEntity: Post::class, foreignKey: 'user_id')]
+ * // HasMany does not declare a foreignKey; it uses mappedBy.
+ * // mappedBy is the BelongsTo property name on the target entity.
+ * #[HasMany(targetEntity: Post::class, mappedBy: 'user')]
  * public ?array $posts = null;
  * ```
  */

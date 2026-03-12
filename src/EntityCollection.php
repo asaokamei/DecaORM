@@ -78,8 +78,15 @@ class EntityCollection extends Collection
 
     public function delEntity(EntityInterface $entity): void
     {
-        $this->items = array_filter($this->items, function ($item) use ($entity) {
-            return $item !== $entity;
+        $id = $entity->getId();
+        $this->items = array_filter($this->items, function ($item) use ($entity, $id) {
+            if ($item === $entity) {
+                return false;
+            }
+            if ($id !== null && $item instanceof EntityInterface && $item->getId() === $id) {
+                return false;
+            }
+            return true;
         });
     }
 

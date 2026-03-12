@@ -10,16 +10,11 @@ use Attribute;
  * Used for one-to-one relationships.
  * Can be used on either side, but typically on the side without the foreign key.
  * 
- * Example (with foreign key on target):
+ * Example:
  * ```php
- * #[HasOne(targetEntity: Profile::class, foreignKey: 'user_id')]
+ * // HasOne uses mappedBy (the BelongsTo/BelongsToOne property name on the target entity).
+ * #[HasOne(targetEntity: Profile::class, mappedBy: 'user')]
  * public ?Profile $profile = null;
- * ```
- * 
- * Example (with foreign key on this side):
- * ```php
- * #[HasOne(targetEntity: User::class, foreignKey: 'profile_id', onThisSide: true)]
- * public ?User $user = null;
  * ```
  */
 #[Attribute(Attribute::TARGET_PROPERTY)]

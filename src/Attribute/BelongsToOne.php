@@ -24,7 +24,7 @@ class BelongsToOne
 
     /**
      * @param string $targetEntity The target entity class name (e.g., User::class)
-     * @param string $foreignKey The foreign key column name (e.g., 'user_id')
+     * @param string $foreignKey The foreign key property name (e.g., 'user_id')
      * @param string|null $inversedBy The property name on the inverse side (for bidirectional relationships)
      */
     public function __construct(

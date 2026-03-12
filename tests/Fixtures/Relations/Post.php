@@ -85,17 +85,6 @@ class Post implements EntityInterface
 
     public function setUser(?User $user): void
     {
-        if ($user === $this->user) {
-            return;
-        }
-        $originalUser = $this->user;
-        $this->user = $user;
-        $this->user_id = $user?->getId() !== null ? (string) $user->getId() : null;
-        if ($originalUser !== null) {
-            $originalUser->removePost($this);
-        }
-        if ($user !== null) {
-            $user->addPost($this);
-        }
+        $this->syncBelongsTo('user', $user);
     }
 }

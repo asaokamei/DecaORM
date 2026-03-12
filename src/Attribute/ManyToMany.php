@@ -30,8 +30,8 @@ class ManyToMany
     /**
      * @param string $targetEntity The target entity class name (e.g., Course::class)
      * @param string $joinTable The join table name (e.g., 'student_course')
-     * @param string $foreignKey The foreign key column name in the join table for this entity (e.g., 'student_id')
-     * @param string $inverseForeignKey The foreign key column name in the join table for the target entity (e.g., 'course_id')
+     * @param string $foreignKey The foreign key *column name* in the join table for this entity (e.g., 'student_id')
+     * @param string $inverseForeignKey The foreign key *column name* in the join table for the target entity (e.g., 'course_id')
      * @param string|null $orderBy Optional ORDER BY clause (e.g., 'created_at DESC')
      */
     public function __construct(

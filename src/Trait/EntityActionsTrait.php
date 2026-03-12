@@ -82,6 +82,56 @@ trait EntityActionsTrait
         return self::_repository()->load($this, $relationName);
     }
 
+    /**
+     * Synchronizes a BelongsTo/BelongsToOne relation.
+     *
+     * - Sets relation property (e.g. $this->user)
+     * - Sets foreign key property (e.g. $this->user_id)
+     * - If inversedBy points to a HasMany collection, updates it on both sides
+     */
+    protected function syncBelongsTo(string $relationName, ?EntityInterface $target): void
+    {
+        $repo = self::_repository();
+        $relation = $repo->getRelation($relationName);
+        if (!($relation instanceof BelongsTo) && !($relation instanceof BelongsToOne)) {
+            throw new \RuntimeException('syncBelongsTo requires BelongsTo/BelongsToOne: ' . $relationName);
+        }
+
+        $current = $this->getRaw($relationName);
+        if ($current === $target) {
+            return;
+        }
+
+        // In this ORM, relation foreignKey is a property name (used with getRaw/setRaw).
+        $fkProp = $relation->foreignKey;
+
+        // Set new relation + FK
+        $this->setRaw($relationName, $target);
+        $id = $target?->getId();
+        $this->setRaw($fkProp, $id !== null ? (string) $id : null);
+
+        // Update inverse HasMany, if configured.
+        if ($relation->inversedBy === null) {
+            return;
+        }
+        $inverseName = $relation->inversedBy;
+
+        // If inverse collection is already loaded, keep it consistent in-memory.
+        // (Avoid triggering DB loads here; setters should not cause queries.)
+        if ($current instanceof EntityInterface) {
+            $inverse = $current->getRaw($inverseName);
+            if ($inverse instanceof EntityCollection) {
+                $inverse->delEntity($this);
+            }
+        }
+        if ($target instanceof EntityInterface) {
+            $inverse = $target->getRaw($inverseName);
+            if ($inverse instanceof EntityCollection && !$inverse->hasEntity($this)) {
+                $inverse->add($this);
+            }
+        }
+    }
+
     public function getHandler(): EntityHandler
     {
         return new EntityHandler($this, self::_repository());
