@@ -76,6 +76,30 @@ class EntityCollection extends Collection
         return $this->items;
     }
 
+    public function delEntity(EntityInterface $entity): void
+    {
+        $this->items = array_filter($this->items, function ($item) use ($entity) {
+            return $item !== $entity;
+        });
+    }
+
+    /**
+     * Returns whether the collection contains the given entity (by reference or by same ID).
+     */
+    public function hasEntity(EntityInterface $entity): bool
+    {
+        $id = $entity->getId();
+        foreach ($this->items as $item) {
+            if ($item === $entity) {
+                return true;
+            }
+            if ($id !== null && $item instanceof EntityInterface && $item->getId() === $id) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public function findById(int|string $id): ?EntityInterface
     {
         if (!isset($this->idMap)) {
@@ -84,8 +108,11 @@ class EntityCollection extends Collection
         return $this->idMap[$id] ?? null;
     }
 
-    public function hasId(int|string $id): bool
+    public function hasId(null|int|string $id): bool
     {
+        if ($id === null) {
+            return false;
+        }
         if (!isset($this->idMap)) {
             $this->buildIdMap();
         }

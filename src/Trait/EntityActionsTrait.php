@@ -2,6 +2,12 @@
 
 namespace WScore\DecaORM\Trait;
 
+use WScore\DecaORM\Attribute\HasMany;
+use WScore\DecaORM\Attribute\HasOne;
+use WScore\DecaORM\Attribute\BelongsTo;
+use WScore\DecaORM\Attribute\BelongsToOne;
+use WScore\DecaORM\Attribute\ManyToMany;
+use WScore\DecaORM\Attribute\CustomLoader;
 use WScore\DecaORM\Collection;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\EntityHandler;
@@ -45,15 +51,33 @@ trait EntityActionsTrait
     /**
      * Loads a relation.
      */
-    public function load(string $relationName): Collection|EntityCollection
+    public function load(string $relationName): Collection|EntityCollection|null
     {
         $found = $this->getRaw($relationName);
         if ($found !== null) {
             return $found;
         }
         if ($this->isNew()) {
-            $this->setRaw($relationName, new EntityCollection([], self::_repository()));
-            return $this->getRaw($relationName);
+            $relation = self::_repository()->getRelation($relationName);
+            if (
+                $relation instanceof HasOne
+                || $relation instanceof BelongsTo
+                || $relation instanceof BelongsToOne
+            ) {
+                $this->setRaw($relationName, null);
+                return null;
+            }
+            if (
+                $relation instanceof HasMany
+                || $relation instanceof ManyToMany
+                || $relation instanceof CustomLoader
+            ) {
+                $repo = self::_repository();
+                $targetRepo = $relation->targetEntity ? $repo->getRepository($relation->targetEntity) : $repo;
+                $empty = new EntityCollection([], $targetRepo);
+                $this->setRaw($relationName, $empty);
+                return $empty;
+            }
         }
         return self::_repository()->load($this, $relationName);
     }

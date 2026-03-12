@@ -24,6 +24,19 @@ class Collection implements IteratorAggregate, Countable, ArrayAccess
     }
 
     /**
+     * @param T $item
+     */
+    public function add(mixed $item): void
+    {
+        $this->items[] = $item;
+    }
+
+    public function first(): mixed
+    {
+        return $this->items[0] ?? null;
+    }
+
+    /**
      * @return array<T>
      */
     public function getItems(): array

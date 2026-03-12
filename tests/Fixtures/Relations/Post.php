@@ -76,6 +76,10 @@ class Post implements EntityInterface
 
     public function getUser(): ?User
     {
+        if ($this->user !== null) {
+            return $this->user;
+        }
+        $this->load('user');
         return $this->user;
     }
 

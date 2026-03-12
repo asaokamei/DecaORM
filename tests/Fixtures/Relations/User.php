@@ -91,9 +91,9 @@ class User implements EntityInterface
         $this->email = $email;
     }
 
-    public function getPosts(): ?EntityCollection
+    public function getPosts(): EntityCollection
     {
-        return $this->posts;
+        return $this->load('posts');
     }
 
     /**
@@ -119,18 +119,13 @@ class User implements EntityInterface
 
     public function addPost(Post $post): void
     {
-        if ($this->posts === null) {
-            $this->posts = new EntityCollection([]);
+        $posts = $this->load('posts');
+        if ($posts->hasEntity($post)) {
+            return;
         }
-        foreach ($this->posts as $p) {
-            if ($p === $post) {
-                return;
-            }
-        }
-        $this->posts[] = $post;
+        $posts->add($post);
         if ($post->getUser() !== $this) {
             $post->setUser($this);
-            return;
         }
     }
 
@@ -139,15 +134,7 @@ class User implements EntityInterface
         if ($post->getUser() === $this) {
             $post->setUser(null);
         }
-        if ($this->posts === null) {
-            return;
-        }
-        $kept = [];
-        foreach ($this->posts as $p) {
-            if ($p->getId() !== $post->getId()) {
-                $kept[] = $p;
-            }
-        }
-        $this->posts = new EntityCollection($kept);
+        $posts = $this->load('posts');
+        $posts->delEntity($post);
     }
 }

@@ -10,7 +10,6 @@ use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\Contracts\EntityInterface;
-use WScore\DecaORM\Trait\EntityActionsTrait;
 use WScore\DecaORM\Trait\EntityTrait;
 
 #[Table(name: 'action_users')]
@@ -18,7 +17,6 @@ use WScore\DecaORM\Trait\EntityTrait;
 final class ActionUser implements EntityInterface
 {
     use EntityTrait;
-    use EntityActionsTrait;
 
     #[Column(name: 'user_id')]
     #[Id]
