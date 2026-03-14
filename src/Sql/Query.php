@@ -55,6 +55,9 @@ class Query extends QueryBuilder
         return (int)($row['COUNT(*)'] ?? 0);
     }
 
+    /**
+     * @deprecated Use getResult() instead.
+     */
     public function getCollection(): EntityCollection
     {
         return $this->getResult();

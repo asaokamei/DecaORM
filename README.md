@@ -48,8 +48,6 @@ composer require wscore/decaorm
 `WScore\DecaORM\Attribute` 名前空間のアトリビュートを使用して、エンティティクラスを定義します。
 `EntityInterface` を実装し、`EntityTrait` を利用することで、基本的なエンティティ機能が提供されます。
 
-#### 親エンティティ (例: User)
-
 ```php
 use WScore\DecaORM\Attribute\Column;
 use WScore\DecaORM\Attribute\GeneratedValue;
@@ -60,29 +58,121 @@ use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Trait\EntityTrait;
 
-#[Table(name: 'users')]
-#[Repository(UserRepository::class)]
+#[Table(name: 'users')]               // 必須アトリビュート
+#[Repository(UserRepository::class)]  // 必須アトリビュート
 class User implements EntityInterface
 {
     use EntityTrait;
 
-    #[Id]
-    #[GeneratedValue]
-    #[Column(name: 'user_id')]
-    public ?int $id = null;
+    #[Id]                       // プライマリキーとして指定
+    #[GeneratedValue]           // AutoNumberingなど
+    #[Column(name: 'user_id')]  // DBコラム名など指定
+    private ?int $id = null;    // プロパティ型の詳細は docs/entity.md 参照
 
-    #[Column(name: 'name')]
-    public string $name = '';
+    #[Column(name: 'name')]     // DBコラム名。同じ場合はnameは省略可能
+    private string $name = '';  // 
 
+    public function getId(): int 
+    {
+        return (int) $this->id;
+    }
+    public function getName(): string 
+    {
+        return $this->name;
+    }
+}
+```
+
+
+### 2. リポジトリの実装
+
+`AbstractRepository` を継承して、特定エンティティ用のリポジトリを作成します。
+
+```php
+use PDO;
+use WScore\DecaORM\AbstractRepository;
+use WScore\DecaORM\AttributeHydrator;
+
+/**
+ * @extends AbstractRepository<User>
+ */
+class UserRepository extends AbstractRepository
+{
+    public function __construct(OrmManager $manager)
+    {
+        $this->setUpRepository($manager, null, User::class);
+    }
+}
+```
+
+### 3. 基本的な操作 (CRUD)
+
+```php
+$pdo = new PDO('mysql:host=localhost;dbname=test', 'user', 'pass');
+$manager = OrmManager::initialize($container);
+$userRepo = new UserRepository($manager);
+
+// --- 作成 (Create) ---
+$user = new User();
+$user->fill(['name' => 'Deca Taro']);
+$user->save(); // INSERTが実行され、IDが自動採番されます
+echo $user->getId(); 
+
+// --- 取得 (Read) ---
+$user = $userRepo->findById(1);
+if ($user) {
+    echo $user->getName();
+}
+
+// --- 更新 (Update) ---
+$user->setName('Deca Jiro');  // または setRaw('name', 'Deca Jiro')
+$user->save(); // IDが存在するためUPDATEが実行されます
+
+// --- 削除 (Delete) ---
+$user->delete();
+```
+
+## リレーションの利用
+
+リレーションデータは自動的には読み込まれません。`load()` を明示的に呼ぶか、ゲッターで Lazy Loading を実装して初回アクセス時に読み込むことができます。
+
+### 親エンティティ (例: User)
+
+```php
+class User implements EntityInterface
+{
+    ... 
     // リレーションの定義（1対多）
     // targetEntity: 関連先クラス
     // mappedBy: 関連先でのプロパティ名
     #[HasMany(targetEntity: Post::class, mappedBy: 'user')]
-    public ?array $posts = null;
+    private ?array $posts = null;
+
+    public function getPosts(): EntityCollection
+    {
+        return $this->load('posts'); // 直接loadを呼ぶことも可能
+    }
+    /**
+     * @param EntityCollection<Post>|null $posts
+     */
+    public function setPosts(?EntityCollection $posts): void
+    {
+        $this->associate('posts', $posts); // 直接associateを呼ぶことも可能
+    }
+
+    public function addPost(Post $post): void
+    {
+        $this->addHasMany('posts', $post);
+    }
+
+    public function removePost(Post $post): void
+    {
+        $this->removeHasMany('posts', $post);
+    }
 }
 ```
 
-#### 子エンティティ (例: Post)
+### 子エンティティ (例: Post)
 
 ```php
 use WScore\DecaORM\Attribute\BelongsTo;
@@ -103,135 +193,38 @@ class Post implements EntityInterface
     #[Id]
     #[GeneratedValue]
     #[Column(name: 'post_id')]
-    public ?int $id = null;
+    private ?int $id = null;
 
     #[Column(name: 'user_id')]
-    public ?int $user_id = null;
+    private ?int $user_id = null; // ユーザー用外部キープロパティ
 
     #[Column(name: 'title')]
-    public string $title = '';
+    private string $title = '';
 
     // リレーションの定義（多対1）
-    // foreignKey: 外部キーカラム名
+    // foreignKey: 外部キープロパティ名
     // inversedBy: 関連先（親）でのプロパティ名
     #[BelongsTo(targetEntity: User::class, foreignKey: 'user_id', inversedBy: 'posts')]
-    public ?User $user = null;
+    private ?User $user = null;
 }
 ```
 
-### 2. リポジトリの実装
-
-`AbstractRepository` を継承して、特定エンティティ用のリポジトリを作成します。
-
-```php
-use PDO;
-use WScore\DecaORM\AbstractRepository;
-use WScore\DecaORM\AttributeHydrator;
-
-/**
- * @extends AbstractRepository<User>
- */
-class UserRepository extends AbstractRepository
-{
-    public function __construct(PDO $pdo)
-    {
-        $this->db = $pdo;
-        // 対象のエンティティクラスを指定してHydratorを初期化
-        $this->hydrator = new AttributeHydrator(User::class);
-        $this->now = new \DateTimeImmutable();
-    }
-    
-    // リレーションを手動でロードするヘルパーメソッドの例
-    public function loadPosts(User $user): void
-    {
-        // 親クラスの protected メソッド load() を呼び出す
-        $this->load($user, 'posts');
-    }
-}
-```
-
-### 3. 基本的な操作 (CRUD)
-
-```php
-$pdo = new PDO('mysql:host=localhost;dbname=test', 'user', 'pass');
-$manager = RepositoryManager::getInstance($container);
-$userRepo = new UserRepository($pdo, $manager);
-
-// --- 作成 (Create) ---
-$user = new User();
-$user->name = 'Deca Taro';
-$userRepo->save($user); // INSERTが実行され、IDが自動採番されます
-echo $user->getId(); 
-
-// --- 取得 (Read) ---
-$user = $userRepo->findById(1);
-if ($user) {
-    echo $user->name;
-}
-
-// --- 更新 (Update) ---
-$user->name = 'Deca Jiro';
-$userRepo->save($user); // IDが存在するためUPDATEが実行されます
-
-// --- 削除 (Delete) ---
-$userRepo->delete($user);
-```
-
-### 4. リレーションの利用
-
-リレーションデータは自動的には読み込まれません。`load()` を明示的に呼ぶか、ゲッターで Lazy Loading を実装して初回アクセス時に読み込むことができます。
-
-#### Lazy Loading（遅延読み込み）
+### Lazy Loading（遅延読み込み）
 
 ゲッター内で `load($relationName)` を呼ぶと、そのリレーションへ初回アクセスしたときにだけ DB から読み込み、以降はキャッシュされた値が返ります。
 
 ```php
-// User エンティティの例
-public function getPosts(): EntityCollection
-{
-    return $this->load('posts');
-}
-
-public function getProfile(): ?Profile
-{
-    $this->load('profile');
-    return $this->profile;
-}
-
 // 利用側: 初回アクセス時にのみクエリが発行される
 $user = $userRepo->findById(1);
-$posts = $user->getPosts();  // ここで SELECT が実行される
-$posts = $user->getPosts();  // 2回目はキャッシュから返る
+$posts = $user->load('posts');  // ここで SELECT が実行される
+$posts = $user->load('posts');  // 2回目はキャッシュから返る
 ```
 
-#### associate() による関連づけ
-
-エンティティ側でリレーションを設定するには、公開 API の `associate($relationName, $targetOrTargets)` を使います。リレーションの種類に応じて、内部で適切な処理（FK の設定・逆参照の更新など）が行われます。
-
-- **BelongsTo / BelongsToOne / HasOne**: 単一エンティティまたは `null` を渡す。
-- **HasMany / ManyToMany**: コレクション（`EntityCollection` または `iterable`）または `null` を渡す。
-
-setter から呼び出すと、型安全にリレーションを更新できます。
-
-```php
-// setter での利用例（User エンティティ）
-public function setUser(?User $user): void
-{
-    $this->associate('user', $user);
-}
-
-public function setPosts(?EntityCollection $posts): void
-{
-    $this->associate('posts', $posts);
-}
-
-public function setRoles(?EntityCollection $roles): void
-{
-    $this->associate('roles', $roles);
-}
-```
+### associate() による関連づけ
 
 直接 `associate()` を呼ぶこともできます（汎用コードやハイドレーション時など）。
+
+エンティティ側でリレーションを設定するには、公開 API の `associate($relationName, $targetOrTargets)` を使います。リレーションの種類に応じて、内部で適切な処理（FK の設定・逆参照の更新など）が行われます。
 
 ```php
 $post->associate('user', $user);
@@ -240,24 +233,13 @@ $user->associate('roles', $roleCollection);
 
 **補足**: `associate()` はエンティティのメモリ上での関連づけのみ行います。ManyToMany の中間テーブルへ反映するには、リポジトリの `syncManyToMany($entity, $relationName)` を別途呼び出してください。
 
-#### 単一エンティティのリレーション読み込み
+- **BelongsTo / BelongsToOne / HasOne**: 単一エンティティまたは `null` を渡す。
+- **HasMany / ManyToMany**: コレクション（`EntityCollection` または `iterable`）または `null` を渡す。
 
-リポジトリから明示的にロードする場合は `$repository->load($entity, 'relationName')` を使います。エンティティのゲッターで `load()` を呼ぶ実装にしている場合は、`$user->getPosts()` のようにアクセスするだけで初回のみクエリが発行されます（Lazy Loading）。
+setter から呼び出すと、型安全にリレーションを更新できます。
 
-```php
-$user = $userRepo->findById(1);
 
-// リポジトリから明示的にロードする場合
-$userRepo->load($user, 'posts');
-foreach ($user->posts as $post) {
-    echo $post->title;
-}
-
-// ゲッターで load() を呼ぶ実装なら、getPosts() が初回アクセス時にロードする
-$posts = $user->getPosts();
-```
-
-#### バッチローディング（N+1問題の解決）
+### バッチローディング（N+1問題の解決）
 
 複数のエンティティに対して、一度のクエリで関連データを読み込むことができます。
 
@@ -268,83 +250,107 @@ $users = $userRepo->sqlQuery()
     ->getResult();
 
 // 一度のクエリで全ユーザーの投稿を読み込む（N+1問題を回避）
-$posts = $userRepo->load($users, 'posts');
+$posts = $users->load('posts');
 
-// $post はEntityCollection
-$titles = $posts->map(fn($e) => $e->get('title'));
+// $posts は EntityCollection
+$titles = $posts->map(fn($e) => $e->getRaw('title'));
 
 // 各ユーザーの投稿にアクセス
 foreach ($users as $user) {
-    foreach ($user->posts as $post) {
-        echo $post->title;
+    foreach ($user->getPosts() as $post) {
+        echo $post->getRaw('title');  // または getTitle() など
     }
 }
 ```
 
-#### Collectionオブジェクトの利用
+### Collectionオブジェクトの利用
 
 複雑な条件で複数のエンティティを取得するためにCollectionオブジェクトが用意されている。また、Collectionオブジェクトからは、バッチローディングを簡単に行う機能が用意されている。
 
 ```php
 // Collectionオブジェクト
-$users = $userRepo->sqlQuery()->...->getCollection();
+$users = $userRepo->sqlQuery()->...->getResult();
 // リレーションを読み込む
 $posts = $users->load('posts');
 $comments = $posts->load('comments');
 // エンティティの保存など
 $posts->save();
+$comments->save();
 ```
 
-#### ManyToManyリレーションの利用
+### ManyToManyリレーションの利用
 
 多対多のリレーションでは、中間テーブルを使用して関連付けを管理します。
 
+ManyToManyアトリビュートにおいては、DBでのテーブル名とコラム名を指定してください。JoinTable用のレポジトリやエンティティを作成しないためです。
+
 ```php
-// Studentエンティティ
-#[Table(name: 'students')]
-class Student implements EntityInterface
+class User implements EntityInterface
 {
-    use EntityTrait;
-
-    #[Id]
-    #[GeneratedValue]
-    #[Column(name: 'student_id')]
-    public ?int $id = null;
-
-    #[Column(name: 'name')]
-    public string $name = '';
-
-    // ManyToManyリレーションの定義
+    ...
+    /** @var EntityCollection<Role>|null */
     #[ManyToMany(
-        targetEntity: Course::class,
-        joinTable: 'student_course',
-        foreignKey: 'student_id',
-        inverseForeignKey: 'course_id'
+        targetEntity: Role::class,
+        joinTable: 'user_role',       // DBテーブル名
+        foreignKey: 'user_id',        // 外部キーコラム名
+        inverseForeignKey: 'role_id'  // 外部キーコラム名
     )]
-    public ?array $courses = null;
+    private ?EntityCollection $roles = null;
+
+    public function getRoles(): EntityCollection
+    {
+        return $this->load('roles');
+    }
+
+    /**
+     * @param EntityCollection<Role>|null $roles
+     */
+    public function setRoles(?EntityCollection $roles): void
+    {
+        $this->associate('roles', $roles);
+    }
 }
 
-// Courseエンティティ
-#[Table(name: 'courses')]
-class Course implements EntityInterface
+#[Table(name: 'roles')]
+#[Repository(RoleRepository::class)]
+class Role implements EntityInterface
 {
     use EntityTrait;
 
     #[Id]
     #[GeneratedValue]
-    #[Column(name: 'course_id')]
-    public ?int $id = null;
+    #[Column(name: 'role_id')]
+    public ?string $id = null;
 
-    #[Column(name: 'name')]
+    #[Column(name: 'role_name')]
     public string $name = '';
 
+    /** @var EntityCollection<User>|null */
     #[ManyToMany(
-        targetEntity: Student::class,
-        joinTable: 'student_course',
-        foreignKey: 'course_id',
-        inverseForeignKey: 'student_id'
+        targetEntity: User::class,
+        joinTable: 'user_role',
+        foreignKey: 'role_id',
+        inverseForeignKey: 'user_id'
     )]
-    public ?array $students = null;
+    public ?EntityCollection $users = null;
+
+    public function getId(): ?int
+    {
+        return $this->id !== null ? (int) $this->id : null;
+    }
+
+    public function getUsers(): EntityCollection
+    {
+        return $this->load('users');
+    }
+
+    /**
+     * @param EntityCollection<User>|null $users
+     */
+    public function setUsers(?EntityCollection $users): void
+    {
+        $this->associate('users', $users);
+    }
 }
 ```
 
@@ -352,14 +358,14 @@ class Course implements EntityInterface
 
 ```php
 // 単一エンティティのリレーション読み込み
-$student = $studentRepo->findById(1);
-$studentRepo->load($student, 'courses');
+$user = $userRepo->findById(1);
+$user->load('roles');
 
 // バッチローディング
-$students = $studentRepo->sqlQuery()
+$users = $studentRepo->sqlQuery()
     ->whereIn('student_id', [1, 2, 3])
     ->getResult();
-$studentRepo->load($students, 'courses');
+$users->load('roles');
 ```
 
 **ManyToManyリレーションの同期:**
@@ -369,24 +375,27 @@ $studentRepo->load($students, 'courses');
 ```php
 use WScore\DecaORM\Trait\ManyToManyTrait;
 
-class StudentRepository extends AbstractRepository
+class UserRepository extends AbstractRepository
 {
     use ManyToManyTrait;
     // ...
 }
 
 // エンティティのリレーションプロパティに設定してから同期
-$student->set('courses', [$course1, $course2]);
-$studentRepo->syncManyToMany($student, 'courses');
+$user->getRoles()->add($role1);
+$user->getRoles()->add($role2);
+$user->getRoles()->delEntity($role3);
+
+$userRepo->syncManyToMany($user, 'roles');
 ```
 
 `syncManyToMany()`は、エンティティのリレーションプロパティに設定されたエンティティの状態をデータベースに反映します。現在のDBの状態と比較し、必要なINSERT/DELETEを自動的に実行します。
 
-### 5. エンティティの保存と依存性の管理
+## エンティティの保存と依存性の管理
 
 DecaORMには**Unit of Work (UoW)**が実装されていません。そのため、エンティティを保存する際は、**依存性を考慮して適切な順番で保存する必要があります**。
 
-#### 複数のエンティティを保存する場合
+### 複数のエンティティを保存する場合
 
 重要なポイント：**エンティティは先に作成して関連付けても問題ありません**。保存の順番だけ注意してください。
 
@@ -416,7 +425,7 @@ $postRepo->save($post1);
 $postRepo->save($post2);
 ```
 
-#### 自動的な外部キー設定の仕組み
+### 自動的な外部キー設定の仕組み
 
 親エンティティ（User）を保存すると、DecaORMは以下の処理を自動的に行います：
 
@@ -426,22 +435,23 @@ $postRepo->save($post2);
 
 そのため、子エンティティの`user_id`を手動で設定する必要はありません。エンティティ間の関連付け（`$post->user = $user`）だけで十分です。
 
-#### トランザクション管理
+### トランザクション管理
 
 複数のエンティティを保存する場合は、トランザクションを使用してデータの整合性を保つことを推奨します。
 
 ```php
-$pdo->beginTransaction();
-try {
+use WScore\DecaORM\OrmManager;
+
+OrmManager::transaction(function() use ($userRepo, $postRepo) {
     // エンティティを作成
     $user = new User();
-    $user->name = 'John Doe';
+    $user->setName('John Doe');  // または setRaw('name', 'John Doe')
 
     $post = new Post();
-    $post->title = 'My Post';
+    $post->setTitle('My Post');  // または setRaw('title', 'My Post')
 
-    // 親エンティティ側から子エンティティを関連付け
-    $user->posts = [$post];
+    // 親エンティティ側から子エンティティを関連付け（setter で associate を使用）
+    $user->setPosts(new EntityCollection([$post], $postRepo));
 
     // 親を先に保存（IDが確定し、子のforeignKeyが自動設定される）
     $userRepo->save($user);
@@ -449,11 +459,7 @@ try {
     // 子を保存
     $postRepo->save($post);
 
-    $pdo->commit();
-} catch (\Exception $e) {
-    $pdo->rollBack();
-    throw $e;
-}
+});
 ```
 
 ### デフォルトコンテナの設定（アプリ起動時に1回）

@@ -39,9 +39,8 @@ $users = $repository->sqlQuery()
 - `orderBy(string $column)` - ORDER BY句を指定
 - `limit(?int $limit)` - LIMIT句を指定
 - `offset(?int $offset)` - OFFSET句を指定
-- `getResult()` - クエリを実行してエンティティの配列を取得
-- `getCollection()` - クエリを実行してEntityCollectionを取得
-- `executeCountQuery()` - COUNT(*)クエリを実行
+- `getResult()` - クエリを実行してEntityCollectionを取得
+- `executeCountQuery()` - COUNT(*)クエリを実行し、件数(int)を返す
 
 ### 使用例
 
@@ -94,6 +93,7 @@ $users = $repository->sqlQuery()
 // 件数取得
 $count = $repository->sqlQuery()
     ->where('status', 'active')
+    ->limit(10)->offset(20) // これらの設定は無視する
     ->executeCountQuery();
 ```
 
@@ -130,8 +130,8 @@ $repository->sqlInsert([
     'email' => 'alice@example.com'
 ])->execute();
 
-// データを後から追加
-$insert = $repository->sqlInsert();
+// データを後から追加（空配列で取得し data() で設定）
+$insert = $repository->sqlInsert([]);
 $insert->data([
     'name' => 'Bob',
     'email' => 'bob@example.com'

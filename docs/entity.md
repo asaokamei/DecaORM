@@ -49,14 +49,18 @@ DecaORMでは、アトリビュートを使用してエンティティ間のリ�
     *   `mappedBy`: 関連先（子）で自身を指しているプロパティ名。
 *   **BelongsTo**: 子から親への参照（多対1）。
     *   `targetEntity`: 関連先のクラス名。
-    *   `foreignKey`: データベース上の外部キーカラム名。
+    *   `foreignKey`: データベース上の外部キープロパティ名。
     *   `inversedBy`: 関連先（親）で自身を指しているプロパティ名。
 
 ```php
 // User.php (親)
 #[HasMany(targetEntity: Post::class, mappedBy: 'user')]
 private ?array $posts = null;
+```
 
+BelongsToなどでは、外部キープロパティ名（下記コードでは`$user_id`）と関連先のエンティティ用プロパティ（下記コードでは`$user`）の両方が必要です。
+
+```php
 // Post.php (子)
 #[Column(name: 'user_id')]
 private string $user_id = '';
@@ -67,7 +71,7 @@ private ?User $user = null;
 
 ### Lazy Loading（遅延読み込み）
 
-リレーションは自動では読み込まれません。ゲッター内で `load($relationName)` を呼ぶと、そのプロパティへ初回アクセスしたときだけ DB から取得し、以降はキャッシュされた値が返ります。`EntityTrait` が `EntityActionsTrait` を利用しているため、`load()` はそのまま利用できます。
+リレーションは自動では読み込まれません。ゲッター内で `load($relationName)` を呼ぶと、そのプロパティへ初回アクセスしたときだけ DB から取得し、以降はキャッシュされた値が返ります。
 
 ```php
 // User.php
@@ -78,9 +82,15 @@ public function getPosts(): EntityCollection
 
 public function getProfile(): ?Profile
 {
-    $this->load('profile');
-    return $this->profile;
+    return $this->load('profile');
 }
+```
+
+直接`load`を呼び出すこともできます。
+
+```php
+$user->load('posts');
+$user->load('profile');
 ```
 
 ### associate() による関連づけ
@@ -102,20 +112,12 @@ public function setUser(?User $user): void
 // User.php（HasMany）
 public function setPosts(?EntityCollection $posts): void
 {
-    if ($posts === null) {
-        $this->posts = null;
-        return;
-    }
     $this->associate('posts', $posts);
 }
 
 // User.php（ManyToMany）
 public function setRoles(?EntityCollection $roles): void
 {
-    if ($roles === null) {
-        $this->roles = null;
-        return;
-    }
     $this->associate('roles', $roles);
 }
 ```
@@ -173,66 +175,48 @@ private ?User $user = null;
 ```
 
 
+## Entityの操作
 
+### EntityCollection
 
----
-
-## サンプルコード
-
-以下は、プライベートプロパティを使用した標準的なエンティティの構成例です。
+エンティティの配列を返すメソッドのほとんどが、EntityCollectionオブジェクトを返します。EntityCollectionはエンティティの配列扱うための便利なクラスです。
 
 ```php
-<?php
+$users = $userRepo->find('active', 'status');  // find(値, カラム名)
 
-namespace App\Entity;
+$users->add($newUser);
+$posts = $users->load('posts'); // N+1問題対策のための一括読み込み
+$posts->load('comments');       // 続けて関連先を読み込む。
 
-use WScore\DecaORM\Attribute\Column;
-use WScore\DecaORM\Attribute\GeneratedValue;
-use WScore\DecaORM\Attribute\Id;
-use WScore\DecaORM\Attribute\Table;
-use WScore\DecaORM\Attribute\Repository;
-use WScore\DecaORM\Contracts\EntityInterface;
-use WScore\DecaORM\Trait\EntityTrait;
-use App\Repository\UserRepository;
-
-#[Table(name: 'users')]
-#[Repository(UserRepository::class)]
-class User implements EntityInterface
-{
-    use EntityTrait;
-
-    #[Id]
-    #[GeneratedValue]
-    #[Column(name: 'user_id')]
-    private string $id = '';
-
-    #[Column(name: 'user_name')]
-    private string $name = '';
-
-    #[Column(name: 'email_address')]
-    private string $email = '';
-
-    /**
-     * 注意: DecaORMのエンティティプロパティは、
-     * データベースとの一貫性のために string 型として定義します。
-     */
+$user1 = $users->findById(1);
+if ($users->hasEntity($deleteUser)) {
+    $users->delEntity($deleteUser);
 }
+$names = $users->getValues('name');
+$users->sort('birthday');
+$users->sort(function($a, $b) {$a->status <=> $b->status;})
+$userByGroup = $users->groupBy('status');
 ```
 
-## エンティティの操作
 
-プロパティが `private` であっても、`EntityTrait` によって以下のように操作可能です。
+### EntityHandler
+
+エンティティに対して複雑な操作を行うためのクラス。
 
 ```php
-$user = new User();
+$userHandler = $user->getHandler();
+$userHandler->load('posts.comments');
+$newUserHandler = $userHandler->replicate(); // 関連先も含めて一括複製
 
-// 値の設定 (setメソッドまたはマジックメソッド)
-$user->set('name', 'テスト太郎');
-// または
-$user->name = 'テスト太郎'; 
-
-// 値の取得 (getメソッドまたはマジックメソッド)
-echo $user->get('name');
-// または
-echo $user->name;
+$newUserHandler->save(); // 関連先も含めて一括保存。
 ```
+
+#### レプリケーション（replicate）
+
+HasManyとHasOneの関連先のエンティティだけを複製します。
+
+#### 一括保存（save）
+
+HasManyとHasOneとManyToManyの関連を保存します。
+なお、ManyToManyに関しては関連だけを保存し、関連先のエンティティは保存しません。
+
