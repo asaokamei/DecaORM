@@ -110,6 +110,7 @@ class User implements EntityInterface
 
     public function getProfile(): ?Profile
     {
+        $this->load('profile');
         return $this->profile;
     }
 

@@ -76,9 +76,6 @@ class Post implements EntityInterface
 
     public function getUser(): ?User
     {
-        if ($this->user !== null) {
-            return $this->user;
-        }
         $this->load('user');
         return $this->user;
     }
@@ -86,5 +83,32 @@ class Post implements EntityInterface
     public function setUser(?User $user): void
     {
         $this->syncBelongsTo('user', $user);
+    }
+
+    public function getComments(): EntityCollection
+    {
+        return $this->load('comments');
+    }
+
+    /**
+     * @param EntityCollection<Comment>|null $comments
+     */
+    public function setComments(?EntityCollection $comments): void
+    {
+        if ($comments === null) {
+            $this->comments = null;
+            return;
+        }
+        $this->syncHasMany('comments', $comments);
+    }
+
+    public function addComment(Comment $comment): void
+    {
+        $this->addHasMany('comments', $comment);
+    }
+
+    public function removeComment(Comment $comment): void
+    {
+        $this->removeHasMany('comments', $comment);
     }
 }

@@ -54,4 +54,25 @@ class Comment implements EntityInterface
     {
         return $this->updated_at !== null ? new DateTimeImmutable($this->updated_at) : null;
     }
+
+    public function getBody(): string
+    {
+        return $this->body;
+    }
+
+    public function setBody(string $body): void
+    {
+        $this->body = $body;
+    }
+
+    public function getPost(): ?Post
+    {
+        $this->load('post');
+        return $this->post;
+    }
+
+    public function setPost(?Post $post): void
+    {
+        $this->syncBelongsTo('post', $post);
+    }
 }

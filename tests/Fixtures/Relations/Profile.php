@@ -24,7 +24,7 @@ class Profile implements EntityInterface
     private string $nickname;
 
     #[BelongsToOne(targetEntity: User::class, foreignKey: 'id', inversedBy: 'profile')]
-    private ?User $user;
+    private ?User $user = null;
 
     public function getId(): null|int|string
     {

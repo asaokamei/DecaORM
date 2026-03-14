@@ -50,8 +50,10 @@ trait EntityActionsTrait
 
     /**
      * Loads a relation.
+     *
+     * @return Collection|EntityCollection|EntityInterface|null For HasOne/BelongsTo/BelongsToOne returns single entity or null; for HasMany/ManyToMany returns collection.
      */
-    public function load(string $relationName): Collection|EntityCollection|null
+    public function load(string $relationName): Collection|EntityCollection|EntityInterface|null
     {
         $found = $this->getRaw($relationName);
         if ($found !== null) {

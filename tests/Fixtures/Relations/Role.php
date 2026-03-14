@@ -39,4 +39,21 @@ class Role implements EntityInterface
     {
         return $this->id !== null ? (int) $this->id : null;
     }
+
+    public function getUsers(): EntityCollection
+    {
+        return $this->load('users');
+    }
+
+    /**
+     * @param EntityCollection<User>|null $users
+     */
+    public function setUsers(?EntityCollection $users): void
+    {
+        if ($users === null) {
+            $this->users = null;
+            return;
+        }
+        $this->syncManyToMany('users', $users);
+    }
 }
