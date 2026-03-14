@@ -73,6 +73,6 @@ class Comment implements EntityInterface
 
     public function setPost(?Post $post): void
     {
-        $this->syncBelongsTo('post', $post);
+        $this->associate('post', $post);
     }
 }

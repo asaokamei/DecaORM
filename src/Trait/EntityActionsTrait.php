@@ -85,18 +85,57 @@ trait EntityActionsTrait
     }
 
     /**
-     * Synchronizes a BelongsTo/BelongsToOne relation.
+     * Associates a relation by name. Dispatches to the appropriate method
+     * based on the relation type (BelongsTo/BelongsToOne → single entity,
+     * HasOne → single entity, HasMany/ManyToMany → iterable/collection).
+     * In-memory only; use repository's syncManyToMany() to persist M:N join table.
+     *
+     * @param string $relationName Relation property name (e.g. 'user', 'posts')
+     * @param EntityInterface|iterable|EntityCollection|null $targetOrTargets For BelongsTo/BelongsToOne/HasOne: single entity or null; for HasMany/ManyToMany: iterable/EntityCollection or null
+     */
+    public function associate(string $relationName, EntityInterface|iterable|EntityCollection|null $targetOrTargets): void
+    {
+        $repo = self::_repository();
+        $relation = $repo->getRelation($relationName);
+
+        if ($relation instanceof BelongsTo || $relation instanceof BelongsToOne) {
+            if ($targetOrTargets !== null && !$targetOrTargets instanceof EntityInterface) {
+                throw new \InvalidArgumentException('associate for BelongsTo/BelongsToOne expects EntityInterface|null, got ' . get_debug_type($targetOrTargets));
+            }
+            $this->associateBelongsTo($relationName, $targetOrTargets);
+            return;
+        }
+        if ($relation instanceof HasOne) {
+            if ($targetOrTargets !== null && !$targetOrTargets instanceof EntityInterface) {
+                throw new \InvalidArgumentException('associate for HasOne expects EntityInterface|null, got ' . get_debug_type($targetOrTargets));
+            }
+            $this->associateHasOne($relationName, $targetOrTargets);
+            return;
+        }
+        if ($relation instanceof HasMany) {
+            $this->associateHasMany($relationName, $targetOrTargets);
+            return;
+        }
+        if ($relation instanceof ManyToMany) {
+            $this->associateManyToMany($relationName, $targetOrTargets);
+            return;
+        }
+        throw new \RuntimeException('Unsupported relation type for associate: ' . $relationName);
+    }
+
+    /**
+     * Associates a BelongsTo/BelongsToOne relation.
      *
      * - Sets relation property (e.g. $this->user)
      * - Sets foreign key property (e.g. $this->user_id)
      * - If inversedBy points to a HasMany collection, updates it on both sides
      */
-    protected function syncBelongsTo(string $relationName, ?EntityInterface $target): void
+    protected function associateBelongsTo(string $relationName, ?EntityInterface $target): void
     {
         $repo = self::_repository();
         $relation = $repo->getRelation($relationName);
         if (!($relation instanceof BelongsTo) && !($relation instanceof BelongsToOne)) {
-            throw new \RuntimeException('syncBelongsTo requires BelongsTo/BelongsToOne: ' . $relationName);
+            throw new \RuntimeException('associateBelongsTo requires BelongsTo/BelongsToOne: ' . $relationName);
         }
 
         $current = $this->getRaw($relationName);
@@ -135,18 +174,18 @@ trait EntityActionsTrait
     }
 
     /**
-     * Synchronizes a HasOne relation (one-to-one, inverse side).
+     * Associates a HasOne relation (one-to-one, inverse side).
      *
      * - Sets relation property on this entity (e.g. $this->profile)
      * - Updates the target entity's BelongsTo/BelongsToOne (mappedBy) + its foreign key property
      * - Keeps inverse properties consistent only when already loaded (no DB loads in setters)
      */
-    protected function syncHasOne(string $relationName, ?EntityInterface $target): void
+    protected function associateHasOne(string $relationName, ?EntityInterface $target): void
     {
         $repo = self::_repository();
         $relation = $repo->getRelation($relationName);
         if (!($relation instanceof HasOne)) {
-            throw new \RuntimeException('syncHasOne requires HasOne: ' . $relationName);
+            throw new \RuntimeException('associateHasOne requires HasOne: ' . $relationName);
         }
 
         $current = $this->getRaw($relationName);
@@ -171,7 +210,7 @@ trait EntityActionsTrait
     }
 
     /**
-     * Synchronizes a HasMany relation (one-to-many, inverse side).
+     * Associates a HasMany relation (one-to-many, inverse side).
      *
      * - Sets relation property on this entity to an EntityCollection
      * - Updates each child entity's BelongsTo/BelongsToOne (mappedBy) + its foreign key property
@@ -180,12 +219,12 @@ trait EntityActionsTrait
      * @param string $relationName HasMany property name on this entity (e.g. 'posts')
      * @param iterable<EntityInterface>|EntityCollection|null $children
      */
-    protected function syncHasMany(string $relationName, iterable|EntityCollection|null $children): void
+    protected function associateHasMany(string $relationName, iterable|EntityCollection|null $children): void
     {
         $repo = self::_repository();
         $relation = $repo->getRelation($relationName);
         if (!($relation instanceof HasMany)) {
-            throw new \RuntimeException('syncHasMany requires HasMany: ' . $relationName);
+            throw new \RuntimeException('associateHasMany requires HasMany: ' . $relationName);
         }
 
         $targetRepo = $relation->targetEntity ? $repo->getRepository($relation->targetEntity) : $repo;
@@ -235,20 +274,20 @@ trait EntityActionsTrait
     }
 
     /**
-     * Synchronizes a ManyToMany relation on the entity side.
+     * Associates a ManyToMany relation on the entity side (in-memory only).
      *
-     * This only normalizes and sets the in-memory collection (no DB writes).
-     * Use repository-side ManyToManyTrait::syncManyToMany() to persist join-table changes.
+     * Sets the in-memory collection; does not write to the join table.
+     * Use repository's syncManyToMany() to persist join-table changes.
      *
      * @param string $relationName ManyToMany property name on this entity (e.g. 'roles')
      * @param iterable<EntityInterface>|EntityCollection|null $targets
      */
-    protected function syncManyToMany(string $relationName, iterable|EntityCollection|null $targets): void
+    protected function associateManyToMany(string $relationName, iterable|EntityCollection|null $targets): void
     {
         $repo = self::_repository();
         $relation = $repo->getRelation($relationName);
         if (!($relation instanceof ManyToMany)) {
-            throw new \RuntimeException('syncManyToMany requires ManyToMany: ' . $relationName);
+            throw new \RuntimeException('associateManyToMany requires ManyToMany: ' . $relationName);
         }
 
         $targetRepo = $relation->targetEntity ? $repo->getRepository($relation->targetEntity) : null;

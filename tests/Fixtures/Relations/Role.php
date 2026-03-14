@@ -54,6 +54,6 @@ class Role implements EntityInterface
             $this->users = null;
             return;
         }
-        $this->syncManyToMany('users', $users);
+        $this->associate('users', $users);
     }
 }

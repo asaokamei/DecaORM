@@ -105,7 +105,7 @@ class User implements EntityInterface
             $this->posts = null;
             return;
         }
-        $this->syncHasMany('posts', $posts);
+        $this->associate('posts', $posts);
     }
 
     public function getProfile(): ?Profile
@@ -116,7 +116,7 @@ class User implements EntityInterface
 
     public function setProfile(?Profile $profile): void
     {
-        $this->syncHasOne('profile', $profile);
+        $this->associate('profile', $profile);
     }
 
     public function addPost(Post $post): void
@@ -143,6 +143,6 @@ class User implements EntityInterface
             $this->roles = null;
             return;
         }
-        $this->syncManyToMany('roles', $roles);
+        $this->associate('roles', $roles);
     }
 }

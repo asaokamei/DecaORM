@@ -82,7 +82,7 @@ class Post implements EntityInterface
 
     public function setUser(?User $user): void
     {
-        $this->syncBelongsTo('user', $user);
+        $this->associate('user', $user);
     }
 
     public function getComments(): EntityCollection
@@ -99,7 +99,7 @@ class Post implements EntityInterface
             $this->comments = null;
             return;
         }
-        $this->syncHasMany('comments', $comments);
+        $this->associate('comments', $comments);
     }
 
     public function addComment(Comment $comment): void

@@ -225,7 +225,7 @@ class DecaOrmTest extends TestCase
         $this->assertSame('1', $pdo->lastInsertId());
     }
 
-    // --- Relation tests (syncBelongsTo, syncHasOne, syncHasMany, syncManyToMany, addHasMany, removeHasMany) ---
+    // --- Relation tests (associate, associateBelongsTo, associateHasOne, associateHasMany, associateManyToMany, addHasMany, removeHasMany) ---
 
     public function testSyncBelongsToPostUser(): void
     {
