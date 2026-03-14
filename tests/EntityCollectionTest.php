@@ -239,4 +239,56 @@ class EntityCollectionTest extends TestCase
         $collection = new EntityCollection([], null);
         $this->assertNull($collection->getEntityClass());
     }
+
+    /** シリアライズ時は repository を含めず、復元後はエンティティと entityClass のみ復元される */
+    public function testSerializeOmitsRepository()
+    {
+        $repo = $this->createMock(RepositoryInterface::class);
+        $hydrator = $this->createMock(HydratorInterface::class);
+        $hydrator->method('getEntityClass')->willReturn(TestEntity::class);
+        $repo->method('getHydrator')->willReturn($hydrator);
+
+        $e1 = $this->createEntity(1, ['name' => 'A']);
+        $e2 = $this->createEntity(2, ['name' => 'B']);
+        $original = new EntityCollection([$e1, $e2], $repo);
+
+        $restored = unserialize(serialize($original));
+
+        $this->assertInstanceOf(EntityCollection::class, $restored);
+        $this->assertCount(2, $restored);
+        $this->assertSame([1, 2], $restored->getIds());
+        $this->assertSame(TestEntity::class, $restored->getEntityClass());
+        $this->assertEquals(['A', 'B'], $restored->getValues('name'));
+        // 復元直後は repository は null。load() で OrmManager から解決しようとするが、
+        // 未初期化または TestRepository がコンテナに無いため例外になる
+        $this->expectException(\Throwable::class);
+        $restored->load('posts');
+    }
+
+    /** 復元後に OrmManager がセットアップされていれば、load() でリポジトリを解決できる */
+    public function testUnserializedCollectionResolvesRepositoryFromOrmManager()
+    {
+        $pdo = new PDO('sqlite::memory:');
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo->exec(file_get_contents(__DIR__ . '/Fixtures/Relations/Sql/users.sql'));
+        $pdo->exec(file_get_contents(__DIR__ . '/Fixtures/Relations/Sql/posts.sql'));
+
+        $container = new TestContainer();
+        $container->set(PDO::class, $pdo);
+        $manager = OrmManager::initialize($container);
+        $userRepo = new UserRepository($manager);
+        $postsRepo = new PostRepository($manager);
+        $container->set(UserRepository::class, $userRepo);
+        $container->set(PostRepository::class, $postsRepo);
+
+        $user1 = $userRepo->create(['name' => 'Alice', 'email' => 'alice@example.com']);
+        $userRepo->save($user1);
+        $users = $userRepo->sqlQuery()->getCollection();
+
+        $restored = unserialize(serialize($users));
+        $this->assertCount(1, $restored);
+        // DI 済みなので load() で OrmManager からリポジトリが解決される
+        $posts = $restored->load('posts');
+        $this->assertInstanceOf(EntityCollection::class, $posts);
+    }
 }

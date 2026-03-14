@@ -5,10 +5,12 @@ namespace WScore\DecaORM;
 use InvalidArgumentException;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Contracts\RepositoryInterface;
+use WScore\DecaORM\OrmManager;
 
 /**
  * Collection specifically for EntityInterface instances.
- * 
+ * Repository is intentionally omitted from serialization (e.g. PDO cannot be restored).
+ *
  * @template T of EntityInterface
  */
 class EntityCollection extends Collection
@@ -72,6 +74,48 @@ class EntityCollection extends Collection
     }
 
     /**
+     * Returns the repository, resolving from OrmManager when null (e.g. after unserialize).
+     */
+    private function resolveRepository(): RepositoryInterface
+    {
+        if ($this->repository !== null) {
+            return $this->repository;
+        }
+        if ($this->entityClass === null) {
+            throw new InvalidArgumentException('Cannot resolve repository: collection is empty and no repository was provided.');
+        }
+        $repoClass = $this->entityClass::getRepositoryClass();
+        $this->repository = OrmManager::getRepository($repoClass);
+        return $this->repository;
+    }
+
+    /**
+     * Serialize without repository (PDO etc. cannot be restored on unserialize).
+     *
+     * @return array{items: array<EntityInterface>, entityClass: ?string}
+     */
+    public function __serialize(): array
+    {
+        return [
+            'items' => $this->items,
+            'entityClass' => $this->entityClass,
+        ];
+    }
+
+    /**
+     * Restore from serialized data. Repository is left null (use resolve when needed).
+     *
+     * @param array{items: array<EntityInterface>, entityClass: ?string} $data
+     */
+    public function __unserialize(array $data): void
+    {
+        $this->entityClass = $data['entityClass'] ?? null;
+        $this->repository = null;
+        $this->items = $data['items'] ?? [];
+        $this->idMap = [];
+    }
+
+    /**
      * @param T $item
      */
     public function add(mixed $item): void
@@ -106,13 +150,11 @@ class EntityCollection extends Collection
 
     public function load(string $propertyName, int $chunkSize = 100): static
     {
-        if ($this->repository === null) {
-            throw new InvalidArgumentException('load() requires a repository');
-        }
-        
+        $repository = $this->resolveRepository();
+
         $relatedEntities = [];
         foreach (array_chunk($this->items, $chunkSize) as $chunk) {
-            $collection = $this->repository->load($chunk, $propertyName);
+            $collection = $repository->load($chunk, $propertyName);
             $relatedEntities = array_merge($relatedEntities, $collection->getEntities());
         }
 
@@ -126,9 +168,9 @@ class EntityCollection extends Collection
         }
         $uniqueEntities = array_values($uniqueEntity);
 
-        $relation = $this->repository->getRelation($propertyName);
-        $relatedRepository = $relation->targetEntity 
-            ? $this->repository->getRepository($relation->targetEntity) 
+        $relation = $repository->getRelation($propertyName);
+        $relatedRepository = $relation->targetEntity
+            ? $repository->getRepository($relation->targetEntity)
             : null;
 
         return new static($uniqueEntities, $relatedRepository);
@@ -136,12 +178,9 @@ class EntityCollection extends Collection
 
     public function save(): static
     {
-        if ($this->repository === null) {
-            throw new InvalidArgumentException('save() requires a repository');
-        }
-        
+        $repository = $this->resolveRepository();
         foreach ($this->items as $entity) {
-            $this->repository->save($entity);
+            $repository->save($entity);
         }
         return $this;
     }
