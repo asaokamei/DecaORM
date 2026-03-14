@@ -6,33 +6,30 @@ use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
-use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\Contracts\HydratorInterface;
 use WScore\DecaORM\Contracts\RepositoryInterface;
 use WScore\DecaORM\OrmManager;
+use WScore\DecaORM\Tests\Fixtures\TestEntity;
+use WScore\DecaORM\Tests\Fixtures\Relations\Post;
 use WScore\DecaORM\Tests\Fixtures\Relations\PostRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
+use WScore\DecaORM\Tests\Fixtures\Relations\User;
 use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
 
 class EntityCollectionTest extends TestCase
 {
-    /**
-     * エンティティのモックを作成するヘルパー
-     */
-    private function createEntityMock($id, $data = [])
+    /** 同一クラス（TestEntity）のエンティティを作成。getRaw は $data を返す。 */
+    private function createEntity(int|string $id, array $data = []): TestEntity
     {
-        $entity = $this->createMock(EntityInterface::class);
-        $entity->method('getId')->willReturn($id);
-        $entity->method('getRaw')->willReturnCallback(fn($key) => $data[$key] ?? null);
-        return $entity;
+        return new TestEntity($id, $data);
     }
 
     public function testBasicMethods()
     {
-        $repo = $this->createMock(RepositoryInterface::class);
-        $e1 = $this->createEntityMock(1);
-        $e2 = $this->createEntityMock(2);
+        $e1 = $this->createEntity(1);
+        $e2 = $this->createEntity(2);
 
-        $collection = new EntityCollection([$e1, $e2], $repo);
+        $collection = new EntityCollection([$e1, $e2], null);
 
         $this->assertCount(2, $collection);
         $this->assertEquals([1, 2], $collection->getIds());
@@ -48,11 +45,10 @@ class EntityCollectionTest extends TestCase
 
     public function testMapAndFilter()
     {
-        $repo = $this->createMock(RepositoryInterface::class);
-        $e1 = $this->createEntityMock(1, ['name' => 'Alice']);
-        $e2 = $this->createEntityMock(2, ['name' => 'Bob']);
+        $e1 = $this->createEntity(1, ['name' => 'Alice']);
+        $e2 = $this->createEntity(2, ['name' => 'Bob']);
 
-        $collection = new EntityCollection([$e1, $e2], $repo);
+        $collection = new EntityCollection([$e1, $e2], null);
 
         // map
         $names = $collection->map(fn($e) => $e->getRaw('name'));
@@ -70,34 +66,32 @@ class EntityCollectionTest extends TestCase
 
     public function testSortByProperty()
     {
-        $repo = $this->createMock(RepositoryInterface::class);
-        $e1 = $this->createEntityMock(1, ['rank' => 20]);
-        $e2 = $this->createEntityMock(2, ['rank' => 10]);
-        $e3 = $this->createEntityMock(3, ['rank' => 30]);
+        $e1 = $this->createEntity(1, ['rank' => 20]);
+        $e2 = $this->createEntity(2, ['rank' => 10]);
+        $e3 = $this->createEntity(3, ['rank' => 30]);
 
-        $collection = new EntityCollection([$e1, $e2, $e3], $repo);;
+        $collection = new EntityCollection([$e1, $e2, $e3], null);
 
         // 文字列によるソート
         $collection->sort('rank');
         $this->assertEquals([2, 1, 3], $collection->getIds());
 
         // 配列による複数条件ソート
-        $e4 = $this->createEntityMock(4, ['rank' => 10, 'sub' => 'a']);
-        $e5 = $this->createEntityMock(5, ['rank' => 10, 'sub' => 'b']);
-        $collection = new EntityCollection([$e5, $e4], $repo);
+        $e4 = $this->createEntity(4, ['rank' => 10, 'sub' => 'a']);
+        $e5 = $this->createEntity(5, ['rank' => 10, 'sub' => 'b']);
+        $collection = new EntityCollection([$e5, $e4], null);
         $collection->sort(['rank', 'sub']);
         $this->assertEquals([4, 5], $collection->getIds());
     }
 
     public function testChunk()
     {
-        $repo = $this->createMock(RepositoryInterface::class);
         $entities = [
-            $this->createEntityMock(1),
-            $this->createEntityMock(2),
-            $this->createEntityMock(3),
+            $this->createEntity(1),
+            $this->createEntity(2),
+            $this->createEntity(3),
         ];
-        $collection = new EntityCollection($entities, $repo);
+        $collection = new EntityCollection($entities, null);
 
         $chunks = $collection->chunk(2);
 
@@ -179,12 +173,70 @@ class EntityCollectionTest extends TestCase
     public function testSave()
     {
         $repo = $this->createMock(RepositoryInterface::class);
-        $e1 = $this->createEntityMock(1);
-        $e2 = $this->createEntityMock(2);
-
+        $hydrator = $this->createMock(HydratorInterface::class);
+        $hydrator->method('getEntityClass')->willReturn(TestEntity::class);
+        $repo->method('getHydrator')->willReturn($hydrator);
         $repo->expects($this->exactly(2))->method('save');
 
-        $collection = new EntityCollection([$e1, $e2], $repo);;
+        $e1 = $this->createEntity(1);
+        $e2 = $this->createEntity(2);
+        $collection = new EntityCollection([$e1, $e2], $repo);
         $collection->save();
+    }
+
+    /** 異なるエンティティクラスが混在すると InvalidArgumentException */
+    public function testRejectsMixedEntityClasses()
+    {
+        $user = new User();
+        $user->setRaw('id', 1);
+        $post = new Post();
+        $post->setRaw('post_id', 1);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('EntityCollection requires all entities to be the same class');
+
+        new EntityCollection([$user, $post], null);
+    }
+
+    /** 非エンティティが含まれると InvalidArgumentException */
+    public function testRejectsNonEntityInConstructor()
+    {
+        $e = $this->createEntity(1);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('EntityCollection accepts only');
+
+        new EntityCollection([$e, 'not an entity']);
+    }
+
+    /** add で異なるクラスを追加すると InvalidArgumentException */
+    public function testRejectsWrongClassOnAdd()
+    {
+        $collection = new EntityCollection([$this->createEntity(1)], null);
+
+        $user = new User();
+        $user->setRaw('id', 2);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('EntityCollection requires all entities to be the same class');
+
+        $collection->add($user);
+    }
+
+    /** getEntityClass は先頭エンティティのクラスを返す */
+    public function testGetEntityClassReturnsFirstEntityClass()
+    {
+        $e1 = $this->createEntity(1);
+        $e2 = $this->createEntity(2);
+        $collection = new EntityCollection([$e1, $e2], null);
+
+        $this->assertSame(TestEntity::class, $collection->getEntityClass());
+    }
+
+    /** 空コレクションでは getEntityClass は null */
+    public function testGetEntityClassNullWhenEmpty()
+    {
+        $collection = new EntityCollection([], null);
+        $this->assertNull($collection->getEntityClass());
     }
 }

@@ -14,16 +14,94 @@ use WScore\DecaORM\Contracts\RepositoryInterface;
 class EntityCollection extends Collection
 {
     private array $idMap;
-    
+
+    /** Expected entity class (FQCN); null when collection is empty and no repository was provided. */
+    private ?string $entityClass = null;
+
     /**
-     * @param array<EntityInterface>|T[] $entities
-     * @param ?RepositoryInterface $repository
+     * @param array<EntityInterface>|T[] $entities All elements must be the same entity class.
+     * @param ?RepositoryInterface $repository Optional; when provided, entity class is taken from its hydrator.
      */
     public function __construct(
         array $entities = [],
         private ?RepositoryInterface $repository = null
     ) {
+        $this->resolveEntityClass($entities, $repository);
+        $this->checkAllEntitiesSameClass($entities);
         parent::__construct($entities);
+    }
+
+    private function resolveEntityClass(array $entities, ?RepositoryInterface $repository): void
+    {
+        if ($repository instanceof RepositoryInterface) {
+            $this->entityClass = $repository->getHydrator()->getEntityClass();
+            return;
+        }
+        if ($entities === []) {
+            $this->entityClass = null;
+            return;
+        }
+        $first = $entities[0];
+        if ($first instanceof EntityInterface) {
+            $this->entityClass = get_class($first);
+            return;
+        }
+        throw new InvalidArgumentException('resolveEntityClass() requires a repository or entities');
+    }
+
+    private function checkAllEntitiesSameClass(array $entities): void
+    {
+        foreach ($entities as $index => $entity) {
+            if (!$entity instanceof EntityInterface) {
+                throw new InvalidArgumentException(
+                    'EntityCollection accepts only ' . EntityInterface::class . ' instances, got ' . (is_object($entity) ? get_class($entity) : gettype($entity)) . ' at index ' . $index
+                );
+            }
+            if ($this->entityClass !== null && get_class($entity) !== $this->entityClass) {
+                throw new InvalidArgumentException(
+                    'EntityCollection requires all entities to be the same class. Expected ' . $this->entityClass . ', got ' . get_class($entity) . ' at index ' . $index
+                );
+            }
+        }
+    }
+
+    /** Expected entity class (FQCN), or null when collection is empty and no repository was provided. */
+    public function getEntityClass(): ?string
+    {
+        return $this->entityClass;
+    }
+
+    /**
+     * @param T $item
+     */
+    public function add(mixed $item): void
+    {
+        $this->assertEntityMatchesClass($item);
+        parent::add($item);
+    }
+
+    public function offsetSet(mixed $offset, mixed $value): void
+    {
+        $this->assertEntityMatchesClass($value);
+        parent::offsetSet($offset, $value);
+    }
+
+    /** @throws InvalidArgumentException */
+    private function assertEntityMatchesClass(mixed $entity): void
+    {
+        if ($this->entityClass === null && $entity instanceof EntityInterface) {
+            $this->entityClass = get_class($entity);
+        }
+        if (!$entity instanceof EntityInterface) {
+            throw new InvalidArgumentException(
+                'EntityCollection accepts only ' . EntityInterface::class . ' instances, got ' . (is_object($entity) ? get_class($entity) : gettype($entity))
+            );
+        }
+        if ($this->entityClass !== null && get_class($entity) !== $this->entityClass) {
+            throw new InvalidArgumentException(
+                'EntityCollection requires all entities to be the same class. Expected ' . $this->entityClass . ', got ' . get_class($entity)
+            );
+        }
     }
 
     public function load(string $propertyName, int $chunkSize = 100): static
