@@ -101,17 +101,12 @@ class User implements EntityInterface
      */
     public function setPosts(?EntityCollection $posts): void
     {
-        if ($posts === null) {
-            $this->posts = null;
-            return;
-        }
         $this->associate('posts', $posts);
     }
 
     public function getProfile(): ?Profile
     {
-        $this->load('profile');
-        return $this->profile;
+        return $this->load('profile');
     }
 
     public function setProfile(?Profile $profile): void
@@ -139,10 +134,6 @@ class User implements EntityInterface
      */
     public function setRoles(?EntityCollection $roles): void
     {
-        if ($roles === null) {
-            $this->roles = null;
-            return;
-        }
         $this->associate('roles', $roles);
     }
 }

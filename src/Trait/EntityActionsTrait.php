@@ -227,13 +227,27 @@ trait EntityActionsTrait
             throw new \RuntimeException('associateHasMany requires HasMany: ' . $relationName);
         }
 
+        $mappedBy = $relation->mappedBy;
+        $current = $this->getRaw($relationName);
+
+        if ($children === null) {
+            // Clear relation: detach all current children, then set to null
+            if ($current instanceof EntityCollection) {
+                foreach ($current as $oldChild) {
+                    if ($oldChild instanceof EntityInterface) {
+                        self::syncMappedBelongsToOnTarget(target: $oldChild, mappedBy: $mappedBy, parent: null);
+                    }
+                }
+            }
+            $this->setRaw($relationName, null);
+            return;
+        }
+
         $targetRepo = $relation->targetEntity ? $repo->getRepository($relation->targetEntity) : $repo;
         $newChildren = $children instanceof EntityCollection
             ? $children
             : new EntityCollection(
-                $children
-                    ? (is_array($children) ? $children : iterator_to_array($children))
-                    : [],
+                is_array($children) ? $children : iterator_to_array($children),
                 $targetRepo
             );
 
@@ -246,9 +260,6 @@ trait EntityActionsTrait
         }
         $newChildren = new EntityCollection($filtered, $targetRepo);
 
-        $mappedBy = $relation->mappedBy;
-
-        $current = $this->getRaw($relationName);
         if ($current instanceof EntityCollection) {
             // Detach children that are no longer present
             foreach ($current as $oldChild) {
@@ -288,6 +299,11 @@ trait EntityActionsTrait
         $relation = $repo->getRelation($relationName);
         if (!($relation instanceof ManyToMany)) {
             throw new \RuntimeException('associateManyToMany requires ManyToMany: ' . $relationName);
+        }
+
+        if ($targets === null) {
+            $this->setRaw($relationName, null);
+            return;
         }
 
         $targetRepo = $relation->targetEntity ? $repo->getRepository($relation->targetEntity) : null;

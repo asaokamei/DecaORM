@@ -76,8 +76,7 @@ class Post implements EntityInterface
 
     public function getUser(): ?User
     {
-        $this->load('user');
-        return $this->user;
+        return $this->load('user');
     }
 
     public function setUser(?User $user): void
@@ -95,10 +94,6 @@ class Post implements EntityInterface
      */
     public function setComments(?EntityCollection $comments): void
     {
-        if ($comments === null) {
-            $this->comments = null;
-            return;
-        }
         $this->associate('comments', $comments);
     }
 

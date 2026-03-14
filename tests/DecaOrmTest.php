@@ -340,6 +340,11 @@ class DecaOrmTest extends TestCase
         $user->setPosts(new EntityCollection([$p1], $fixture->posts));
         $this->assertCount(1, $user->getPosts());
         $this->assertNull($p2->getUser());
+
+        // associate(null) clears HasMany and detaches all children
+        $user->setPosts(null);
+        $this->assertNull($user->getRaw('posts'));
+        $this->assertNull($p1->getUser());
     }
 
     public function testAddHasManyRemoveHasManyUserPosts(): void
@@ -393,6 +398,13 @@ class DecaOrmTest extends TestCase
         $fixture->roles->save($r1);
         $r2 = $fixture->roles->create(['name' => 'editor']);
         $fixture->roles->save($r2);
+
+        $user->setRoles(new EntityCollection([$r1, $r2], $fixture->roles));
+        $this->assertCount(2, $user->getRoles());
+
+        // associate(null) clears ManyToMany in-memory
+        $user->setRoles(null);
+        $this->assertNull($user->getRaw('roles'));
 
         $user->setRoles(new EntityCollection([$r1, $r2], $fixture->roles));
         $roles = $user->getRoles();

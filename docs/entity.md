@@ -65,122 +65,91 @@ private string $user_id = '';
 private ?User $user = null;
 ```
 
-### HasMany / BelongsTo 用メソッドの書き方
+### Lazy Loading（遅延読み込み）
 
-双方向の参照を自分で更新する場合、`User::addPost()` と `Post::setUser()` が互いに呼び合って
-永久ループにならないようにガードを入れる必要があります。以下はフラグなしで安全に動作する実装例です。
+リレーションは自動では読み込まれません。ゲッター内で `load($relationName)` を呼ぶと、そのプロパティへ初回アクセスしたときだけ DB から取得し、以降はキャッシュされた値が返ります。`EntityTrait` が `EntityActionsTrait` を利用しているため、`load()` はそのまま利用できます。
 
 ```php
 // User.php
-class User implements EntityInterface
+public function getPosts(): EntityCollection
 {
-    use EntityTrait;
+    return $this->load('posts');
+}
 
-    #[HasMany(targetEntity: Post::class, mappedBy: 'user')]
-    private ?array $posts = null;
-
-    /**
-     * @return Post[]
-     */
-    public function getPosts(): array
-    {
-        return $this->posts ?? [];
-    }
-
-    /**
-     * @param Post[] $posts
-     */
-    public function setPosts(array $posts): static
-    {
-        $this->posts = $posts;
-        foreach ($posts as $post) {
-            if ($post->getUser() !== $this) {
-                $post->setUser($this);
-            }
-        }
-        return $this;
-    }
-
-    public function addPost(Post $post): void
-    {
-        $this->posts ??= [];
-        if (in_array($post, $this->posts, true)) {
-            return;
-        }
-        $this->posts[] = $post;
-
-        // 逆側の参照も更新
-        $post->setUser($this);
-    }
-
-    public function removePost(Post $post): void
-    {
-        if ($this->posts === null) {
-            return;
-        }
-        $index = array_search($post, $this->posts, true);
-        if ($index === false) {
-            return;
-        }
-        array_splice($this->posts, $index, 1);
-
-        if ($post->getUser() === $this) {
-            $post->setUser(null);
-        }
-    }
+public function getProfile(): ?Profile
+{
+    $this->load('profile');
+    return $this->profile;
 }
 ```
+
+### associate() による関連づけ
+
+リレーションを設定するときは、公開 API の `associate($relationName, $targetOrTargets)` を使います。FK の更新や逆参照の整合はトレイト側で行われるため、自前で双方向の更新やループ防止を書く必要はありません。
+
+- **BelongsTo / BelongsToOne / HasOne**: 第2引数は単一エンティティまたは `null`
+- **HasMany / ManyToMany**: 第2引数は `EntityCollection` または `iterable` または `null`
+
+setter から呼び出す例です。
 
 ```php
-// Post.php
-class Post implements EntityInterface
+// Post.php（BelongsTo）
+public function setUser(?User $user): void
 {
-    use EntityTrait;
+    $this->associate('user', $user);
+}
 
-    #[Column(name: 'user_id')]
-    private string $user_id = '';
-
-    #[BelongsTo(targetEntity: User::class, foreignKey: 'user_id', inversedBy: 'posts')]
-    private ?User $user = null;
-
-    public function getUser(): ?User
-    {
-        return $this->user;
+// User.php（HasMany）
+public function setPosts(?EntityCollection $posts): void
+{
+    if ($posts === null) {
+        $this->posts = null;
+        return;
     }
+    $this->associate('posts', $posts);
+}
 
-    public function setUser(?User $user): void
-    {
-        if ($this->user === $user) {
-            return;
-        }
-
-        $old = $this->user;
-        $this->user = $user;
-
-        // user_id を同期
-        $this->user_id = $user?->id ?? '';
-
-        // 片方だけの変更で済むように、相互更新は1回で止める
-        if ($old !== null) {
-            $old->removePost($this);
-        }
-        if ($user !== null) {
-            $user->addPost($this);
-        }
+// User.php（ManyToMany）
+public function setRoles(?EntityCollection $roles): void
+{
+    if ($roles === null) {
+        $this->roles = null;
+        return;
     }
+    $this->associate('roles', $roles);
 }
 ```
 
-ポイント:
+直接 `associate()` を呼ぶこともできます。
 
-- `addPost()` は先に配列に追加し、その後 `setUser()` を呼ぶ
-- `setUser()` は同一参照なら何もしないガードでループを止める
-- `in_array(..., true)` と `array_search(..., true)` で同一インスタンスの重複を防ぐ
+```php
+$post->associate('user', $user);
+$user->associate('posts', $postCollection);
+```
+
+**補足**: `associate()` はエンティティのメモリ上での関連づけのみです。ManyToMany の中間テーブルへ反映するには、リポジトリの `syncManyToMany($entity, $relationName)` を別途呼んでください。
+
+### addHasMany / removeHasMany
+
+HasMany のコレクションに1件だけ追加・削除する場合は、`addHasMany($relationName, $child)` と `removeHasMany($relationName, $child)` が使えます。こちらもトレイトで提供され、FK と逆参照が更新されます。
+
+```php
+// User.php
+public function addPost(Post $post): void
+{
+    $this->addHasMany('posts', $post);
+}
+
+public function removePost(Post $post): void
+{
+    $this->removeHasMany('posts', $post);
+}
+```
 
 ### HasOne と BelongsToOne (1対1)
 
 「一人のユーザーが一つのプロフィールを持つ」ような1対1の関係に使用します。
-- 
+
 - **HasOne**: 所有する側（外部キーを持たない側）に記述します。
     - `targetEntity`: 関連先のクラス名。
     - `mappedBy`: 関連先で自身を指しているプロパティ名。

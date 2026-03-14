@@ -8,6 +8,7 @@ DecaORMは、PHP 8のアトリビュート（Attribute）を活用した、シ�
 *   **Attribute Mapping**: PHP 8のアトリビュート（`#[Table]`, `#[Column]`, `#[Id]`など）を使用して、マッピング情報をエンティティクラスに直接記述できます。
 *   **Repository Pattern**: データアクセスロジックをリポジトリに分離し、保守性の高いコードを実現します。
 *   **Relations**: `#[HasOne]`, `#[HasMany]`, `#[BelongsTo]`, `#[BelongsToOne]`, `#[ManyToMany]` アトリビュートによるリレーションシップ（1対1、1対多、多対多）をサポートしています。
+*   **Lazy Loading**: ゲッター内で `load()` を呼ぶことで、リレーションに初回アクセスしたタイミングで読み込む遅延読み込みパターンが利用できます。
 *   **Batch Loading**: N+1問題を解決するためのバッチローディング機能を提供します。
 *   **Identity Map**: 同じ主キーを持つエンティティインスタンスが複数存在しないことを保証し、メモリ上の一意性を管理します。
 *   **Dirty Tracking**: エンティティの変更を追跡し、変更されたフィールドのみを更新することで、不要なUPDATEクエリを削減します。
@@ -21,7 +22,7 @@ DecaORMは、PHP 8のアトリビュート（Attribute）を活用した、シ�
 
 *   **Unit of Work (UoW)**: エンティティの保存順序の自動解決や、変更の遅延書き込み（flush）は実装されていません。依存性を考慮して手動で保存順序を制御する必要があります。
 *   **カスケード削除**: 親エンティティを削除した際に、関連する子エンティティを自動的に削除する機能はありません。手動で削除する必要があります。
-*   **自動リレーション読み込み**: リレーションデータは自動的には読み込まれません。`load()` メソッドを明示的に呼び出す必要があります。
+*   **Eager Loading（一括先行読み込み）**: リレーションの自動一括読み込みはありません。必要に応じて `load()` を明示的に呼ぶか、ゲッターで Lazy Loading を実装してください。
 
 ### ライセンス
 
@@ -178,24 +179,82 @@ $userRepo->delete($user);
 
 ### 4. リレーションの利用
 
-リレーションデータは自動的には読み込まれません（Lazy Loading的な挙動に近いですが、自動発火はしません）。
-`load()` メソッドを使用して明示的にロードします。
+リレーションデータは自動的には読み込まれません。`load()` を明示的に呼ぶか、ゲッターで Lazy Loading を実装して初回アクセス時に読み込むことができます。
+
+#### Lazy Loading（遅延読み込み）
+
+ゲッター内で `load($relationName)` を呼ぶと、そのリレーションへ初回アクセスしたときにだけ DB から読み込み、以降はキャッシュされた値が返ります。
+
+```php
+// User エンティティの例
+public function getPosts(): EntityCollection
+{
+    return $this->load('posts');
+}
+
+public function getProfile(): ?Profile
+{
+    $this->load('profile');
+    return $this->profile;
+}
+
+// 利用側: 初回アクセス時にのみクエリが発行される
+$user = $userRepo->findById(1);
+$posts = $user->getPosts();  // ここで SELECT が実行される
+$posts = $user->getPosts();  // 2回目はキャッシュから返る
+```
+
+#### associate() による関連づけ
+
+エンティティ側でリレーションを設定するには、公開 API の `associate($relationName, $targetOrTargets)` を使います。リレーションの種類に応じて、内部で適切な処理（FK の設定・逆参照の更新など）が行われます。
+
+- **BelongsTo / BelongsToOne / HasOne**: 単一エンティティまたは `null` を渡す。
+- **HasMany / ManyToMany**: コレクション（`EntityCollection` または `iterable`）または `null` を渡す。
+
+setter から呼び出すと、型安全にリレーションを更新できます。
+
+```php
+// setter での利用例（User エンティティ）
+public function setUser(?User $user): void
+{
+    $this->associate('user', $user);
+}
+
+public function setPosts(?EntityCollection $posts): void
+{
+    $this->associate('posts', $posts);
+}
+
+public function setRoles(?EntityCollection $roles): void
+{
+    $this->associate('roles', $roles);
+}
+```
+
+直接 `associate()` を呼ぶこともできます（汎用コードやハイドレーション時など）。
+
+```php
+$post->associate('user', $user);
+$user->associate('roles', $roleCollection);
+```
+
+**補足**: `associate()` はエンティティのメモリ上での関連づけのみ行います。ManyToMany の中間テーブルへ反映するには、リポジトリの `syncManyToMany($entity, $relationName)` を別途呼び出してください。
 
 #### 単一エンティティのリレーション読み込み
+
+リポジトリから明示的にロードする場合は `$repository->load($entity, 'relationName')` を使います。エンティティのゲッターで `load()` を呼ぶ実装にしている場合は、`$user->getPosts()` のようにアクセスするだけで初回のみクエリが発行されます（Lazy Loading）。
 
 ```php
 $user = $userRepo->findById(1);
 
-// postsプロパティは初期状態では null
-var_dump($user->posts); // null
-
-// 関連データをロード
+// リポジトリから明示的にロードする場合
 $userRepo->load($user, 'posts');
-
-// データが格納される
 foreach ($user->posts as $post) {
     echo $post->title;
 }
+
+// ゲッターで load() を呼ぶ実装なら、getPosts() が初回アクセス時にロードする
+$posts = $user->getPosts();
 ```
 
 #### バッチローディング（N+1問題の解決）
@@ -331,7 +390,7 @@ DecaORMには**Unit of Work (UoW)**が実装されていません。そのため
 
 重要なポイント：**エンティティは先に作成して関連付けても問題ありません**。保存の順番だけ注意してください。
 
-**注意**: 現状では、親エンティティ側（User）から子エンティティ（Post）への関連付け（`$user->posts = [...]`）が必要です。本来は`setPosts()`や`setUser()`のようなメソッドで双方向の関連付けを行うのが望ましいですが、これは現在のORMの範囲外です。
+エンティティ間の関連づけは、setter 内で `associate()` を呼ぶ形で行うと、FK や逆参照が正しく更新されます。
 
 ```php
 // 1. エンティティを作成
@@ -340,15 +399,13 @@ $user->name = 'John Doe';
 
 $post1 = new Post();
 $post1->title = 'Post 1';
-$post1->user = $user;
 
 $post2 = new Post();
 $post2->title = 'Post 2';
-$post2->user = $user;
 
-// 2. 親エンティティ側から子エンティティを関連付け
-// 注意: 現状では親側からの関連付けが必要です
-$user->posts = [$post1, $post2];
+// 2. setter で関連づけ（双方向の整合が取れる）
+$user->setPosts(new EntityCollection([$post1, $post2], $postRepo));
+// または 子側から: $post1->setUser($user); $post2->setUser($user);
 
 // 3. 親エンティティを保存（IDが確定し、子エンティティのforeignKeyが自動設定される）
 $userRepo->save($user);

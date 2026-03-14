@@ -50,10 +50,6 @@ class Role implements EntityInterface
      */
     public function setUsers(?EntityCollection $users): void
     {
-        if ($users === null) {
-            $this->users = null;
-            return;
-        }
         $this->associate('users', $users);
     }
 }

@@ -33,7 +33,7 @@ class Profile implements EntityInterface
 
     public function getUser(): ?User
     {
-        return $this->user;
+        return $this->load('user');
     }
 
     public function setUser(?User $user): void

@@ -67,8 +67,7 @@ class Comment implements EntityInterface
 
     public function getPost(): ?Post
     {
-        $this->load('post');
-        return $this->post;
+        return $this->load('post');
     }
 
     public function setPost(?Post $post): void
