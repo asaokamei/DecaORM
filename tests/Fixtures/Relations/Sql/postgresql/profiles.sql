@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS profiles;
+DROP TABLE IF EXISTS profiles CASCADE;
 CREATE TABLE profiles
 (
     profile_id INTEGER PRIMARY KEY,

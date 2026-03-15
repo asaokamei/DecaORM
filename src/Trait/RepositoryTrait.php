@@ -169,6 +169,12 @@ trait RepositoryTrait
             $entity->setRaw($this->hydrator->getUpdatedAt(), $this->now->format('Y-m-d H:i:s'));
         }
         $data = $this->hydrator->dehydrate($entity);
+        if ($this->hydrator->isPkAutoNumber()) {
+            $pkCol = $this->hydrator->getPrimaryKeyColumn();
+            if (array_key_exists($pkCol, $data) && $data[$pkCol] === null) {
+                unset($data[$pkCol]);
+            }
+        }
         $stmt = $this->sqlInsert($data)->execute();
 
         if (!$stmt) {

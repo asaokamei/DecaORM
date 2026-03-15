@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS comments;
+DROP TABLE IF EXISTS comments CASCADE;
 CREATE TABLE comments
 (
     comment_id SERIAL PRIMARY KEY,

@@ -179,9 +179,12 @@ class HasOneTest extends TestCase
 
     public function testFillUserFromProfileWithNoUser(): void
     {
-        // Create a profile without a user (invalid foreign key)
-        $this->pdo->exec("INSERT INTO profiles (profile_id, nickname) VALUES (999, 'Orphan Profile')");
-        $profileId = 999;
+        // Create user and profile, then delete user to get an orphan profile (DB-agnostic)
+        $user = $this->userRepo->create(['name' => 'Temporary', 'email' => 'tmp@example.com']);
+        $this->userRepo->save($user);
+        $profileId = $user->getId();
+        $this->profileRepo->save($this->profileRepo->create(['id' => $profileId, 'nickname' => 'Orphan Profile']));
+        $this->pdo->exec("DELETE FROM users WHERE user_id = {$profileId}");
 
         $profile = $this->profileRepo->findById($profileId);
         $this->assertNotNull($profile);

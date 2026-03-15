@@ -1,4 +1,6 @@
+SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS invalid_projects;
+SET FOREIGN_KEY_CHECKS = 1;
 CREATE TABLE invalid_projects
 (
     project_id INT AUTO_INCREMENT PRIMARY KEY,

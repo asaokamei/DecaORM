@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS invalid_projects;
+DROP TABLE IF EXISTS invalid_projects CASCADE;
 CREATE TABLE invalid_projects
 (
     project_id SERIAL PRIMARY KEY,

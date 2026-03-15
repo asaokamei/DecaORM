@@ -230,9 +230,13 @@ class OneToManyTest extends TestCase
 
     public function testLoadUserForPostWithNonExistentUser(): void
     {
-        // Create a post with invalid user_id
-        $this->pdo->exec("INSERT INTO posts (user_id, title, content) VALUES (999, 'Test', 'Content')");
-        $postId = $this->pdo->lastInsertId();
+        // Create user and post, then delete user to get a post with non-existent user_id (DB-agnostic)
+        $user = $this->userRepo->create(['name' => 'Temporary', 'email' => 'tmp@example.com']);
+        $this->userRepo->save($user);
+        $post = $this->postsRepo->create(['user_id' => $user->getId(), 'title' => 'Test', 'content' => 'Content']);
+        $this->postsRepo->save($post);
+        $postId = $post->getId();
+        $this->pdo->exec("DELETE FROM users WHERE user_id = {$user->getId()}");
 
         $post = $this->postsRepo->findById($postId);
         $this->assertNotNull($post);
@@ -349,11 +353,13 @@ class OneToManyTest extends TestCase
         $user = $this->createAndSaveUser(1);
         $post = $this->createAndSavePost($user, 'with-comments');
 
+        $now1 = date('Y-m-d H:i:s');
+        $now2 = date('Y-m-d H:i:s', strtotime('-1 second'));
         $this->pdo->exec(
-            "INSERT INTO comments (post_id, body, created_at) VALUES ({$post->getId()}, 'Comment 1', datetime('now'))"
+            "INSERT INTO comments (post_id, body, created_at) VALUES ({$post->getId()}, 'Comment 1', '{$now1}')"
         );
         $this->pdo->exec(
-            "INSERT INTO comments (post_id, body, created_at) VALUES ({$post->getId()}, 'Comment 2', datetime('now', '-1 second'))"
+            "INSERT INTO comments (post_id, body, created_at) VALUES ({$post->getId()}, 'Comment 2', '{$now2}')"
         );
 
         EntityCache::clear();
