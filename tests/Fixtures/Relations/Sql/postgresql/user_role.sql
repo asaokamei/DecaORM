@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS user_role;
 CREATE TABLE user_role
 (
     user_id INTEGER NOT NULL,

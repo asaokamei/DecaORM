@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS roles;
 CREATE TABLE roles
 (
     role_id    SERIAL PRIMARY KEY,

@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS tasks;
 CREATE TABLE tasks
 (
     task_id    INT AUTO_INCREMENT PRIMARY KEY,

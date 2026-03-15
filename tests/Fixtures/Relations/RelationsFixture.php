@@ -33,6 +33,10 @@ class RelationsFixture
         $fixture->manager->setSlowQueryThresholdMs($slowQueryThresholdMs);
 
         $schemaDir = SchemaLoader::getSchemaDir();
+        $dropAll = file_get_contents($schemaDir . '/drop_all.sql');
+        if ($dropAll !== false) {
+            $fixture->pdo->exec($dropAll);
+        }
         foreach (self::schemaFileNames() as $name) {
             $sql = file_get_contents($schemaDir . '/' . $name);
             if ($sql !== false) {

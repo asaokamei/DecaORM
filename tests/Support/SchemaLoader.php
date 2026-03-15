@@ -18,7 +18,7 @@ class SchemaLoader
 
     /**
      * Load schema SQL for a table (e.g. 'users', 'projects').
-     * File is read from getSchemaDir() . '/' . $name . '.sql'
+     * File includes DROP TABLE IF EXISTS at the top, then CREATE TABLE.
      */
     public static function loadTable(string $name): string
     {

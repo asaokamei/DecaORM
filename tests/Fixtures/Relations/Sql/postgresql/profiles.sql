@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS profiles;
 CREATE TABLE profiles
 (
     profile_id INTEGER PRIMARY KEY,

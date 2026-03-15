@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS comments;
 CREATE TABLE comments
 (
     comment_id INT AUTO_INCREMENT PRIMARY KEY,

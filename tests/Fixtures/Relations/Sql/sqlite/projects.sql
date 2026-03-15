@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS projects;
 CREATE TABLE projects
 (
     project_id INTEGER PRIMARY KEY AUTOINCREMENT,

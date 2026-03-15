@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS posts;
 CREATE TABLE posts
 (
     post_id    INT AUTO_INCREMENT PRIMARY KEY,
