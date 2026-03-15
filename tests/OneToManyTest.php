@@ -236,7 +236,18 @@ class OneToManyTest extends TestCase
         $post = $this->postsRepo->create(['user_id' => $user->getId(), 'title' => 'Test', 'content' => 'Content']);
         $this->postsRepo->save($post);
         $postId = $post->getId();
+        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        if ($driver === 'mysql') {
+            $this->pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+        } elseif ($driver === 'pgsql') {
+            $this->pdo->exec('SET session_replication_role = replica');
+        }
         $this->pdo->exec("DELETE FROM users WHERE user_id = {$user->getId()}");
+        if ($driver === 'mysql') {
+            $this->pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+        } elseif ($driver === 'pgsql') {
+            $this->pdo->exec('SET session_replication_role = DEFAULT');
+        }
 
         $post = $this->postsRepo->findById($postId);
         $this->assertNotNull($post);

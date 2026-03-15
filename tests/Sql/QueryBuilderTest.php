@@ -18,6 +18,7 @@ class QueryBuilderTest extends TestCase
     protected function setUp(): void
     {
         $this->pdo = DbConnection::get();
+        $this->pdo->exec(SchemaLoader::loadTable('drop_all'));
         $this->pdo->exec(SchemaLoader::loadTable('users_query_builder'));
     }
 

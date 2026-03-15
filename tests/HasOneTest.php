@@ -184,7 +184,18 @@ class HasOneTest extends TestCase
         $this->userRepo->save($user);
         $profileId = $user->getId();
         $this->profileRepo->save($this->profileRepo->create(['id' => $profileId, 'nickname' => 'Orphan Profile']));
+        $driver = $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
+        if ($driver === 'mysql') {
+            $this->pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+        } elseif ($driver === 'pgsql') {
+            $this->pdo->exec('SET session_replication_role = replica');
+        }
         $this->pdo->exec("DELETE FROM users WHERE user_id = {$profileId}");
+        if ($driver === 'mysql') {
+            $this->pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+        } elseif ($driver === 'pgsql') {
+            $this->pdo->exec('SET session_replication_role = DEFAULT');
+        }
 
         $profile = $this->profileRepo->findById($profileId);
         $this->assertNotNull($profile);
