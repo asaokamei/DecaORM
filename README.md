@@ -2,6 +2,11 @@
 
 DecaORM is a simple, lightweight **data-mapper ORM** for PHP 8. It uses PHP 8 **attributes** to map entity classes to database tables and provides flexible data access via the **repository pattern**.
 
+### Support
+
+PHP: 8.1, 8.2, 8.3, 8.4  
+Databases: SQLite, MySQL, PostgreSQL
+
 ---
 
 ## Features
