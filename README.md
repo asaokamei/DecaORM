@@ -41,6 +41,8 @@ composer require wscore/decaorm
 * [entity.md](docs/entity.md)
 * [sql.md](docs/sql.md)
 
+**English:** [README-en.md](README-en.md) | [entity-en.md](docs/entity-en.md) | [sql-en.md](docs/sql-en.md)
+
 ## 使い方
 
 ### 1. エンティティの定義
