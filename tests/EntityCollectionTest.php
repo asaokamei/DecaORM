@@ -15,6 +15,8 @@ use WScore\DecaORM\Tests\Fixtures\Relations\PostRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
 use WScore\DecaORM\Tests\Fixtures\Relations\User;
 use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
+use WScore\DecaORM\Tests\Support\DbConnection;
+use WScore\DecaORM\Tests\Support\SchemaLoader;
 
 class EntityCollectionTest extends TestCase
 {
@@ -103,17 +105,9 @@ class EntityCollectionTest extends TestCase
 
     public function testFillAndUniqueness()
     {
-        // In-memory SQLite database for testing
-        $pdo = new PDO('sqlite::memory:');
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        // Create users table
-        $sql = file_get_contents(__DIR__ . '/Fixtures/Relations/Sql/users.sql');
-        $pdo->exec($sql);
-
-        // Create posts table
-        $sql = file_get_contents(__DIR__ . '/Fixtures/Relations/Sql/posts.sql');
-        $pdo->exec($sql);
+        $pdo = DbConnection::get();
+        $pdo->exec(SchemaLoader::loadTable('users'));
+        $pdo->exec(SchemaLoader::loadTable('posts'));
 
         // prepare repositories
         $container = new TestContainer();
@@ -268,10 +262,9 @@ class EntityCollectionTest extends TestCase
     /** 復元後に OrmManager がセットアップされていれば、load() でリポジトリを解決できる */
     public function testUnserializedCollectionResolvesRepositoryFromOrmManager()
     {
-        $pdo = new PDO('sqlite::memory:');
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $pdo->exec(file_get_contents(__DIR__ . '/Fixtures/Relations/Sql/users.sql'));
-        $pdo->exec(file_get_contents(__DIR__ . '/Fixtures/Relations/Sql/posts.sql'));
+        $pdo = DbConnection::get();
+        $pdo->exec(SchemaLoader::loadTable('users'));
+        $pdo->exec(SchemaLoader::loadTable('posts'));
 
         $container = new TestContainer();
         $container->set(PDO::class, $pdo);

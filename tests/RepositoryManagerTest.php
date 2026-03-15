@@ -11,6 +11,7 @@ use WScore\DecaORM\AttributeHydrator;
 use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Fixtures\Relations\User;
 use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
+use WScore\DecaORM\Tests\Support\DbConnection;
 
 class RepositoryManagerTest extends TestCase
 {
@@ -72,8 +73,7 @@ class RepositoryManagerTest extends TestCase
 
     private function createRepositoryWithoutManager(): AbstractRepository
     {
-        $pdo = new PDO('sqlite::memory:');
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo = DbConnection::get();
 
         return new class($pdo) extends AbstractRepository {
             public function __construct(PDO $pdo)

@@ -12,6 +12,8 @@ use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Fixtures\EntityActions\ActionUser;
 use WScore\DecaORM\Tests\Fixtures\EntityActions\ActionUserRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
+use WScore\DecaORM\Tests\Support\DbConnection;
+use WScore\DecaORM\Tests\Support\SchemaLoader;
 use WScore\DecaORM\Tests\Support\SpyActionUserRepository;
 
 final class EntityActionsTraitTest extends TestCase
@@ -23,15 +25,8 @@ final class EntityActionsTraitTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->pdo = new PDO('sqlite::memory:');
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        $this->pdo->exec(
-            "CREATE TABLE action_users (
-                user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_name TEXT
-            )"
-        );
+        $this->pdo = DbConnection::get();
+        $this->pdo->exec(SchemaLoader::loadTable('action_users'));
 
         EntityCache::clear();
 

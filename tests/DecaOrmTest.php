@@ -8,18 +8,12 @@ use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Fixtures\ArrayLogger;
-use WScore\DecaORM\Tests\Fixtures\Relations\Comment;
-use WScore\DecaORM\Tests\Fixtures\Relations\CommentRepository;
-use WScore\DecaORM\Tests\Fixtures\Relations\Post;
-use WScore\DecaORM\Tests\Fixtures\Relations\PostRepository;
-use WScore\DecaORM\Tests\Fixtures\Relations\Profile;
-use WScore\DecaORM\Tests\Fixtures\Relations\ProfileRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\RelationsFixture;
-use WScore\DecaORM\Tests\Fixtures\Relations\Role;
-use WScore\DecaORM\Tests\Fixtures\Relations\RoleRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\User;
 use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
+use WScore\DecaORM\Tests\Support\DbConnection;
+use WScore\DecaORM\Tests\Support\SchemaLoader;
 
 // --- Mock Classes for Testing ---
 
@@ -35,19 +29,8 @@ class DecaOrmTest extends TestCase
 
     protected function setUp(): void
     {
-        // In-memory SQLite database for testing
-        $this->pdo = new PDO('sqlite::memory:');
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        $this->pdo->exec(
-            "CREATE TABLE users (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            created_at TEXT,
-            updated_at TEXT
-        )"
-        );
+        $this->pdo = DbConnection::get();
+        $this->pdo->exec(SchemaLoader::loadTable('users'));
 
         // Clear cache before each test
         \WScore\DecaORM\EntityCache::clear();
@@ -160,17 +143,8 @@ class DecaOrmTest extends TestCase
 
     public function testExecuteLogsSqlThroughRepositoryManager(): void
     {
-        $pdo = new PDO('sqlite::memory:');
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $pdo->exec(
-            "CREATE TABLE users (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            created_at TEXT,
-            updated_at TEXT
-        )"
-        );
+        $pdo = DbConnection::get();
+        $pdo->exec(SchemaLoader::loadTable('users'));
 
         $container = new TestContainer();
         $container->set(PDO::class, $pdo);
@@ -198,17 +172,8 @@ class DecaOrmTest extends TestCase
 
     public function testExecuteWorksWithoutConfiguredLogger(): void
     {
-        $pdo = new PDO('sqlite::memory:');
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $pdo->exec(
-            "CREATE TABLE users (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            created_at TEXT,
-            updated_at TEXT
-        )"
-        );
+        $pdo = DbConnection::get();
+        $pdo->exec(SchemaLoader::loadTable('users'));
 
         $container = new TestContainer();
         $container->set(PDO::class, $pdo);

@@ -5,6 +5,8 @@ namespace WScore\DecaORM\Tests\Sql;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\Sql\QueryBuilder;
+use WScore\DecaORM\Tests\Support\DbConnection;
+use WScore\DecaORM\Tests\Support\SchemaLoader;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -15,20 +17,8 @@ class QueryBuilderTest extends TestCase
 
     protected function setUp(): void
     {
-        // In-memory SQLite database for testing
-        $this->pdo = new PDO('sqlite::memory:');
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        // Create table
-        $this->pdo->exec(
-            "CREATE TABLE users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            created_at TEXT,
-            updated_at TEXT
-        )"
-        );
+        $this->pdo = DbConnection::get();
+        $this->pdo->exec(SchemaLoader::loadTable('users_query_builder'));
     }
 
     public function testSelectQueryWithParameters()

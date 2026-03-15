@@ -14,6 +14,8 @@ use WScore\DecaORM\Tests\Fixtures\CustomLoader\ProjectRepositoryWithReturn;
 use WScore\DecaORM\Tests\Fixtures\CustomLoader\Task;
 use WScore\DecaORM\Tests\Fixtures\CustomLoader\TaskRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
+use WScore\DecaORM\Tests\Support\DbConnection;
+use WScore\DecaORM\Tests\Support\SchemaLoader;
 use WScore\DecaORM\OrmManager;
 
 class CustomLoaderTest extends TestCase
@@ -24,28 +26,9 @@ class CustomLoaderTest extends TestCase
 
     protected function setUp(): void
     {
-        // In-memory SQLite database for testing
-        $this->pdo = new PDO('sqlite::memory:');
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        // Create projects table
-        $this->pdo->exec(
-            "CREATE TABLE projects (
-            project_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL
-        )"
-        );
-
-        // Create tasks table (with composite key scenario: project_id + user_id)
-        $this->pdo->exec(
-            "CREATE TABLE tasks (
-            task_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id INTEGER NOT NULL,
-            user_id INTEGER NOT NULL,
-            title TEXT NOT NULL,
-            FOREIGN KEY (project_id) REFERENCES projects(project_id)
-        )"
-        );
+        $this->pdo = DbConnection::get();
+        $this->pdo->exec(SchemaLoader::loadTable('projects'));
+        $this->pdo->exec(SchemaLoader::loadTable('tasks'));
 
         // Clear cache before each test
         EntityCache::clear();
@@ -196,13 +179,7 @@ class CustomLoaderTest extends TestCase
         $container->set(InvalidProjectRepository::class, $invalidRepo);
         $container->set(TaskRepository::class, $taskRepo);
 
-        // Create table
-        $this->pdo->exec(
-            "CREATE TABLE invalid_projects (
-            project_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL
-        )"
-        );
+        $this->pdo->exec(SchemaLoader::loadTable('invalid_projects'));
 
         $project = $invalidRepo->create([
             'name' => 'Project 1'

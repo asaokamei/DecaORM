@@ -3,6 +3,8 @@
 namespace WScore\DecaORM\Tests\Fixtures\Relations;
 
 use PDO;
+use WScore\DecaORM\Tests\Support\DbConnection;
+use WScore\DecaORM\Tests\Support\SchemaLoader;
 use Psr\Log\LoggerInterface;
 use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\OrmManager;
@@ -21,8 +23,7 @@ class RelationsFixture
     public static function create(?LoggerInterface $logger = null, int $slowQueryThresholdMs = 100): self
     {
         $fixture = new self();
-        $fixture->pdo = new PDO('sqlite::memory:');
-        $fixture->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $fixture->pdo = DbConnection::get();
         $fixture->container = new TestContainer();
         $fixture->container->set(PDO::class, $fixture->pdo);
         $fixture->manager = OrmManager::initialize($fixture->container);
@@ -31,8 +32,9 @@ class RelationsFixture
         }
         $fixture->manager->setSlowQueryThresholdMs($slowQueryThresholdMs);
 
-        foreach (self::schemaFiles() as $file) {
-            $sql = file_get_contents($file);
+        $schemaDir = SchemaLoader::getSchemaDir();
+        foreach (self::schemaFileNames() as $name) {
+            $sql = file_get_contents($schemaDir . '/' . $name);
             if ($sql !== false) {
                 $fixture->pdo->exec($sql);
             }
@@ -58,17 +60,15 @@ class RelationsFixture
     /**
      * @return list<string>
      */
-    private static function schemaFiles(): array
+    private static function schemaFileNames(): array
     {
-        $base = __DIR__ . '/Sql';
-
         return [
-            $base . '/users.sql',
-            $base . '/posts.sql',
-            $base . '/comments.sql',
-            $base . '/profiles.sql',
-            $base . '/roles.sql',
-            $base . '/user_role.sql',
+            'users.sql',
+            'posts.sql',
+            'comments.sql',
+            'profiles.sql',
+            'roles.sql',
+            'user_role.sql',
         ];
     }
 }

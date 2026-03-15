@@ -12,6 +12,8 @@ use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Support\SpyUserRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\User;
 use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
+use WScore\DecaORM\Tests\Support\DbConnection;
+use WScore\DecaORM\Tests\Support\SchemaLoader;
 
 final class DirtyTrackingTest extends TestCase
 {
@@ -20,18 +22,8 @@ final class DirtyTrackingTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->pdo = new PDO('sqlite::memory:');
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        $this->pdo->exec(
-            "CREATE TABLE users (
-                user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_name TEXT NOT NULL,
-                email TEXT NOT NULL,
-                created_at TEXT,
-                updated_at TEXT
-            )"
-        );
+        $this->pdo = DbConnection::get();
+        $this->pdo->exec(SchemaLoader::loadTable('users'));
 
         EntityCache::clear();
 

@@ -17,6 +17,8 @@ use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Trait\EntityTrait;
 use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
+use WScore\DecaORM\Tests\Support\DbConnection;
+use WScore\DecaORM\Tests\Support\SchemaLoader;
 
 // Test entities for HasMany::loader
 #[Table('projects')]
@@ -130,28 +132,9 @@ class HasManyLoaderTest extends TestCase
 
     protected function setUp(): void
     {
-        // In-memory SQLite database for testing
-        $this->pdo = new PDO('sqlite::memory:');
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        // Create projects table
-        $this->pdo->exec(
-            "CREATE TABLE projects (
-            project_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL
-        )"
-        );
-
-        // Create tasks table with created_at
-        $this->pdo->exec(
-            "CREATE TABLE tasks (
-            task_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id INTEGER NOT NULL,
-            title TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            FOREIGN KEY (project_id) REFERENCES projects(project_id)
-        )"
-        );
+        $this->pdo = DbConnection::get();
+        $this->pdo->exec(SchemaLoader::loadTable('projects'));
+        $this->pdo->exec(SchemaLoader::loadTable('tasks'));
 
         // Clear cache before each test
         EntityCache::clear();
