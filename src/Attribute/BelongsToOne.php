@@ -3,6 +3,7 @@
 namespace WScore\DecaORM\Attribute;
 
 use Attribute;
+use WScore\DecaORM\Contracts\EntityInterface;
 
 /**
  * BelongsTo relationship attribute
@@ -32,6 +33,17 @@ class BelongsToOne
         public string $foreignKey,
         public ?string $inversedBy = null
     ) {
+    }
+
+    /**
+     * Sets the relation property and foreign key on the owning entity only.
+     * Does not update inversedBy / inverse collections; that is handled at a higher level.
+     */
+    public function associate(EntityInterface $entity, ?EntityInterface $target): void
+    {
+        $entity->setRaw($this->propertyName, $target);
+        $id = $target?->getId();
+        $entity->setRaw($this->foreignKey, $id !== null ? (string) $id : null);
     }
 }
 

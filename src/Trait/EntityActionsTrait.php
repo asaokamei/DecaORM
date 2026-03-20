@@ -126,9 +126,8 @@ trait EntityActionsTrait
     /**
      * Associates a BelongsTo/BelongsToOne relation.
      *
-     * - Sets relation property (e.g. $this->user)
-     * - Sets foreign key property (e.g. $this->user_id)
-     * - If inversedBy points to a HasMany collection, updates it on both sides
+     * Delegates owning-side assignment to the attribute's {@see BelongsTo::associate} /
+     * {@see BelongsToOne::associate}, then updates inverse HasMany collections when inversedBy is set.
      */
     protected function associateBelongsTo(string $relationName, ?EntityInterface $target): void
     {
@@ -143,13 +142,7 @@ trait EntityActionsTrait
             return;
         }
 
-        // In this ORM, relation foreignKey is a property name (used with getRaw/setRaw).
-        $fkProp = $relation->foreignKey;
-
-        // Set new relation + FK
-        $this->setRaw($relationName, $target);
-        $id = $target?->getId();
-        $this->setRaw($fkProp, $id !== null ? (string) $id : null);
+        $relation->associate($this, $target);
 
         // Update inverse HasMany, if configured.
         if ($relation->inversedBy === null) {
@@ -176,9 +169,8 @@ trait EntityActionsTrait
     /**
      * Associates a HasOne relation (one-to-one, inverse side).
      *
-     * - Sets relation property on this entity (e.g. $this->profile)
-     * - Updates the target entity's BelongsTo/BelongsToOne (mappedBy) + its foreign key property
-     * - Keeps inverse properties consistent only when already loaded (no DB loads in setters)
+     * Owning-side property is set via {@see HasOne::associate}; this method then syncs the target's
+     * mappedBy BelongsTo/BelongsToOne and FK (see {@see syncMappedBelongsToOnTarget}).
      */
     protected function associateHasOne(string $relationName, ?EntityInterface $target): void
     {
@@ -193,8 +185,7 @@ trait EntityActionsTrait
             return;
         }
 
-        // Set the relation on this entity first.
-        $this->setRaw($relationName, $target);
+        $relation->associate($this, $target);
 
         $mappedBy = $relation->mappedBy;
 
@@ -210,11 +201,39 @@ trait EntityActionsTrait
     }
 
     /**
+     * Builds a filtered {@see EntityCollection} for in-memory HasMany association.
+     * Placed here for now; a more specific home may be chosen later.
+     *
+     * @param iterable<EntityInterface>|EntityCollection $children
+     */
+    protected function normalizeHasManyChildren(
+        RepositoryInterface $ownerRepo,
+        HasMany $relation,
+        iterable|EntityCollection $children
+    ): EntityCollection {
+        $targetRepo = $relation->targetEntity ? $ownerRepo->getRepository($relation->targetEntity) : $ownerRepo;
+        $newChildren = $children instanceof EntityCollection
+            ? $children
+            : new EntityCollection(
+                is_array($children) ? $children : iterator_to_array($children),
+                $targetRepo
+            );
+
+        $filtered = [];
+        foreach ($newChildren as $c) {
+            if ($c instanceof EntityInterface) {
+                $filtered[] = $c;
+            }
+        }
+
+        return new EntityCollection($filtered, $targetRepo);
+    }
+
+    /**
      * Associates a HasMany relation (one-to-many, inverse side).
      *
-     * - Sets relation property on this entity to an EntityCollection
-     * - Updates each child entity's BelongsTo/BelongsToOne (mappedBy) + its foreign key property
-     * - Keeps things in-memory only (no DB loads in setters)
+     * Collection shape is built via {@see self::normalizeHasManyChildren} and assigned with
+     * {@see HasMany::associate}; this method detaches removed children and attaches mappedBy on each child.
      *
      * @param string $relationName HasMany property name on this entity (e.g. 'posts')
      * @param iterable<EntityInterface>|EntityCollection|null $children
@@ -231,7 +250,6 @@ trait EntityActionsTrait
         $current = $this->getRaw($relationName);
 
         if ($children === null) {
-            // Clear relation: detach all current children, then set to null
             if ($current instanceof EntityCollection) {
                 foreach ($current as $oldChild) {
                     if ($oldChild instanceof EntityInterface) {
@@ -239,29 +257,13 @@ trait EntityActionsTrait
                     }
                 }
             }
-            $this->setRaw($relationName, null);
+            $relation->associate($this, null);
             return;
         }
 
-        $targetRepo = $relation->targetEntity ? $repo->getRepository($relation->targetEntity) : $repo;
-        $newChildren = $children instanceof EntityCollection
-            ? $children
-            : new EntityCollection(
-                is_array($children) ? $children : iterator_to_array($children),
-                $targetRepo
-            );
-
-        // Filter invalid items defensively
-        $filtered = [];
-        foreach ($newChildren as $c) {
-            if ($c instanceof EntityInterface) {
-                $filtered[] = $c;
-            }
-        }
-        $newChildren = new EntityCollection($filtered, $targetRepo);
+        $newChildren = $this->normalizeHasManyChildren($repo, $relation, $children);
 
         if ($current instanceof EntityCollection) {
-            // Detach children that are no longer present
             foreach ($current as $oldChild) {
                 if (!$oldChild instanceof EntityInterface) {
                     continue;
@@ -272,10 +274,8 @@ trait EntityActionsTrait
             }
         }
 
-        // Set collection on this entity
-        $this->setRaw($relationName, $newChildren);
+        $relation->associate($this, $newChildren);
 
-        // Attach/update all children
         foreach ($newChildren as $child) {
             if (!$child instanceof EntityInterface) {
                 continue;
@@ -287,8 +287,8 @@ trait EntityActionsTrait
     /**
      * Associates a ManyToMany relation on the entity side (in-memory only).
      *
-     * Sets the in-memory collection; does not write to the join table.
-     * Use repository's syncManyToMany() to persist join-table changes.
+     * Delegates to {@see ManyToMany::associate}. Does not write the join table; use the repository's
+     * syncManyToMany() to persist join-table changes.
      *
      * @param string $relationName ManyToMany property name on this entity (e.g. 'roles')
      * @param iterable<EntityInterface>|EntityCollection|null $targets
@@ -301,52 +301,7 @@ trait EntityActionsTrait
             throw new \RuntimeException('associateManyToMany requires ManyToMany: ' . $relationName);
         }
 
-        if ($targets === null) {
-            $this->setRaw($relationName, null);
-            return;
-        }
-
-        $targetRepo = $relation->targetEntity ? $repo->getRepository($relation->targetEntity) : null;
-
-        $list = [];
-        if ($targets instanceof EntityCollection) {
-            foreach ($targets as $t) {
-                if ($t instanceof EntityInterface) {
-                    $list[] = $t;
-                }
-            }
-        } elseif ($targets !== null) {
-            foreach ($targets as $t) {
-                if ($t instanceof EntityInterface) {
-                    $list[] = $t;
-                }
-            }
-        }
-
-        // De-duplicate by reference or ID
-        $seenRef = [];
-        $seenId = [];
-        $list2 = [];
-        foreach ($list as $t) {
-            $id = $t->getId();
-            if ($id !== null) {
-                if (isset($seenId[(string) $id])) {
-                    continue;
-                }
-                $seenId[(string) $id] = true;
-            } else {
-                // avoid duplicate references for unsaved entities
-                $hash = spl_object_hash($t);
-                if (isset($seenRef[$hash])) {
-                    continue;
-                }
-                $seenRef[$hash] = true;
-            }
-            $list2[] = $t;
-        }
-
-        $collection = new EntityCollection($list2, $targetRepo);
-        $this->setRaw($relationName, $collection);
+        $relation->associate($repo, $this, $targets);
     }
 
     /**
