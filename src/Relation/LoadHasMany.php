@@ -97,7 +97,7 @@ class LoadHasMany
         } else {
             // Batch load all children using WHERE IN
             $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
-            [$parentIds, ] = self::collectEntityIds($parentEntities);
+            $parentIds = array_keys((new EntityCollection($parentEntities))->getIdMap());
             $foreignKey = $targetRepository->getHydrator()->getColumnNameForProperty($childRelation->foreignKey)
                 ?? $childRelation->foreignKey;
             $query = $targetRepository->sqlQuery()
@@ -134,9 +134,10 @@ class LoadHasMany
         $childRelation = $targetRepository->getRelation($relation->mappedBy);
         $loadedChildren = $loadedChildren instanceof EntityCollection ? $loadedChildren : new EntityCollection($loadedChildren, $targetRepository);
         
-        // Collect parent IDs
-        [$parentIds, $parentMap] = self::collectEntityIds($parentEntities);
-        
+        $parentColl = new EntityCollection($parentEntities);
+        $parentMap = $parentColl->getIdMap();
+        $parentIds = array_keys($parentMap);
+
         if (empty($parentIds)) {
             foreach ($parentEntities as $parentEntity) {
                 $parentEntity->setRaw($parentProperty, new EntityCollection([], $targetRepository));
@@ -144,13 +145,13 @@ class LoadHasMany
             return [];
         }
         
-        // Group loaded children by parent ID using foreign key
-        $childrenByParentId = self::groupEntitiesByForeignKey($loadedChildren->getEntities(), $childRelation->foreignKey);
-        
-        // Set children for each parent entity and set bidirectional links
+        $childrenByParentId = $loadedChildren->groupByNonNullProperty($childRelation->foreignKey);
+
         $allChildren = [];
         foreach ($parentMap as $parentId => $entity) {
-            $childrenForParent = $childrenByParentId[$parentId] ?? [];
+            $childrenForParent = isset($childrenByParentId[$parentId])
+                ? $childrenByParentId[$parentId]->getEntities()
+                : [];
             
             // Set bidirectional link (child -> parent)
             foreach ($childrenForParent as $child) {

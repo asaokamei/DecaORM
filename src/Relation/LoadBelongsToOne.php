@@ -11,7 +11,6 @@ use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class LoadBelongsToOne
 {
-    use RelationTrait;
     use RelationBelongsToTrait;
 
     /**

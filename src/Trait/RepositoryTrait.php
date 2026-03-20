@@ -28,7 +28,6 @@ use WScore\DecaORM\Relation\LoadCustomLoader;
 use WScore\DecaORM\Relation\LoadHasMany;
 use WScore\DecaORM\Relation\LoadHasOne;
 use WScore\DecaORM\Relation\LoadManyToMany;
-use WScore\DecaORM\Relation\RelationTrait;
 use WScore\DecaORM\Contracts\RepositoryInterface;
 use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Sql\Insert;
@@ -41,8 +40,6 @@ use WScore\DecaORM\Sql\Delete;
  */
 trait RepositoryTrait
 {
-    use RelationTrait;
-    
     protected OrmManager $manager;
     protected PDO $db;
     protected HydratorInterface $hydrator;

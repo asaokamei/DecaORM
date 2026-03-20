@@ -9,7 +9,6 @@ use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class LoadBelongsTo
 {
-    use RelationTrait;
     use RelationBelongsToTrait;
 
     /**

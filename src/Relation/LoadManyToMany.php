@@ -11,8 +11,6 @@ use WScore\DecaORM\Sql\QueryBuilder;
 
 class LoadManyToMany
 {
-    use RelationTrait;
-
     /**
      * Load ManyToMany relation for single entity or multiple entities.
      * 
@@ -104,8 +102,9 @@ class LoadManyToMany
 
         $propertyName = $relation->propertyName;
 
-        // Collect entity IDs (skip null IDs)
-        [$entityIds, $entityMap] = self::collectEntityIds($entities);
+        $sourceColl = new EntityCollection($entities);
+        $entityMap = $sourceColl->getIdMap();
+        $entityIds = array_keys($entityMap);
 
         if (empty($entityIds)) {
             // Set empty arrays for all entities
@@ -139,8 +138,7 @@ class LoadManyToMany
         }
         $targetEntities = $query->getResult();
 
-        // Create a map of target entity ID => target entity
-        $targetEntityMap = self::createEntityMap($targetEntities->getEntities());
+        $targetEntityMap = $targetEntities->getIdMap();
 
         // Group target entities by source entity ID
         $relatedIdsByEntityId = self::groupRelatedIdsByEntityId(
@@ -179,9 +177,7 @@ class LoadManyToMany
             }
         }
 
-        // Remove duplicates based on entity ID
-        $uniqueTargetEntities = self::createEntityMap($allTargetEntities);
-        return array_values($uniqueTargetEntities);
+        return array_values((new EntityCollection($allTargetEntities, $targetRepository))->getIdMap());
     }
 
     /**
