@@ -15,9 +15,11 @@ final class SpyActionUserRepository extends ActionUserRepository
     public ?string $loadRelationName = null;
     public Collection|EntityCollection|null $loadReturn = null;
 
-    public function load(EntityInterface|array $entities, string $relationName): Collection|EntityCollection
+    public function load(EntityInterface|array|EntityCollection $entities, string $relationName): Collection|EntityCollection
     {
-        $this->loadEntity = is_array($entities) ? ($entities[0] ?? null) : $entities;
+        $this->loadEntity = $entities instanceof EntityCollection
+            ? $entities->first()
+            : (is_array($entities) ? ($entities[0] ?? null) : $entities);
         $this->loadRelationName = $relationName;
         $this->loadReturn = $this->loadReturn ?? new Collection([]);
         return $this->loadReturn;

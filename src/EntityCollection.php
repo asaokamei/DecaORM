@@ -169,7 +169,7 @@ class EntityCollection extends Collection
 
         $relatedEntities = [];
         foreach (array_chunk($this->items, $chunkSize) as $chunk) {
-            $collection = $repository->load($chunk, $propertyName);
+            $collection = $repository->load(new EntityCollection($chunk, $repository), $propertyName);
             $relatedEntities = array_merge($relatedEntities, $collection->getEntities());
         }
 

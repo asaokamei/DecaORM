@@ -14,14 +14,14 @@ class LoadHasOne
     /**
      * Load HasOne relation for single entity or multiple entities.
      * 
-     * @param \WScore\DecaORM\Contracts\EntityInterface|array<\WScore\DecaORM\Contracts\EntityInterface> $entities
+     * @param EntityInterface|EntityCollection<EntityInterface> $entities
      * @param HasOne $parentRelation
      * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
      * @param \WScore\DecaORM\Contracts\RepositoryInterface|null $sourceRepository The repository for the source entities (needed for loader)
      * @return \WScore\DecaORM\Contracts\EntityInterface[] All loaded children entities (array with 0 or 1 element per parent)
      */
     public static function load(
-        EntityInterface|array $entities,
+        EntityInterface|EntityCollection $entities,
         HasOne $parentRelation,
         RepositoryInterface $targetRepository,
         ?RepositoryInterface $sourceRepository = null
@@ -29,11 +29,20 @@ class LoadHasOne
 
         $loader = self::getLoader($parentRelation, $sourceRepository);
 
-        if (is_array($entities)) {
-            return self::loadBatch($entities, $parentRelation, $targetRepository, $loader);
-        }        
-        // Single entity
-        return self::loadSingle($entities, $parentRelation, $targetRepository, $loader);
+        if ($entities instanceof EntityInterface) {
+            return self::loadSingle($entities, $parentRelation, $targetRepository, $loader);
+        }
+        if (count($entities) === 0) {
+            return [];
+        }
+        if (count($entities) === 1) {
+            $first = $entities->first();
+            if (!$first instanceof EntityInterface) {
+                return [];
+            }
+            return self::loadSingle($first, $parentRelation, $targetRepository, $loader);
+        }
+        return self::loadBatch($entities, $parentRelation, $targetRepository, $loader);
     }
 
     /**
@@ -74,19 +83,19 @@ class LoadHasOne
     /**
      * Batch load HasOne relations for multiple entities.
      *
-     * @param array<\WScore\DecaORM\Contracts\EntityInterface> $parentEntities
+     * @param EntityCollection<EntityInterface> $parentEntities
      * @param HasOne $parentRelation
      * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
      * @param callable|null $loader
      * @return \WScore\DecaORM\Contracts\EntityInterface[] All loaded children entities (array with 0 or 1 element per parent)
      */
     public static function loadBatch(
-        array $parentEntities,
+        EntityCollection $parentEntities,
         HasOne $parentRelation,
         RepositoryInterface $targetRepository,
         ?callable $loader = null
     ): array {
-        if (empty($parentEntities)) {
+        if (count($parentEntities) === 0) {
             return [];
         }
 
@@ -97,7 +106,7 @@ class LoadHasOne
         } else {
             // Batch load all children using WHERE IN
             $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
-            $parentIds = array_keys((new EntityCollection($parentEntities))->getIdMap());
+            $parentIds = array_keys($parentEntities->getIdMap());
             $foreignKey = $targetRepository->getHydrator()->getColumnNameForProperty($childRelation->foreignKey)
                 ?? $childRelation->foreignKey;
             $query = $targetRepository->sqlQuery()
@@ -113,25 +122,23 @@ class LoadHasOne
      * Apply loader result for HasOne relation.
      * Groups loaded entities by parent ID using foreign key and set them on parent entities.
      * 
-     * @param EntityInterface|array<\WScore\DecaORM\Contracts\EntityInterface> $parentEntities
-     * @param array<\WScore\DecaORM\Contracts\EntityInterface> $loadedChildren
+     * @param EntityCollection<EntityInterface> $parentEntities
+     * @param EntityCollection|array<\WScore\DecaORM\Contracts\EntityInterface> $loadedChildren
      * @param HasOne $relation
      * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
      * @return \WScore\DecaORM\Contracts\EntityInterface[] All loaded children entities
      */
     public static function applyLoaderResult(
-        EntityInterface|array $parentEntities,
+        EntityCollection $parentEntities,
         EntityCollection|array $loadedChildren,
         HasOne $relation,
         RepositoryInterface $targetRepository
     ): array {
-        $parentEntities = is_array($parentEntities) ? $parentEntities : [$parentEntities];
         $parentProperty = $relation->propertyName;
         $childProperty = $relation->mappedBy;
         $childRelation = $targetRepository->getRelation($relation->mappedBy);
         
-        $parentColl = new EntityCollection($parentEntities);
-        $parentMap = $parentColl->getIdMap();
+        $parentMap = $parentEntities->getIdMap();
         $parentIds = array_keys($parentMap);
 
         if (empty($parentIds)) {

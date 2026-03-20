@@ -13,14 +13,14 @@ class LoadHasMany
     /**
      * Load HasMany relation for single entity or multiple entities.
      * 
-     * @param EntityInterface|array<\WScore\DecaORM\Contracts\EntityInterface> $entities
+     * @param EntityInterface|EntityCollection<EntityInterface> $entities
      * @param HasMany $parentRelation
      * @param RepositoryInterface $targetRepository
      * @param RepositoryInterface|null $sourceRepository The repository for the source entities (needed for loader)
      * @return EntityInterface[] All loaded children entities
      */
     public static function load(
-        EntityInterface|array $entities,
+        EntityInterface|EntityCollection $entities,
         HasMany $parentRelation,
         RepositoryInterface $targetRepository,
         ?RepositoryInterface $sourceRepository = null
@@ -28,11 +28,20 @@ class LoadHasMany
 
         $loader = self::getLoader($parentRelation, $sourceRepository);
 
-        if (is_array($entities)) {
-            return self::loadBatch($entities, $parentRelation, $targetRepository, $loader);
+        if ($entities instanceof EntityInterface) {
+            return self::loadSingle($entities, $parentRelation, $targetRepository, $loader);
         }
-        // Single entity
-        return self::loadSingle($entities, $parentRelation, $targetRepository, $loader);
+        if (count($entities) === 0) {
+            return [];
+        }
+        if (count($entities) === 1) {
+            $first = $entities->first();
+            if (!$first instanceof EntityInterface) {
+                return [];
+            }
+            return self::loadSingle($first, $parentRelation, $targetRepository, $loader);
+        }
+        return self::loadBatch($entities, $parentRelation, $targetRepository, $loader);
     }
 
     /**
@@ -74,19 +83,19 @@ class LoadHasMany
     /**
      * Batch load HasMany relations for multiple entities.
      *
-     * @param array<EntityInterface> $parentEntities
+     * @param EntityCollection<EntityInterface> $parentEntities
      * @param HasMany $parentRelation
      * @param RepositoryInterface $targetRepository
      * @param callable|null $loader
      * @return EntityInterface[] All loaded children entities
      */
     public static function loadBatch(
-        array $parentEntities,
+        EntityCollection $parentEntities,
         HasMany $parentRelation,
         RepositoryInterface $targetRepository,
         ?callable $loader = null
     ): array {
-        if (empty($parentEntities)) {
+        if (count($parentEntities) === 0) {
             return [];
         }
 
@@ -97,7 +106,7 @@ class LoadHasMany
         } else {
             // Batch load all children using WHERE IN
             $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
-            $parentIds = array_keys((new EntityCollection($parentEntities))->getIdMap());
+            $parentIds = array_keys($parentEntities->getIdMap());
             $foreignKey = $targetRepository->getHydrator()->getColumnNameForProperty($childRelation->foreignKey)
                 ?? $childRelation->foreignKey;
             $query = $targetRepository->sqlQuery()
@@ -116,26 +125,24 @@ class LoadHasMany
      * Apply loader result for HasMany relation.
      * Groups loaded entities by parent ID using foreign key and set them on parent entities.
      * 
-     * @param EntityInterface|array<EntityInterface> $parentEntities
-     * @param array<EntityInterface> $loadedChildren
+     * @param EntityCollection<EntityInterface> $parentEntities
+     * @param EntityCollection|array<EntityInterface> $loadedChildren
      * @param HasMany $relation
      * @param RepositoryInterface $targetRepository
      * @return EntityInterface[] All loaded children entities
      */
     public static function applyLoaderResult(
-        EntityInterface|array $parentEntities,
+        EntityCollection $parentEntities,
         EntityCollection|array $loadedChildren,
         HasMany $relation,
         RepositoryInterface $targetRepository
     ): array {
-        $parentEntities = is_array($parentEntities) ? $parentEntities : [$parentEntities];
         $parentProperty = $relation->propertyName;
         $childProperty = $relation->mappedBy;
         $childRelation = $targetRepository->getRelation($relation->mappedBy);
         $loadedChildren = $loadedChildren instanceof EntityCollection ? $loadedChildren : new EntityCollection($loadedChildren, $targetRepository);
         
-        $parentColl = new EntityCollection($parentEntities);
-        $parentMap = $parentColl->getIdMap();
+        $parentMap = $parentEntities->getIdMap();
         $parentIds = array_keys($parentMap);
 
         if (empty($parentIds)) {
@@ -164,7 +171,7 @@ class LoadHasMany
             $allChildren = array_merge($allChildren, $childrenForParent);
         }
         
-        // Set empty arrays for entities that had no children
+        // Set empty collections for entities that had no children
         foreach ($parentEntities as $parentEntity) {
             if ($parentEntity->getRaw($parentProperty) === null) {
                 $parentEntity->setRaw($parentProperty, new EntityCollection([], $targetRepository));

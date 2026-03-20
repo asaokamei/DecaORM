@@ -39,10 +39,10 @@ trait RelationBelongsToTrait
      *
      * @param EntityCollection $parents A collection of potential parent entities.
      * @param BelongsTo|BelongsToOne $childRelation The relationship definition linking child to parent.
-     * @param array $childEntities An array of child entities to link to their respective parents.
+     * @param EntityCollection<EntityInterface> $childEntities Child entities to link to their respective parents.
      * @return array An array of parent entities that were successfully linked to child entities.
      */
-    public static function getParents(EntityCollection $parents, BelongsTo|BelongsToOne $childRelation, array $childEntities): array
+    public static function getParents(EntityCollection $parents, BelongsTo|BelongsToOne $childRelation, EntityCollection $childEntities): array
     {
         // Set parent for each child entity
         // Note: BelongsTo does not set child on parent (parent may have HasMany, which is dangerous)
