@@ -169,7 +169,7 @@ class EntityCollectionTest extends TestCase
 
         EntityCache::clear();
 
-        $users = $userRepo->sqlQuery()->getCollection();
+        $users = $userRepo->sqlQuery()->getResult();
         $this->assertEquals(2, $users->count());
         $this->assertEquals([1, 2], $users->getIds());
         $this->assertEquals(['Alice', 'Bob'], $users->getValues('name'));
@@ -308,7 +308,7 @@ class EntityCollectionTest extends TestCase
 
         $user1 = $userRepo->create(['name' => 'Alice', 'email' => 'alice@example.com']);
         $userRepo->save($user1);
-        $users = $userRepo->sqlQuery()->getCollection();
+        $users = $userRepo->sqlQuery()->getResult();
 
         $restored = unserialize(serialize($users));
         $this->assertCount(1, $restored);

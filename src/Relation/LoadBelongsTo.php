@@ -81,7 +81,7 @@ class LoadBelongsTo
         $parents = $targetRepository
             ->sqlQuery()
             ->whereIn($targetRepository->getHydrator()->getPrimaryKeyColumn(), $parentIds)
-            ->getCollection();
+            ->getResult();
         $allParents = self::getParents($parents, $childRelation, $children);
 
         return array_unique($allParents, SORT_REGULAR);
