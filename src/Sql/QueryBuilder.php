@@ -12,9 +12,13 @@ class QueryBuilder
     private string $fromTable = '';
     private array $joins = [];
     private string $withSql = '';
+    private array $groupBys = [];
+    /** @var array<string> HAVING fragments (same AND style as WHERE) */
+    private array $havings = [];
     private ?string $orderBy = null;
     private ?int $offset = null;
     private ?int $limit = null;
+    private bool $forUpdate = false;
 
     public function select(string ...$columns): static
     {
@@ -71,6 +75,55 @@ class QueryBuilder
         return $this;
     }
 
+    /**
+     * @param string ...$columns Column expressions (e.g. 'u.id', 'DATE(created_at)').
+     */
+    public function groupBy(string ...$columns): static
+    {
+        foreach ($columns as $column) {
+            $this->groupBys[] = $column;
+        }
+        return $this;
+    }
+
+    /**
+     * HAVING condition with bound value (placeholder generated like WHERE).
+     */
+    public function having(string $column, mixed $value, string $operator = '='): static
+    {
+        $placeholder = $this->createPlaceholder('having_' . $column);
+        $this->havings[] = "{$column} {$operator} :{$placeholder}\n";
+        $this->parameters[$placeholder] = $value;
+        return $this;
+    }
+
+    /**
+     * Raw HAVING fragment with optional bound parameters (merged into the query parameter bag).
+     */
+    public function havingRaw(string $sql_snippet, array $bindings = []): static
+    {
+        $this->havings[] = $sql_snippet . "\n";
+        $this->parameters = array_merge($this->parameters, $bindings);
+        return $this;
+    }
+
+    /**
+     * Append FOR UPDATE (row lock). Supported by PostgreSQL, MySQL, etc. Not supported by SQLite.
+     */
+    public function forUpdate(bool $on = true): static
+    {
+        $this->forUpdate = $on;
+        return $this;
+    }
+
+    protected function buildHavingClause(): string
+    {
+        if ($this->havings === []) {
+            return '';
+        }
+        return implode('  AND ', $this->havings);
+    }
+
     // --- SQLとパラメーターの取得 ---
 
     /**
@@ -106,6 +159,15 @@ class QueryBuilder
             $sql .= "WHERE {$whereClause}" . "\n";
         }
 
+        if ($this->groupBys !== []) {
+            $sql .= 'GROUP BY ' . implode(', ', $this->groupBys) . "\n";
+        }
+
+        $havingClause = $this->buildHavingClause();
+        if ($havingClause !== '') {
+            $sql .= "HAVING {$havingClause}\n";
+        }
+
         // ORDER BY
         if ($this->orderBy) {
             $sql .= "ORDER BY {$this->orderBy}" . "\n";
@@ -116,6 +178,10 @@ class QueryBuilder
         }
         if (isset($this->offset) && $this->offset > 0) {
             $sql .= "OFFSET {$this->offset}" . "\n";
+        }
+
+        if ($this->forUpdate) {
+            $sql .= "FOR UPDATE\n";
         }
 
         // 最終的な SQL 文字列に対してIN句の展開マーカーを置換

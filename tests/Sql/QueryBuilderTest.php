@@ -148,4 +148,76 @@ END_SQL;
         $this->assertStringContainsString('INNER JOIN orders o', $sql);
         $this->assertStringContainsString('WHERE', $sql);
     }
+
+    public function testGroupByAndHaving(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->select('status', 'COUNT(*) AS cnt')
+            ->from('users')
+            ->where('active', 1)
+            ->groupBy('status')
+            ->having('cnt', 5, '>')
+            ->orderBy('status')
+            ->getSql();
+
+        $this->assertStringContainsString('GROUP BY status', $sql);
+        $this->assertStringContainsString('HAVING', $sql);
+        $this->assertStringContainsString('cnt > :', $sql);
+        $this->assertMatchesRegularExpression('/WHERE.*GROUP BY/s', $sql);
+        $this->assertMatchesRegularExpression('/GROUP BY.*HAVING/s', $sql);
+        $this->assertMatchesRegularExpression('/HAVING.*ORDER BY/s', $sql);
+
+        $params = $builder->getParameters();
+        $this->assertContains(5, $params);
+        $this->assertContains(1, $params);
+    }
+
+    public function testGroupByMultipleCallsAndColumns(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->groupBy('country', 'city')
+            ->groupBy('status')
+            ->getSql();
+
+        $this->assertStringContainsString('GROUP BY country, city, status', $sql);
+    }
+
+    public function testHavingRawMergesBindings(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->groupBy('role')
+            ->havingRaw('COUNT(*) >= :min_count', ['min_count' => 10])
+            ->getSql();
+
+        $this->assertStringContainsString('HAVING COUNT(*) >= :min_count', $sql);
+        $this->assertSame(10, $builder->getParameters()['min_count']);
+    }
+
+    public function testForUpdateAppendedAfterLimit(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->where('id', 1)
+            ->limit(1)
+            ->forUpdate()
+            ->getSql();
+
+        $this->assertStringContainsString('LIMIT 1', $sql);
+        $this->assertStringEndsWith("FOR UPDATE\n", $sql);
+        $this->assertMatchesRegularExpression('/LIMIT\s+1\s*\n\s*FOR UPDATE\s*$/', $sql);
+    }
+
+    public function testForUpdateFalseOmitsClause(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder->from('users')->forUpdate(true)->forUpdate(false)->getSql();
+
+        $this->assertStringNotContainsString('FOR UPDATE', $sql);
+    }
 }
