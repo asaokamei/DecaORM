@@ -3,6 +3,7 @@
 namespace WScore\DecaORM\Tests\Fixtures;
 
 use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\EntityCollection;
 
 /**
  * Test stub implementing EntityInterface.
@@ -35,5 +36,10 @@ class TestEntity implements EntityInterface
     public function setRaw(string $name, mixed $value): void
     {
         $this->data[$name] = $value;
+    }
+
+    public function associate(string $relationName, EntityInterface|iterable|EntityCollection|null $targetOrTargets): void
+    {
+        throw new \BadMethodCallException('TestEntity does not support associate()');
     }
 }

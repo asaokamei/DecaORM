@@ -139,24 +139,32 @@ trait EntityActionsTrait
 
         $relation->associate($this, $target);
 
-        // Update inverse HasMany, if configured.
+        // Keep inverse side in memory when already loaded (HasMany collection or HasOne single ref).
         if ($relation->inversedBy === null) {
             return;
         }
         $inverseName = $relation->inversedBy;
 
-        // If inverse collection is already loaded, keep it consistent in-memory.
-        // (Avoid triggering DB loads here; setters should not cause queries.)
         if ($current instanceof EntityInterface) {
             $inverse = $current->getRaw($inverseName);
-            if ($inverse instanceof EntityCollection) {
-                $inverse->delEntity($this);
+            $inverseRel = OrmManager::getRepository($current::getRepositoryClass())->getRelation($inverseName);
+            if ($inverseRel instanceof HasMany || $inverseRel instanceof ManyToMany) {
+                if ($inverse instanceof EntityCollection) {
+                    $inverse->delEntity($this);
+                }
+            } elseif ($inverse === $this) {
+                $current->setRaw($inverseName, null);
             }
         }
         if ($target instanceof EntityInterface) {
             $inverse = $target->getRaw($inverseName);
-            if ($inverse instanceof EntityCollection && !$inverse->hasEntity($this)) {
-                $inverse->add($this);
+            $inverseRel = OrmManager::getRepository($target::getRepositoryClass())->getRelation($inverseName);
+            if ($inverseRel instanceof HasMany || $inverseRel instanceof ManyToMany) {
+                if ($inverse instanceof EntityCollection && !$inverse->hasEntity($this)) {
+                    $inverse->add($this);
+                }
+            } elseif ($inverse === null || $inverse === $this) {
+                $target->setRaw($inverseName, $this);
             }
         }
     }
@@ -164,8 +172,8 @@ trait EntityActionsTrait
     /**
      * Associates a HasOne relation (one-to-one, inverse side).
      *
-     * Owning-side property is set via {@see HasOne::associate}; this method then syncs the target's
-     * mappedBy BelongsTo/BelongsToOne and FK (see {@see syncMappedBelongsToOnTarget}).
+     * Owning-side property is set via {@see HasOne::associate}; the target's owning BelongsTo is updated
+     * via the target entity's {@see associate()} so inverse handling stays in one place.
      */
     protected function associateHasOne(HasOne $relation, ?EntityInterface $target): void
     {
@@ -179,14 +187,12 @@ trait EntityActionsTrait
 
         $mappedBy = $relation->mappedBy;
 
-        // Detach current target (if any)
         if ($current instanceof EntityInterface) {
-            self::syncMappedBelongsToOnTarget(target: $current, mappedBy: $mappedBy, parent: null);
+            $current->associate($mappedBy, null);
         }
 
-        // Attach new target (if any)
         if ($target instanceof EntityInterface) {
-            self::syncMappedBelongsToOnTarget(target: $target, mappedBy: $mappedBy, parent: $this);
+            $target->associate($mappedBy, $this);
         }
     }
 
@@ -223,7 +229,7 @@ trait EntityActionsTrait
      * Associates a HasMany relation (one-to-many, inverse side).
      *
      * Collection shape is built via {@see self::normalizeHasManyChildren} and assigned with
-     * {@see HasMany::associate}; this method detaches removed children and attaches mappedBy on each child.
+     * {@see HasMany::associate}; children update their owning BelongsTo via {@see associate()}.
      *
      * @param iterable<EntityInterface>|EntityCollection|null $children
      */
@@ -238,7 +244,7 @@ trait EntityActionsTrait
             if ($current instanceof EntityCollection) {
                 foreach ($current as $oldChild) {
                     if ($oldChild instanceof EntityInterface) {
-                        self::syncMappedBelongsToOnTarget(target: $oldChild, mappedBy: $mappedBy, parent: null);
+                        $oldChild->associate($mappedBy, null);
                     }
                 }
             }
@@ -254,7 +260,7 @@ trait EntityActionsTrait
                     continue;
                 }
                 if (!$newChildren->hasEntity($oldChild)) {
-                    self::syncMappedBelongsToOnTarget(target: $oldChild, mappedBy: $mappedBy, parent: null);
+                    $oldChild->associate($mappedBy, null);
                 }
             }
         }
@@ -265,7 +271,7 @@ trait EntityActionsTrait
             if (!$child instanceof EntityInterface) {
                 continue;
             }
-            self::syncMappedBelongsToOnTarget(target: $child, mappedBy: $mappedBy, parent: $this);
+            $child->associate($mappedBy, $this);
         }
     }
 
@@ -309,7 +315,7 @@ trait EntityActionsTrait
         }
         $current->add($child);
 
-        self::syncMappedBelongsToOnTarget(target: $child, mappedBy: $relation->mappedBy, parent: $this);
+        $child->associate($relation->mappedBy, $this);
     }
 
     /**
@@ -332,49 +338,7 @@ trait EntityActionsTrait
             $current->delEntity($child);
         }
 
-        self::syncMappedBelongsToOnTarget(target: $child, mappedBy: $relation->mappedBy, parent: null);
-    }
-
-    /**
-     * Updates a target entity that owns the FK (BelongsTo/BelongsToOne) for a HasOne relation.
-     *
-     * mappedBy is the BelongsTo/BelongsToOne property name on the target entity.
-     */
-    private static function syncMappedBelongsToOnTarget(
-        EntityInterface $target,
-        string $mappedBy,
-        ?EntityInterface $parent
-    ): void {
-        $targetRepo = OrmManager::getRepository($target::getRepositoryClass());
-        $belongs = $targetRepo->getRelation($mappedBy);
-        if (!($belongs instanceof BelongsTo) && !($belongs instanceof BelongsToOne)) {
-            throw new \RuntimeException('HasOne mappedBy must point to BelongsTo/BelongsToOne: ' . $mappedBy);
-        }
-
-        $fkProp = $belongs->foreignKey; // property name
-
-        $oldParent = $target->getRaw($mappedBy);
-        if ($oldParent === $parent) {
-            return;
-        }
-
-        // Set FK owner side
-        $target->setRaw($mappedBy, $parent);
-        $target->setRaw($fkProp, $parent?->getId());
-
-        // If old parent had inverse loaded and it pointed to this target, clear it.
-        if ($belongs->inversedBy !== null && $oldParent instanceof EntityInterface) {
-            if ($oldParent->getRaw($belongs->inversedBy) === $target) {
-                $oldParent->setRaw($belongs->inversedBy, null);
-            }
-        }
-        // If new parent has inverse already loaded (or is being set via its own setter), set it.
-        if ($belongs->inversedBy !== null && $parent instanceof EntityInterface) {
-            $existing = $parent->getRaw($belongs->inversedBy);
-            if ($existing === null || $existing === $target) {
-                $parent->setRaw($belongs->inversedBy, $target);
-            }
-        }
+        $child->associate($relation->mappedBy, null);
     }
 
     public function getHandler(): EntityHandler

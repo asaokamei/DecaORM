@@ -2,6 +2,8 @@
 
 namespace WScore\DecaORM\Contracts;
 
+use WScore\DecaORM\EntityCollection;
+
 interface EntityInterface
 {
     /**
@@ -23,4 +25,9 @@ interface EntityInterface
      * Sets the property value of the name.
      */
     public function setRaw(string $name, mixed $value): void;
+
+    /**
+     * Associates a relation by property name (in-memory; FK / inverse handling per relation type).
+     */
+    public function associate(string $relationName, EntityInterface|iterable|EntityCollection|null $targetOrTargets): void;
 }
