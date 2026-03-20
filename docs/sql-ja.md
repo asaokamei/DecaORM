@@ -5,6 +5,7 @@ DecaORMのSQLビルダーを使用して、型安全で柔軟なSQLクエリを�
 ## 目次
 
 - [Query（SELECT文）](#queryselect文)
+- [Raw SELECT / FROM](#raw-select-and-from)
 - [DISTINCT, GROUP BY, HAVING, FOR UPDATE](#distinct-group-by-having-for-update)
 - [Insert（INSERT文）](#insertinsert文)
 - [Update（UPDATE文）](#updateupdate文)
@@ -31,7 +32,9 @@ $users = $repository->sqlQuery()
 ### メソッド一覧
 
 - `select(string ...$columns)` - SELECT句を指定
+- `selectRaw(string $expression, array $bindings = [])` - 生の SELECT 式を既存列の後に追加
 - `from(string $table)` - FROM句を指定（通常は自動設定）
+- `fromRaw(string $fragment, array $bindings = [])` - FROM を生断片で指定（派生テーブルなど）
 - `where(string $column, mixed $value, string $operator = '=')` - WHERE条件を追加
 - `whereIn(string $column, array $values)` - WHERE IN条件を追加
 - `whereRaw(string $sql_snippet, array $bindings = [])` - 生のWHERE句を追加
@@ -102,6 +105,33 @@ $count = $repository->sqlQuery()
     ->limit(10)->offset(20) // これらの設定は無視する
     ->executeCountQuery();
 ```
+
+### Raw SELECT / FROM
+
+**`selectRaw()`** と **`fromRaw()`** は、式・スカラサブクエリ・派生テーブルが必要なときに使います。`whereRaw` / `joinRaw` と同様、**バインドはクエリ全体で 1 つの袋**にマージされ、最終 SQL に対して **`whereIn()`** や **`:_EXPAND_`** の展開が効きます。
+
+- **`selectRaw($expr, $bindings)`** — いまの `select()` の列リストの**後ろに追加**します。`sqlQuery()` の既定の `table.*` を捨てたいときは、先に `select(...)` で列を置き換えてください。さもないと `SELECT *, expr` のようになり得ます。
+- **`fromRaw($fragment, $bindings)`** — `FROM` の本体を断片で置き換えます（サブクエリなら括弧とエイリアスまで含める、例: `(SELECT …) AS t`）。断片内の **`:_EXPAND_`** も展開されます。[IN句の配列展開](#in句の配列展開) と同じルールで `setParameters()` します（例: SQL に `:_EXPAND_uid`、パラメータに `['uid' => [1, 2, 3]]`）。
+
+```php
+// SELECT リストに相関スカラサブクエリ
+$rows = $repository->sqlQuery()
+    ->select('o.id', 'o.total')
+    ->selectRaw(
+        '(SELECT COUNT(*) FROM order_items i WHERE i.order_id = o.id) AS line_count'
+    )
+    ->from('orders o')
+    ->getResult();
+
+// FROM に派生テーブル + 内部で IN 展開
+$rows = $repository->sqlQuery()
+    ->select('sub.id')
+    ->fromRaw('(SELECT id FROM users WHERE id IN (:_EXPAND_uid)) AS sub')
+    ->setParameters(['uid' => $userIds])
+    ->getResult();
+```
+
+UNION などビルダで素直に表しにくい形は、生 SQL を組み立てて **`fetch()`** で実行するのが無難です。
 
 ### DISTINCT, GROUP BY, HAVING, FOR UPDATE
 

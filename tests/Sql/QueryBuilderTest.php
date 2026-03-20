@@ -220,4 +220,35 @@ END_SQL;
 
         $this->assertStringNotContainsString('FOR UPDATE', $sql);
     }
+
+    public function testSelectRawAppendsExpressionAndBindings(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('orders o')
+            ->select('o.id')
+            ->selectRaw('(SELECT COUNT(*) FROM order_items i WHERE i.order_id = o.id) AS line_count', [])
+            ->selectRaw('o.total > :min_total AS big', ['min_total' => 100])
+            ->getSql();
+
+        $this->assertStringContainsString('o.id, (SELECT COUNT(*)', $sql);
+        $this->assertStringContainsString('o.total > :', $sql);
+        $this->assertSame(100, $builder->getParameters()['min_total']);
+    }
+
+    public function testFromRawWithExpandMarkerInSubquery(): void
+    {
+        $builder = new QueryBuilder();
+        $builder
+            ->select('sub.id')
+            ->fromRaw('(SELECT id FROM users WHERE id IN (:_EXPAND_uid)) AS sub')
+            ->setParameters(['uid' => [10, 20]]);
+
+        $sql = $builder->getSql();
+        $this->assertStringContainsString('IN (', $sql);
+        $this->assertStringContainsString('_EXPAND_uid_0', $sql);
+        $this->assertStringContainsString('_EXPAND_uid_1', $sql);
+        $this->assertArrayHasKey('_EXPAND_uid_0', $builder->getParameters());
+        $this->assertArrayHasKey('_EXPAND_uid_1', $builder->getParameters());
+    }
 }

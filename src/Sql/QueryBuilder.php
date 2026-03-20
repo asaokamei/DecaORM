@@ -55,6 +55,29 @@ class QueryBuilder
         return $this;
     }
 
+    /**
+     * Append a raw SELECT expression (comma-separated after existing columns).
+     * Bindings merge into the query bag (same as whereRaw); :_EXPAND_ markers work in the expression.
+     * Call {@see select()} first if you must replace the default column list (avoid `*, expr` mistakes).
+     */
+    public function selectRaw(string $expression, array $bindings = []): static
+    {
+        $this->selects[] = $expression;
+        $this->parameters = array_merge($this->parameters, $bindings);
+        return $this;
+    }
+
+    /**
+     * Set the FROM clause from a raw fragment (subquery, alias, etc.).
+     * Bindings merge into the query bag; :_EXPAND_ inside the fragment is expanded like other clauses.
+     */
+    public function fromRaw(string $fragment, array $bindings = []): static
+    {
+        $this->fromTable = $fragment;
+        $this->parameters = array_merge($this->parameters, $bindings);
+        return $this;
+    }
+
     // WHERE句関連のメソッドはWhereTraitで提供される
 
     public function limit(?int $limit): static

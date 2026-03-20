@@ -7,6 +7,7 @@ DecaORM’s SQL builder lets you build type-safe, flexible SQL for queries and u
 ## Contents
 
 - [Query (SELECT)](#query-select)
+- [Raw SELECT and FROM](#raw-select-and-from)
 - [DISTINCT, GROUP BY, HAVING, FOR UPDATE](#distinct-group-by-having-for-update)
 - [Insert (INSERT)](#insert-insert)
 - [Update (UPDATE)](#update-update)
@@ -35,7 +36,9 @@ $users = $repository->sqlQuery()
 | Method | Description |
 |--------|-------------|
 | `select(string ...$columns)` | SELECT columns |
+| `selectRaw(string $expression, array $bindings = [])` | Append a raw SELECT expression (after existing columns) |
 | `from(string $table)` | FROM clause (usually set automatically) |
+| `fromRaw(string $fragment, array $bindings = [])` | FROM clause from a raw fragment (e.g. derived table) |
 | `where(string $column, mixed $value, string $operator = '=')` | Add WHERE condition |
 | `whereIn(string $column, array $values)` | WHERE IN |
 | `whereRaw(string $sql_snippet, array $bindings = [])` | Raw WHERE fragment |
@@ -106,6 +109,33 @@ $count = $repository->sqlQuery()
     ->limit(10)->offset(20)  // ignored for count
     ->executeCountQuery();
 ```
+
+### Raw SELECT and FROM
+
+Use **`selectRaw()`** and **`fromRaw()`** when you need expressions, scalar subqueries, or derived tables, but still want **one parameter bag**, **`whereIn()`**, and **`:_EXPAND_`** handling on the final SQL (same as `whereRaw` / `joinRaw`).
+
+- **`selectRaw($expr, $bindings)`** — **Appends** after whatever `select()` already set. Call `select(...)` first if you must replace the default `table.*` from `sqlQuery()`; otherwise you can accidentally produce `SELECT *, expr ...`.
+- **`fromRaw($fragment, $bindings)`** — Replaces the whole `FROM` body with your fragment (include parentheses and alias for a subquery, e.g. `(SELECT …) AS t`). **`:_EXPAND_`** markers inside the fragment are expanded; use `setParameters()` with the same rules as [IN clause expansion](#in-clause-and-array-expansion) (e.g. SQL `:_EXPAND_uid` + `['uid' => [1, 2, 3]]`).
+
+```php
+// Correlated scalar in SELECT list
+$rows = $repository->sqlQuery()
+    ->select('o.id', 'o.total')
+    ->selectRaw(
+        '(SELECT COUNT(*) FROM order_items i WHERE i.order_id = o.id) AS line_count'
+    )
+    ->from('orders o')
+    ->getResult();
+
+// Derived table + IN expansion inside FROM
+$rows = $repository->sqlQuery()
+    ->select('sub.id')
+    ->fromRaw('(SELECT id FROM users WHERE id IN (:_EXPAND_uid)) AS sub')
+    ->setParameters(['uid' => $userIds])
+    ->getResult();
+```
+
+UNION and other multi-statement shapes are still best written as a single raw SQL string executed with `fetch()` if the builder cannot express them cleanly.
 
 ### DISTINCT, GROUP BY, HAVING, FOR UPDATE
 
