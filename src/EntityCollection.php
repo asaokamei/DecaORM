@@ -327,15 +327,31 @@ class EntityCollection extends Collection
     }
 
     /**
+     * @return static[]
+     */
+    public function chunk(int $size = 100, bool $preserveKeys = false): array
+    {
+        $chunks = [];
+        foreach (array_chunk($this->items, $size, $preserveKeys) as $chunk) {
+            $chunks[] = new static($chunk, $this->repository);
+        }
+        return $chunks;
+    }
+
+    /**
      * @param string $foreignKey
-     * @return array<array<EntityInterface>>
+     * @return array<int|string, static> Keyed by raw property value; each value is a sub-collection with the same repository as this collection.
      */
     public function groupBy(string $foreignKey): array
     {
-        $group = [];
+        $buckets = [];
         foreach ($this->items as $entity) {
             $key = $entity->getRaw($foreignKey);
-            $group[$key][] = $entity;
+            $buckets[$key][] = $entity;
+        }
+        $group = [];
+        foreach ($buckets as $key => $entities) {
+            $group[$key] = new static($entities, $this->repository);
         }
         return $group;
     }

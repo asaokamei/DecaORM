@@ -93,7 +93,11 @@ class EntityCollectionTest extends TestCase
             $this->createEntity(2),
             $this->createEntity(3),
         ];
-        $collection = new EntityCollection($entities, null);
+        $repo = $this->createMock(RepositoryInterface::class);
+        $hydrator = $this->createMock(HydratorInterface::class);
+        $hydrator->method('getEntityClass')->willReturn(TestEntity::class);
+        $repo->method('getHydrator')->willReturn($hydrator);
+        $collection = new EntityCollection($entities, $repo);
 
         $chunks = $collection->chunk(2);
 
@@ -101,6 +105,34 @@ class EntityCollectionTest extends TestCase
         $this->assertCount(2, $chunks[0]);
         $this->assertCount(1, $chunks[1]);
         $this->assertInstanceOf(EntityCollection::class, $chunks[0]);
+        $ref = new \ReflectionProperty(EntityCollection::class, 'repository');
+        $ref->setAccessible(true);
+        $this->assertSame($repo, $ref->getValue($chunks[0]));
+        $this->assertSame($repo, $ref->getValue($chunks[1]));
+    }
+
+    public function testGroupByReturnsEntityCollections()
+    {
+        $e1 = $this->createEntity(1, ['status' => 'a']);
+        $e2 = $this->createEntity(2, ['status' => 'b']);
+        $e3 = $this->createEntity(3, ['status' => 'a']);
+        $repo = $this->createMock(RepositoryInterface::class);
+        $hydrator = $this->createMock(HydratorInterface::class);
+        $hydrator->method('getEntityClass')->willReturn(TestEntity::class);
+        $repo->method('getHydrator')->willReturn($hydrator);
+
+        $collection = new EntityCollection([$e1, $e2, $e3], $repo);
+        $grouped = $collection->groupBy('status');
+
+        $this->assertCount(2, $grouped);
+        $this->assertInstanceOf(EntityCollection::class, $grouped['a']);
+        $this->assertInstanceOf(EntityCollection::class, $grouped['b']);
+        $this->assertEquals([1, 3], $grouped['a']->getIds());
+        $this->assertEquals([2], $grouped['b']->getIds());
+        $ref = new \ReflectionProperty(EntityCollection::class, 'repository');
+        $ref->setAccessible(true);
+        $this->assertSame($repo, $ref->getValue($grouped['a']));
+        $this->assertSame($repo, $ref->getValue($grouped['b']));
     }
 
     public function testFillAndUniqueness()
