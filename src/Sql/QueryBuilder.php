@@ -37,7 +37,7 @@ class QueryBuilder
 
     public function joinRaw(string $raw_join_sql): static
     {
-        $this->joins[] = '  ' . $raw_join_sql . PHP_EOL;
+        $this->joins[] = '  ' . $raw_join_sql . "\n";
         return $this;
     }
 
@@ -77,12 +77,12 @@ class QueryBuilder
 
         // WITH句
         if (!empty($this->withSql)) {
-            $sql .= "WITH " . $this->withSql . PHP_EOL;
+            $sql .= "WITH " . $this->withSql . "\n";
         }
 
         // SELECT句
         $select = empty($this->selects) ? '*' : implode(', ', $this->selects);
-        $sql .= "{$this->queryType} {$select} " . PHP_EOL . "FROM {$this->fromTable}" . PHP_EOL;
+        $sql .= "{$this->queryType} {$select} " . "\n" . "FROM {$this->fromTable}" . "\n";
 
         // JOIN句
         if (!empty($this->joins)) {
@@ -92,19 +92,19 @@ class QueryBuilder
         // WHERE句
         $whereClause = $this->buildWhereClause();
         if (!empty($whereClause)) {
-            $sql .= "WHERE {$whereClause}" . PHP_EOL;
+            $sql .= "WHERE {$whereClause}" . "\n";
         }
 
         // ORDER BY
         if ($this->orderBy) {
-            $sql .= "ORDER BY {$this->orderBy}" . PHP_EOL;
+            $sql .= "ORDER BY {$this->orderBy}" . "\n";
         }
         // LIMIT, OFFSET句
         if (isset($this->limit) && $this->limit > 0) {
-            $sql .= "LIMIT {$this->limit}" . PHP_EOL;
+            $sql .= "LIMIT {$this->limit}" . "\n";
         }
         if (isset($this->offset) && $this->offset > 0) {
-            $sql .= "OFFSET {$this->offset}" . PHP_EOL;
+            $sql .= "OFFSET {$this->offset}" . "\n";
         }
 
         // 最終的な SQL 文字列に対してIN句の展開マーカーを置換

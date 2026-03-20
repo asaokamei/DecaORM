@@ -26,7 +26,7 @@ trait WhereTrait
      */
     public function whereRaw(string $sql_snippet, array $bindings = []): static
     {
-        $this->wheres[] = $sql_snippet . PHP_EOL;
+        $this->wheres[] = $sql_snippet . "\n";
         $this->parameters = array_merge($this->parameters, $bindings);
         return $this;
     }
@@ -41,7 +41,7 @@ trait WhereTrait
     public function where(string $column, $value, string $operator = '='): static
     {
         $placeholder = $this->createPlaceholder($column);
-        $this->wheres[] = "{$column} {$operator} :{$placeholder}" . PHP_EOL;
+        $this->wheres[] = "{$column} {$operator} :{$placeholder}" . "\n";
         $this->parameters[$placeholder] = $value;
         return $this;
     }
@@ -62,7 +62,7 @@ trait WhereTrait
 
         // 展開が必要なことを示すマーカープレースホルダーを使用
         $marker = $this->createPlaceholder('_EXPAND_' . $column);
-        $this->wheres[] = "{$column} IN (:{$marker})" . PHP_EOL;
+        $this->wheres[] = "{$column} IN (:{$marker})" . "\n";
         $this->parameters[$marker] = $values;
         return $this;
     }

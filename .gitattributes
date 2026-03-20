@@ -1,0 +1,2 @@
+# Keep PHP sources LF so heredocs, tooling, and CI match regardless of OS/Git autocrlf.
+*.php text eol=lf

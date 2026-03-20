@@ -65,8 +65,8 @@ class UpdateBuilder
             $this->processExtends();
         }
 
-        $sql = "UPDATE {$this->table}" . PHP_EOL
-            . "SET " . implode(', ', $this->sets) . PHP_EOL;
+        $sql = "UPDATE {$this->table}" . "\n"
+            . "SET " . implode(', ', $this->sets) . "\n";
 
         $where = $this->buildWhereClause();
         if ($where !== '') {

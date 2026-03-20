@@ -15,6 +15,15 @@ class QueryBuilderTest extends TestCase
 {
     private PDO $pdo;
 
+    /**
+     * Heredocs follow the file's newline bytes; generated SQL uses \n. Normalize so
+     * assertions pass under any core.autocrlf / checkout eol.
+     */
+    private static function normalizeLineEndings(string $sql): string
+    {
+        return preg_replace('/\R/', "\n", $sql) ?? $sql;
+    }
+
     protected function setUp(): void
     {
         $this->pdo = DbConnection::get();
@@ -72,7 +81,7 @@ class QueryBuilderTest extends TestCase
         $this->assertNotEmpty($sql);
         $this->assertNotEmpty($params);
         $this->assertCount(8, $params);
-        $this->assertEquals(8, substr_count($sql, ':'));;
+        $this->assertEquals(8, substr_count($sql, ':'));
         $expectedSql =<<< END_SQL
 WITH recent_orders AS (SELECT user_id, amount FROM orders WHERE order_date > '2024-01-01')
 SELECT u.id, u.name, COUNT(ro.user_id) AS order_count 
@@ -88,7 +97,10 @@ OFFSET 2
 
 END_SQL;
 
-        $this->assertEquals($expectedSql, $sql);
+        $this->assertSame(
+            self::normalizeLineEndings($expectedSql),
+            self::normalizeLineEndings($sql)
+        );
         foreach ($params as $key => $value) {
             $this->assertStringContainsString($key, $sql);
         }
