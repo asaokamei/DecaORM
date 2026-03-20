@@ -73,7 +73,7 @@ class EntityCollection extends Collection
             }
 
             $id = $entity->getId();
-            if ($id !== null) {
+            if ($id !== null && !isset($idMap[$id])) {
                 $idMap[$id] = $entity;
             }
         }
@@ -295,9 +295,33 @@ class EntityCollection extends Collection
             if ($id === null) {
                 continue;
             }
-            $map[$id] = $entity;
+            if (!isset($map[$id])) {
+                $map[$id] = $entity;
+            }
         }
         return $map;
+    }
+
+    /**
+     * Like {@see groupBy} but omits entities whose raw value at $propertyName is null.
+     *
+     * @return array<int|string, static>
+     */
+    public function groupByNonNullProperty(string $propertyName): array
+    {
+        $buckets = [];
+        foreach ($this->items as $entity) {
+            $key = $entity->getRaw($propertyName);
+            if ($key === null) {
+                continue;
+            }
+            $buckets[$key][] = $entity;
+        }
+        $group = [];
+        foreach ($buckets as $key => $entities) {
+            $group[$key] = new static($entities, $this->repository);
+        }
+        return $group;
     }
 
     /**
@@ -364,7 +388,9 @@ class EntityCollection extends Collection
             if ($id === null) {
                 continue;
             }
-            $map[$id] = $entity;
+            if (!isset($map[$id])) {
+                $map[$id] = $entity;
+            }
         }
         $this->idMap = $map;
     }
