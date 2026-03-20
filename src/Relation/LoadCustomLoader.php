@@ -19,13 +19,13 @@ class LoadCustomLoader
     /**
      * Load CustomLoader relation for single entity or multiple entities.
      * 
-     * @param EntityInterface|array<\WScore\DecaORM\Contracts\EntityInterface> $entities
+     * @param EntityInterface|EntityCollection<EntityInterface> $entities
      * @param CustomLoader $relation
      * @param RepositoryInterface $repository The repository that contains the loader method
      * @return EntityInterface[] Loaded relation entities (may be empty if mapping is done in loader)
      */
     public static function load(
-        EntityInterface|array $entities,
+        EntityInterface|EntityCollection $entities,
         CustomLoader $relation,
         RepositoryInterface $repository
     ): array {

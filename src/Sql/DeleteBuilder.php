@@ -32,7 +32,7 @@ class DeleteBuilder
 
         // WHERE句がない場合はエラー
         if ($whereConditions !== '') {
-            $sql .= PHP_EOL . "WHERE {$whereConditions}";
+            $sql .= "\n" . "WHERE {$whereConditions}";
         }
 
 

@@ -47,6 +47,7 @@ class Query extends QueryBuilder
         $query->select('COUNT(*)');
         $query->limit(null);
         $query->offset(null);
+        $query->forUpdate(false);
         $stmt = $this->repository->execute($query->getSql(), $query->getParameters());
         if (!$stmt) {
             return 0;

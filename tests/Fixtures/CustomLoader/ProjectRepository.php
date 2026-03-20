@@ -21,13 +21,15 @@ class ProjectRepository extends AbstractRepository
         return $project;
     }
 
-    public function findTasks(EntityInterface|array $entities): void
+    public function findTasks(EntityInterface|EntityCollection $entities): void
     {
-        $entities = is_array($entities) ? $entities : [$entities];
-        $projectIds = array_filter(array_map(fn($e) => $e->getId(), $entities));
+        $list = $entities instanceof EntityCollection
+            ? $entities->getEntities()
+            : [$entities];
+        $projectIds = array_filter(array_map(fn($e) => $e->getId(), $list));
 
         if (empty($projectIds)) {
-            foreach ($entities as $entity) {
+            foreach ($list as $entity) {
                 $entity->setRaw('tasks', new EntityCollection([]));
             }
             return;
@@ -49,7 +51,7 @@ class ProjectRepository extends AbstractRepository
             }
         }
 
-        foreach ($entities as $entity) {
+        foreach ($list as $entity) {
             $projectId = $entity->getId();
             $entity->setRaw('tasks', new EntityCollection($tasksByProjectId[$projectId] ?? [], $taskRepo));
         }

@@ -28,7 +28,6 @@ use WScore\DecaORM\Relation\LoadCustomLoader;
 use WScore\DecaORM\Relation\LoadHasMany;
 use WScore\DecaORM\Relation\LoadHasOne;
 use WScore\DecaORM\Relation\LoadManyToMany;
-use WScore\DecaORM\Relation\RelationTrait;
 use WScore\DecaORM\Contracts\RepositoryInterface;
 use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Sql\Insert;
@@ -41,8 +40,6 @@ use WScore\DecaORM\Sql\Delete;
  */
 trait RepositoryTrait
 {
-    use RelationTrait;
-    
     protected OrmManager $manager;
     protected PDO $db;
     protected HydratorInterface $hydrator;
@@ -323,13 +320,16 @@ trait RepositoryTrait
     /**
      * Loads the specified relation for the given entity or entities.
      * 
-     * @param T|T[] $entities
+     * @param T|T[]|EntityCollection<T> $entities Single entity is passed through; arrays become EntityCollection.
      * @param string $relationName
      * @return Collection|EntityCollection The loaded relation entities as a collection.
      *         Returns EntityCollection if the result contains EntityInterface instances, Collection otherwise.
      */
-    public function load(EntityInterface|array $entities, string $relationName): Collection|EntityCollection
+    public function load(EntityInterface|array|EntityCollection $entities, string $relationName): Collection|EntityCollection
     {
+        if (is_array($entities)) {
+            $entities = new EntityCollection($entities, $this);
+        }
         $relation = $this->hydrator->getRelation($relationName);
         $targetRepo = $relation->targetEntity 
             ? $this->getRepository($relation->targetEntity) 

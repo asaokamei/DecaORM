@@ -150,10 +150,10 @@ interface RepositoryInterface
     /**
      * Loads the specified relation for the given entity or entities.
      *
-     * @param EntityInterface|array<EntityInterface> $entities
+     * @param EntityInterface|array<EntityInterface>|EntityCollection<EntityInterface> $entities Pass-through for a single entity; arrays are normalized to EntityCollection inside load().
      * @param string $relationName
      * @return Collection|EntityCollection
      *         Returns EntityCollection if the result contains EntityInterface instances, Collection otherwise.
      */
-    public function load(EntityInterface|array $entities, string $relationName): Collection|EntityCollection;
+    public function load(EntityInterface|array|EntityCollection $entities, string $relationName): Collection|EntityCollection;
 }

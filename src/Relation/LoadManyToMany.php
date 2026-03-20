@@ -11,29 +11,35 @@ use WScore\DecaORM\Sql\QueryBuilder;
 
 class LoadManyToMany
 {
-    use RelationTrait;
-
     /**
      * Load ManyToMany relation for single entity or multiple entities.
      * 
-     * @param EntityInterface|array<\WScore\DecaORM\Contracts\EntityInterface> $entities
+     * @param EntityInterface|EntityCollection<EntityInterface> $entities
      * @param ManyToMany $relation
      * @param \WScore\DecaORM\Contracts\RepositoryInterface $sourceRepository The repository for the source entities
      * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository The repository for the target entities
      * @return \WScore\DecaORM\Contracts\EntityInterface[] All loaded target entities
      */
     public static function load(
-        EntityInterface|array $entities,
+        EntityInterface|EntityCollection $entities,
         ManyToMany $relation,
         RepositoryInterface $sourceRepository,
         RepositoryInterface $targetRepository
     ): array {
-        if (is_array($entities)) {
-            return self::loadBatch($entities, $relation, $sourceRepository, $targetRepository);
+        if ($entities instanceof EntityInterface) {
+            return self::loadSingle($entities, $relation, $sourceRepository, $targetRepository);
         }
-        
-        // Single entity
-        return self::loadSingle($entities, $relation, $sourceRepository, $targetRepository);
+        if (count($entities) === 0) {
+            return [];
+        }
+        if (count($entities) === 1) {
+            $first = $entities->first();
+            if (!$first instanceof EntityInterface) {
+                return [];
+            }
+            return self::loadSingle($first, $relation, $sourceRepository, $targetRepository);
+        }
+        return self::loadBatch($entities, $relation, $sourceRepository, $targetRepository);
     }
 
     /**
@@ -86,30 +92,31 @@ class LoadManyToMany
     /**
      * Batch load ManyToMany relations for multiple entities.
      * 
-     * @param array<\WScore\DecaORM\Contracts\EntityInterface> $entities
+     * @param EntityCollection<EntityInterface> $entities
      * @param ManyToMany $relation
      * @param RepositoryInterface $sourceRepository The repository for the source entities
      * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository The repository for the target entities
      * @return \WScore\DecaORM\Contracts\EntityInterface[] All loaded target entities
      */
     public static function loadBatch(
-        array $entities,
+        EntityCollection $entities,
         ManyToMany $relation,
         RepositoryInterface $sourceRepository,
         RepositoryInterface $targetRepository
     ): array {
-        if (empty($entities)) {
+        if (count($entities) === 0) {
             return [];
         }
 
         $propertyName = $relation->propertyName;
 
-        // Collect entity IDs (skip null IDs)
-        [$entityIds, $entityMap] = self::collectEntityIds($entities);
+        $sourceColl = $entities;
+        $entityMap = $sourceColl->getIdMap();
+        $entityIds = array_keys($entityMap);
 
         if (empty($entityIds)) {
-            // Set empty arrays for all entities
-            foreach ($entities as $entity) {
+            // Set empty collections for all entities
+            foreach ($sourceColl as $entity) {
                 $entity->setRaw($propertyName, new EntityCollection([], $targetRepository));
             }
             return [];
@@ -123,8 +130,8 @@ class LoadManyToMany
         );
 
         if (empty($allRelatedIds)) {
-            // Set empty arrays for all entities
-            foreach ($entities as $entity) {
+            // Set empty collections for all entities
+            foreach ($sourceColl as $entity) {
                 $entity->setRaw($propertyName, new EntityCollection([], $targetRepository));
             }
             return [];
@@ -139,8 +146,7 @@ class LoadManyToMany
         }
         $targetEntities = $query->getResult();
 
-        // Create a map of target entity ID => target entity
-        $targetEntityMap = self::createEntityMap($targetEntities->getEntities());
+        $targetEntityMap = $targetEntities->getIdMap();
 
         // Group target entities by source entity ID
         $relatedIdsByEntityId = self::groupRelatedIdsByEntityId(
@@ -173,15 +179,13 @@ class LoadManyToMany
         }
 
         // Set empty collections for entities that had no related entities
-        foreach ($entities as $entity) {
+        foreach ($sourceColl as $entity) {
             if ($entity->getRaw($propertyName) === null) {
                 $entity->setRaw($propertyName, new EntityCollection([], $targetRepository));
             }
         }
 
-        // Remove duplicates based on entity ID
-        $uniqueTargetEntities = self::createEntityMap($allTargetEntities);
-        return array_values($uniqueTargetEntities);
+        return array_values((new EntityCollection($allTargetEntities, $targetRepository))->getIdMap());
     }
 
     /**

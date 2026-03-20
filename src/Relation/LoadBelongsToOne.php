@@ -11,28 +11,35 @@ use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class LoadBelongsToOne
 {
-    use RelationTrait;
     use RelationBelongsToTrait;
 
     /**
      * Load BelongsToOne relation for a single entity or multiple entities.
      * 
-     * @param EntityInterface|array<\WScore\DecaORM\Contracts\EntityInterface> $entities
+     * @param EntityInterface|EntityCollection<EntityInterface> $entities
      * @param BelongsToOne $childRelation
      * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
      * @return EntityInterface[] All loaded parent entities (array with 0 or 1 elements per child)
      */
     public static function load(
-        EntityInterface|array $entities,
+        EntityInterface|EntityCollection $entities,
         BelongsToOne $childRelation,
         RepositoryInterface $targetRepository
     ): array {
-        if (is_array($entities)) {
-            return self::loadBatch($entities, $childRelation, $targetRepository);
+        if ($entities instanceof EntityInterface) {
+            return self::loadSingle($entities, $childRelation, $targetRepository);
         }
-        
-        // Single entity
-        return self::loadSingle($entities, $childRelation, $targetRepository);
+        if (count($entities) === 0) {
+            return [];
+        }
+        if (count($entities) === 1) {
+            $first = $entities->first();
+            if (!$first instanceof EntityInterface) {
+                return [];
+            }
+            return self::loadSingle($first, $childRelation, $targetRepository);
+        }
+        return self::loadBatch($entities, $childRelation, $targetRepository);
     }
 
     /**
@@ -56,21 +63,21 @@ class LoadBelongsToOne
     /**
      * Batch load BelongsToOne relations for multiple entities.
      * 
-     * @param array<\WScore\DecaORM\Contracts\EntityInterface> $childEntities
+     * @param EntityCollection<EntityInterface> $childEntities
      * @param BelongsToOne $childRelation
      * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
      * @return EntityInterface[] All loaded parent entities (array with 0 or 1 elements per child)
      */
     public static function loadBatch(
-        array $childEntities,
+        EntityCollection $childEntities,
         BelongsToOne $childRelation,
         RepositoryInterface $targetRepository
     ): array {
-        if (empty($childEntities)) {
+        if (count($childEntities) === 0) {
             return [];
         }
 
-        $children = new EntityCollection($childEntities);
+        $children = $childEntities;
         $parentIds = $children->getValues($childRelation->foreignKey);
         if (empty($parentIds)) {
             return [];
@@ -80,8 +87,8 @@ class LoadBelongsToOne
         $parents = $targetRepository
             ->sqlQuery()
             ->whereIn($targetRepository->getHydrator()->getPrimaryKeyColumn(), $parentIds)
-            ->getCollection();
-        $allParents = self::getParents($parents, $childRelation, $childEntities);
+            ->getResult();
+        $allParents = self::getParents($parents, $childRelation, $children);
 
         // Set child on parent if inversedBy is specified and parent has HasOne
         if ($childRelation->inversedBy === null) {

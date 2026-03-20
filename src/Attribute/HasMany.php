@@ -3,6 +3,8 @@
 namespace WScore\DecaORM\Attribute;
 
 use Attribute;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\EntityCollection;
 
 /**
  * HasMany relationship attribute
@@ -36,6 +38,15 @@ class HasMany
         public ?string $orderBy = null,
         public ?string $loader = null
     ) {
+    }
+
+    /**
+     * Sets the HasMany property on the owning entity only (null or collection).
+     * Does not update children's mappedBy / FK; that is handled at a higher level.
+     */
+    public function associate(EntityInterface $entity, ?EntityCollection $children): void
+    {
+        $entity->setRaw($this->propertyName, $children);
     }
 }
 

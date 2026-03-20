@@ -15,7 +15,13 @@ use WScore\DecaORM\OrmManager;
  */
 class EntityCollection extends Collection
 {
-    private array $idMap;
+    /**
+     * Map of entity ID => entity.
+     * Null means "not built / invalidated" and will be rebuilt on demand.
+     *
+     * @var ?array<int|string, EntityInterface>
+     */
+    private ?array $idMap = null;
 
     /** Expected entity class (FQCN); null when collection is empty and no repository was provided. */
     private ?string $entityClass = null;
@@ -53,6 +59,7 @@ class EntityCollection extends Collection
 
     private function checkAllEntitiesSameClass(array $entities): void
     {
+        $idMap = [];
         foreach ($entities as $index => $entity) {
             if (!$entity instanceof EntityInterface) {
                 throw new InvalidArgumentException(
@@ -64,7 +71,13 @@ class EntityCollection extends Collection
                     'EntityCollection requires all entities to be the same class. Expected ' . $this->entityClass . ', got ' . get_class($entity) . ' at index ' . $index
                 );
             }
+
+            $id = $entity->getId();
+            if ($id !== null && !isset($idMap[$id])) {
+                $idMap[$id] = $entity;
+            }
         }
+        $this->idMap = $idMap;
     }
 
     /** Expected entity class (FQCN), or null when collection is empty and no repository was provided. */
@@ -112,7 +125,7 @@ class EntityCollection extends Collection
         $this->entityClass = $data['entityClass'] ?? null;
         $this->repository = null;
         $this->items = $data['items'] ?? [];
-        $this->idMap = [];
+        $this->idMap = null;
     }
 
     /**
@@ -121,12 +134,14 @@ class EntityCollection extends Collection
     public function add(mixed $item): void
     {
         $this->assertEntityMatchesClass($item);
+        $this->idMap = null;
         parent::add($item);
     }
 
     public function offsetSet(mixed $offset, mixed $value): void
     {
         $this->assertEntityMatchesClass($value);
+        $this->idMap = null;
         parent::offsetSet($offset, $value);
     }
 
@@ -154,7 +169,7 @@ class EntityCollection extends Collection
 
         $relatedEntities = [];
         foreach (array_chunk($this->items, $chunkSize) as $chunk) {
-            $collection = $repository->load($chunk, $propertyName);
+            $collection = $repository->load(new EntityCollection($chunk, $repository), $propertyName);
             $relatedEntities = array_merge($relatedEntities, $collection->getEntities());
         }
 
@@ -182,6 +197,8 @@ class EntityCollection extends Collection
         foreach ($this->items as $entity) {
             $repository->save($entity);
         }
+        // IDs may be assigned/changed during save; invalidate the map.
+        $this->idMap = null;
         return $this;
     }
 
@@ -205,6 +222,7 @@ class EntityCollection extends Collection
             }
             return true;
         });
+        $this->idMap = null;
     }
 
     /**
@@ -226,7 +244,7 @@ class EntityCollection extends Collection
 
     public function findById(int|string $id): ?EntityInterface
     {
-        if (!isset($this->idMap)) {
+        if ($this->idMap === null) {
             $this->buildIdMap();
         }
         return $this->idMap[$id] ?? null;
@@ -237,7 +255,7 @@ class EntityCollection extends Collection
         if ($id === null) {
             return false;
         }
-        if (!isset($this->idMap)) {
+        if ($this->idMap === null) {
             $this->buildIdMap();
         }
         return isset($this->idMap[$id]);
@@ -260,10 +278,10 @@ class EntityCollection extends Collection
      */
     public function getIds(): array
     {
-        $callback = function ($entity) {
-            return $entity->getId();
-        };
-        return $this->map($callback);
+        if ($this->idMap === null) {
+            $this->buildIdMap();
+        }
+        return array_keys($this->idMap);
     }
 
     /**
@@ -271,11 +289,32 @@ class EntityCollection extends Collection
      */
     public function getIdMap(): array
     {
-        $map = [];
-        foreach ($this->items as $entity) {
-            $map[$entity->getId()] = $entity;
+        if ($this->idMap === null) {
+            $this->buildIdMap();
         }
-        return $map;
+        return $this->idMap;
+    }
+
+    /**
+     * Like {@see groupBy} but omits entities whose raw value at $propertyName is null.
+     *
+     * @return array<int|string, static>
+     */
+    public function groupByNonNullProperty(string $propertyName): array
+    {
+        $buckets = [];
+        foreach ($this->items as $entity) {
+            $key = $entity->getRaw($propertyName);
+            if ($key === null) {
+                continue;
+            }
+            $buckets[$key][] = $entity;
+        }
+        $group = [];
+        foreach ($buckets as $key => $entities) {
+            $group[$key] = new static($entities, $this->repository);
+        }
+        return $group;
     }
 
     /**
@@ -301,25 +340,52 @@ class EntityCollection extends Collection
             throw new InvalidArgumentException('invalid callback.');
         }
         usort($this->items, $callback);
+        $this->idMap = null;
         return $this;
     }
 
     /**
+     * @return static[]
+     */
+    public function chunk(int $size = 100, bool $preserveKeys = false): array
+    {
+        $chunks = [];
+        foreach (array_chunk($this->items, $size, $preserveKeys) as $chunk) {
+            $chunks[] = new static($chunk, $this->repository);
+        }
+        return $chunks;
+    }
+
+    /**
      * @param string $foreignKey
-     * @return array<array<EntityInterface>>
+     * @return array<int|string, static> Keyed by raw property value; each value is a sub-collection with the same repository as this collection.
      */
     public function groupBy(string $foreignKey): array
     {
-        $group = [];
+        $buckets = [];
         foreach ($this->items as $entity) {
             $key = $entity->getRaw($foreignKey);
-            $group[$key][] = $entity;
+            $buckets[$key][] = $entity;
+        }
+        $group = [];
+        foreach ($buckets as $key => $entities) {
+            $group[$key] = new static($entities, $this->repository);
         }
         return $group;
     }
 
     private function buildIdMap(): void
     {
-        $this->idMap = $this->getIdMap();
+        $map = [];
+        foreach ($this->items as $entity) {
+            $id = $entity->getId();
+            if ($id === null) {
+                continue;
+            }
+            if (!isset($map[$id])) {
+                $map[$id] = $entity;
+            }
+        }
+        $this->idMap = $map;
     }
 }

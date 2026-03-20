@@ -5,6 +5,8 @@ DecaORMのSQLビルダーを使用して、型安全で柔軟なSQLクエリを�
 ## 目次
 
 - [Query（SELECT文）](#queryselect文)
+- [Raw SELECT / FROM](#raw-select-and-from)
+- [DISTINCT, GROUP BY, HAVING, FOR UPDATE](#distinct-group-by-having-for-update)
 - [Insert（INSERT文）](#insertinsert文)
 - [Update（UPDATE文）](#updateupdate文)
 - [Delete（DELETE文）](#deletedelete文)
@@ -30,17 +32,24 @@ $users = $repository->sqlQuery()
 ### メソッド一覧
 
 - `select(string ...$columns)` - SELECT句を指定
+- `selectRaw(string $expression, array $bindings = [])` - 生の SELECT 式を既存列の後に追加
 - `from(string $table)` - FROM句を指定（通常は自動設定）
+- `fromRaw(string $fragment, array $bindings = [])` - FROM を生断片で指定（派生テーブルなど）
 - `where(string $column, mixed $value, string $operator = '=')` - WHERE条件を追加
 - `whereIn(string $column, array $values)` - WHERE IN条件を追加
 - `whereRaw(string $sql_snippet, array $bindings = [])` - 生のWHERE句を追加
 - `joinRaw(string $raw_join_sql)` - JOIN句を追加
 - `withRaw(string $cte_sql)` - WITH句（CTE）を追加
+- `distinct(bool $on = true)` - `SELECT DISTINCT`（既定は false 相当＝付けない）
+- `groupBy(string ...$columns)` - GROUP BY（複数回呼ぶと列が順に追加される）
+- `having(string $column, mixed $value, string $operator = '=')` - HAVING 条件（AND で連結）
+- `havingRaw(string $sql_snippet, array $bindings = [])` - 生の HAVING 断片
 - `orderBy(string $column)` - ORDER BY句を指定
 - `limit(?int $limit)` - LIMIT句を指定
 - `offset(?int $offset)` - OFFSET句を指定
+- `forUpdate(bool $on = true)` - 末尾に `FOR UPDATE`（LIMIT/OFFSET の後）
 - `getResult()` - クエリを実行してEntityCollectionを取得
-- `executeCountQuery()` - COUNT(*)クエリを実行し、件数(int)を返す
+- `executeCountQuery()` - COUNT(*) を実行し件数（int）を返す（内部クローンで `FOR UPDATE` は外す）
 
 ### 使用例
 
@@ -95,6 +104,68 @@ $count = $repository->sqlQuery()
     ->where('status', 'active')
     ->limit(10)->offset(20) // これらの設定は無視する
     ->executeCountQuery();
+```
+
+### Raw SELECT / FROM
+
+**`selectRaw()`** と **`fromRaw()`** は、式・スカラサブクエリ・派生テーブルが必要なときに使います。`whereRaw` / `joinRaw` と同様、**バインドはクエリ全体で 1 つの袋**にマージされ、最終 SQL に対して **`whereIn()`** や **`:_EXPAND_`** の展開が効きます。
+
+- **`selectRaw($expr, $bindings)`** — いまの `select()` の列リストの**後ろに追加**します。`sqlQuery()` の既定の `table.*` を捨てたいときは、先に `select(...)` で列を置き換えてください。さもないと `SELECT *, expr` のようになり得ます。
+- **`fromRaw($fragment, $bindings)`** — `FROM` の本体を断片で置き換えます（サブクエリなら括弧とエイリアスまで含める、例: `(SELECT …) AS t`）。断片内の **`:_EXPAND_`** も展開されます。[IN句の配列展開](#in句の配列展開) と同じルールで `setParameters()` します（例: SQL に `:_EXPAND_uid`、パラメータに `['uid' => [1, 2, 3]]`）。
+
+```php
+// SELECT リストに相関スカラサブクエリ
+$rows = $repository->sqlQuery()
+    ->select('o.id', 'o.total')
+    ->selectRaw(
+        '(SELECT COUNT(*) FROM order_items i WHERE i.order_id = o.id) AS line_count'
+    )
+    ->from('orders o')
+    ->getResult();
+
+// FROM に派生テーブル + 内部で IN 展開
+$rows = $repository->sqlQuery()
+    ->select('sub.id')
+    ->fromRaw('(SELECT id FROM users WHERE id IN (:_EXPAND_uid)) AS sub')
+    ->setParameters(['uid' => $userIds])
+    ->getResult();
+```
+
+UNION などビルダで素直に表しにくい形は、生 SQL を組み立てて **`fetch()`** で実行するのが無難です。
+
+### DISTINCT, GROUP BY, HAVING, FOR UPDATE
+
+SQL 上の順序は **WHERE → GROUP BY → HAVING → ORDER BY → LIMIT/OFFSET → FOR UPDATE** です。
+
+- **`distinct()`** — `SELECT` の直後に `DISTINCT` を付けます。既定では付けません。同じビルダーで `distinct(false)` とすると再度オフにできます。
+- **`groupBy()`** — 1 回の呼び出しで複数列を渡せます。呼び出しを重ねると列が末尾に追加されます（例: `groupBy('a', 'b')->groupBy('c')` → `GROUP BY a, b, c`）。
+- **`having()` / `havingRaw()`** — プレースホルダの扱いは `where()` / `whereRaw()` と同様で、バインドは WHERE と同じパラメータ集合にマージされます。集約条件は `havingRaw('COUNT(*) > :n', [':n' => $min])` のように書くと DB 間で無難です。SELECT のエイリアスを HAVING で使えるかはエンジンや設定次第です（PostgreSQL や厳格なモードでは使えないことがあります）。
+- **`forUpdate()`** — **PostgreSQL / MySQL 等**の行ロックヒントです。**SQLite** では同様に使えないため、SQLite 向けビルドでは付けないでください。`executeCountQuery()` は内部でクローンに対し **`forUpdate(false)`** をかけ、`COUNT(*)` にロック句が残らないようにしています。
+
+```php
+// DISTINCT（JOIN で親行が重複する場合など）
+$rows = $repository->sqlQuery()
+    ->select('u.id', 'u.name')
+    ->from('users u')
+    ->joinRaw('INNER JOIN orders o ON o.user_id = u.id')
+    ->distinct()
+    ->getResult();
+
+// GROUP BY + HAVING
+$stats = $repository->sqlQuery()
+    ->select('status', 'COUNT(*) AS cnt')
+    ->from('users')
+    ->groupBy('status')
+    ->havingRaw('COUNT(*) >= :min_cnt', [':min_cnt' => 5])
+    ->orderBy('status')
+    ->getResult();
+
+// FOR UPDATE（トランザクション内、PostgreSQL / MySQL の例）
+$users = $repository->sqlQuery()
+    ->where('id', $id)
+    ->limit(1)
+    ->forUpdate()
+    ->getResult();
 ```
 
 ---
@@ -392,7 +463,7 @@ $repository->sqlUpdate()
 
 ### 3. プレースホルダーの命名規則
 
-- `where()`や`set()`で自動生成されるプレースホルダーは、カラム名とカウンターから生成されます
+- `where()`や`having()`や`set()`で自動生成されるプレースホルダーは、カラム名とカウンターから生成されます
 - 手動でIN句展開する場合は、`:_EXPAND_`プレフィックスを使用
 - `setParameters()`では、`_EXPAND_`プレフィックスを付けずに指定
 
@@ -432,7 +503,7 @@ $params1 = $query->getParameters();  // 展開処理が実行される（既に�
 
 ## まとめ
 
-- **Query**: SELECT文を構築し、`getResult()`でエンティティを取得
+- **Query**: SELECT文を構築し、`getResult()`でエンティティを取得。必要に応じて `distinct()`、`groupBy()`、`having()` / `havingRaw()`、`forUpdate()` を利用
 - **Insert**: INSERT文を構築し、`execute()`で実行
 - **Update**: UPDATE文を構築（WHERE必須）、`execute()`で実行
 - **Delete**: DELETE文を構築（WHERE必須）、`execute()`で実行

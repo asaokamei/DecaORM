@@ -3,6 +3,7 @@
 namespace WScore\DecaORM\Attribute;
 
 use Attribute;
+use WScore\DecaORM\Contracts\EntityInterface;
 
 /**
  * HasOne relationship attribute
@@ -32,6 +33,15 @@ class HasOne
         public string $mappedBy,
         public ?string $loader = null
     ) {
+    }
+
+    /**
+     * Sets the relation property on the owning entity only.
+     * Does not update the target's mappedBy BelongsTo/BelongsToOne; that is handled at a higher level.
+     */
+    public function associate(EntityInterface $entity, ?EntityInterface $target): void
+    {
+        $entity->setRaw($this->propertyName, $target);
     }
 }
 

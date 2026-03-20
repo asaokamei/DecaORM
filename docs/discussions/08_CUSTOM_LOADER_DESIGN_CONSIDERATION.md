@@ -165,7 +165,7 @@ $user->get('postCount'); // 数値が取得できる
 
 ```php
 // Collectionオブジェクトからチェーンでリレーションを読み込む
-$users = $userRepo->sqlQuery()->...->getCollection();
+$users = $userRepo->sqlQuery()->...->getResult();
 $posts = $users->fill('posts');  // EntityCollection
 $comments = $posts->fill('comments');  // さらに先のリレーション
 $authors = $comments->fill('author');  // さらに先のリレーション
@@ -210,17 +210,17 @@ public function loadPostCount(EntityInterface|array $entities): void
 }
 
 // 使用例1: リレーション（チェーン可能）
-$projects = $projectRepo->sqlQuery()->...->getCollection();
+$projects = $projectRepo->sqlQuery()->...->getResult();
 $tasks = $projects->fill('tasks'); // EntityCollection（タスクが入っている）
 $comments = $tasks->fill('comments'); // さらに先のリレーションをチェーンで読み込める
 
 // 使用例2: 計算値（チェーンはできないが、エンティティに値が設定される）
-$users = $userRepo->sqlQuery()->...->getCollection();
+$users = $userRepo->sqlQuery()->...->getResult();
 $collection = $users->fill('postCount'); // EntityCollection（空、postCountはエンティティに設定済み）
 $count = $users[0]->get('postCount'); // 数値が取得できる
 
 // 使用例3: リレーションと計算値を組み合わせる
-$users = $userRepo->sqlQuery()->...->getCollection();
+$users = $userRepo->sqlQuery()->...->getResult();
 $posts = $users->fill('posts'); // リレーション（EntityCollectionにPostが入る）
 $users->fill('postCount'); // 計算値（空のEntityCollection、postCountはエンティティに設定済み）
 $count = $users[0]->get('postCount'); // 数値
@@ -289,7 +289,7 @@ $counts = $collection->getEntities(); // 数値配列（もし返り値があれ
 $count = $users[0]->get('postCount'); // 数値が取得できる
 
 // 使用例2: リレーション（チェーン可能）
-$users = $userRepo->sqlQuery()->...->getCollection();
+$users = $userRepo->sqlQuery()->...->getResult();
 $posts = $users->fill('posts'); // EntityCollection（Post[]）
 $comments = $posts->fill('comments'); // さらに先のリレーションをチェーンで読み込める
 ```
@@ -549,7 +549,7 @@ $collection = $userRepo->fill($users, 'postCount'); // 空のEntityCollection（
 $count = $users[0]->get('postCount'); // 数値が取得できる
 
 // 使用例2: リレーションと計算値を組み合わせる
-$users = $userRepo->sqlQuery()->whereIn('user_id', [1, 2, 3])->getCollection();
+$users = $userRepo->sqlQuery()->whereIn('user_id', [1, 2, 3])->getResult();
 $posts = $users->fill('posts'); // リレーション（EntityCollectionにPostが入る）
 $users->fill('postCount'); // 計算値（空のEntityCollection、postCountはエンティティに設定済み）
 $count = $users[0]->get('postCount'); // 数値

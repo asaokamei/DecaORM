@@ -87,13 +87,15 @@ class ProjectWithLoaderRepository extends \WScore\DecaORM\AbstractRepository
      * Loader method for recentTasks relation.
      * Returns tasks created within the last 7 days.
      * 
-     * @param EntityInterface|array<EntityInterface> $projects Array of project IDs
+     * @param EntityInterface|EntityCollection<EntityInterface> $projects
      * @return EntityCollection Array of TaskWithDate entities
      */
-    public function findRecentTasks(EntityInterface|array $projects): EntityCollection
+    public function findRecentTasks(EntityInterface|EntityCollection $projects): EntityCollection
     {
-        $projects = is_array($projects) ? $projects : [$projects];
-        if (empty($projects)) {
+        $projects = $projects instanceof EntityCollection
+            ? $projects->getEntities()
+            : [$projects];
+        if ($projects === []) {
             return new EntityCollection([], $this->getRepository(TaskWithDate::class));
         }
         $projectIds = array_filter(array_map(fn($p) => $p->getId(), $projects));

@@ -195,7 +195,7 @@ if ($users->hasEntity($deleteUser)) {
 $names = $users->getValues('name');
 $users->sort('birthday');
 $users->sort(function($a, $b) {$a->status <=> $b->status;})
-$userByGroup = $users->groupBy('status');
+$userByGroup = $users->groupBy('status'); // キー => EntityCollection の配列
 ```
 
 

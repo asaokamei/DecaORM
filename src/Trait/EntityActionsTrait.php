@@ -102,22 +102,22 @@ trait EntityActionsTrait
             if ($targetOrTargets !== null && !$targetOrTargets instanceof EntityInterface) {
                 throw new \InvalidArgumentException('associate for BelongsTo/BelongsToOne expects EntityInterface|null, got ' . get_debug_type($targetOrTargets));
             }
-            $this->associateBelongsTo($relationName, $targetOrTargets);
+            $this->associateBelongsTo($relation, $targetOrTargets);
             return;
         }
         if ($relation instanceof HasOne) {
             if ($targetOrTargets !== null && !$targetOrTargets instanceof EntityInterface) {
                 throw new \InvalidArgumentException('associate for HasOne expects EntityInterface|null, got ' . get_debug_type($targetOrTargets));
             }
-            $this->associateHasOne($relationName, $targetOrTargets);
+            $this->associateHasOne($relation, $targetOrTargets);
             return;
         }
         if ($relation instanceof HasMany) {
-            $this->associateHasMany($relationName, $targetOrTargets);
+            $this->associateHasMany($relation, $targetOrTargets);
             return;
         }
         if ($relation instanceof ManyToMany) {
-            $this->associateManyToMany($relationName, $targetOrTargets);
+            $this->associateManyToMany($relation, $targetOrTargets);
             return;
         }
         throw new \RuntimeException('Unsupported relation type for associate: ' . $relationName);
@@ -126,49 +126,45 @@ trait EntityActionsTrait
     /**
      * Associates a BelongsTo/BelongsToOne relation.
      *
-     * - Sets relation property (e.g. $this->user)
-     * - Sets foreign key property (e.g. $this->user_id)
-     * - If inversedBy points to a HasMany collection, updates it on both sides
+     * Delegates owning-side assignment to the attribute's {@see BelongsTo::associate} /
+     * {@see BelongsToOne::associate}, then updates inverse HasMany collections when inversedBy is set.
      */
-    protected function associateBelongsTo(string $relationName, ?EntityInterface $target): void
+    protected function associateBelongsTo(BelongsTo|BelongsToOne $relation, ?EntityInterface $target): void
     {
-        $repo = self::_repository();
-        $relation = $repo->getRelation($relationName);
-        if (!($relation instanceof BelongsTo) && !($relation instanceof BelongsToOne)) {
-            throw new \RuntimeException('associateBelongsTo requires BelongsTo/BelongsToOne: ' . $relationName);
-        }
-
-        $current = $this->getRaw($relationName);
+        $prop = $relation->propertyName;
+        $current = $this->getRaw($prop);
         if ($current === $target) {
             return;
         }
 
-        // In this ORM, relation foreignKey is a property name (used with getRaw/setRaw).
-        $fkProp = $relation->foreignKey;
+        $relation->associate($this, $target);
 
-        // Set new relation + FK
-        $this->setRaw($relationName, $target);
-        $id = $target?->getId();
-        $this->setRaw($fkProp, $id !== null ? (string) $id : null);
-
-        // Update inverse HasMany, if configured.
+        // Keep inverse side in memory when already loaded (HasMany collection or HasOne single ref).
         if ($relation->inversedBy === null) {
             return;
         }
         $inverseName = $relation->inversedBy;
 
-        // If inverse collection is already loaded, keep it consistent in-memory.
-        // (Avoid triggering DB loads here; setters should not cause queries.)
         if ($current instanceof EntityInterface) {
             $inverse = $current->getRaw($inverseName);
-            if ($inverse instanceof EntityCollection) {
-                $inverse->delEntity($this);
+            $inverseRel = OrmManager::getRepository($current::getRepositoryClass())->getRelation($inverseName);
+            if ($inverseRel instanceof HasMany || $inverseRel instanceof ManyToMany) {
+                if ($inverse instanceof EntityCollection) {
+                    $inverse->delEntity($this);
+                }
+            } elseif ($inverse === $this) {
+                $current->setRaw($inverseName, null);
             }
         }
         if ($target instanceof EntityInterface) {
             $inverse = $target->getRaw($inverseName);
-            if ($inverse instanceof EntityCollection && !$inverse->hasEntity($this)) {
-                $inverse->add($this);
+            $inverseRel = OrmManager::getRepository($target::getRepositoryClass())->getRelation($inverseName);
+            if ($inverseRel instanceof HasMany || $inverseRel instanceof ManyToMany) {
+                if ($inverse instanceof EntityCollection && !$inverse->hasEntity($this)) {
+                    $inverse->add($this);
+                }
+            } elseif ($inverse === null || $inverse === $this) {
+                $target->setRaw($inverseName, $this);
             }
         }
     }
@@ -176,74 +172,42 @@ trait EntityActionsTrait
     /**
      * Associates a HasOne relation (one-to-one, inverse side).
      *
-     * - Sets relation property on this entity (e.g. $this->profile)
-     * - Updates the target entity's BelongsTo/BelongsToOne (mappedBy) + its foreign key property
-     * - Keeps inverse properties consistent only when already loaded (no DB loads in setters)
+     * Owning-side property is set via {@see HasOne::associate}; the target's owning BelongsTo is updated
+     * via the target entity's {@see associate()} so inverse handling stays in one place.
      */
-    protected function associateHasOne(string $relationName, ?EntityInterface $target): void
+    protected function associateHasOne(HasOne $relation, ?EntityInterface $target): void
     {
-        $repo = self::_repository();
-        $relation = $repo->getRelation($relationName);
-        if (!($relation instanceof HasOne)) {
-            throw new \RuntimeException('associateHasOne requires HasOne: ' . $relationName);
-        }
-
-        $current = $this->getRaw($relationName);
+        $prop = $relation->propertyName;
+        $current = $this->getRaw($prop);
         if ($current === $target) {
             return;
         }
 
-        // Set the relation on this entity first.
-        $this->setRaw($relationName, $target);
+        $relation->associate($this, $target);
 
         $mappedBy = $relation->mappedBy;
 
-        // Detach current target (if any)
         if ($current instanceof EntityInterface) {
-            self::syncMappedBelongsToOnTarget(target: $current, mappedBy: $mappedBy, parent: null);
+            $current->associate($mappedBy, null);
         }
 
-        // Attach new target (if any)
         if ($target instanceof EntityInterface) {
-            self::syncMappedBelongsToOnTarget(target: $target, mappedBy: $mappedBy, parent: $this);
+            $target->associate($mappedBy, $this);
         }
     }
 
     /**
-     * Associates a HasMany relation (one-to-many, inverse side).
+     * Builds a filtered {@see EntityCollection} for in-memory HasMany association.
+     * Placed here for now; a more specific home may be chosen later.
      *
-     * - Sets relation property on this entity to an EntityCollection
-     * - Updates each child entity's BelongsTo/BelongsToOne (mappedBy) + its foreign key property
-     * - Keeps things in-memory only (no DB loads in setters)
-     *
-     * @param string $relationName HasMany property name on this entity (e.g. 'posts')
-     * @param iterable<EntityInterface>|EntityCollection|null $children
+     * @param iterable<EntityInterface>|EntityCollection $children
      */
-    protected function associateHasMany(string $relationName, iterable|EntityCollection|null $children): void
-    {
-        $repo = self::_repository();
-        $relation = $repo->getRelation($relationName);
-        if (!($relation instanceof HasMany)) {
-            throw new \RuntimeException('associateHasMany requires HasMany: ' . $relationName);
-        }
-
-        $mappedBy = $relation->mappedBy;
-        $current = $this->getRaw($relationName);
-
-        if ($children === null) {
-            // Clear relation: detach all current children, then set to null
-            if ($current instanceof EntityCollection) {
-                foreach ($current as $oldChild) {
-                    if ($oldChild instanceof EntityInterface) {
-                        self::syncMappedBelongsToOnTarget(target: $oldChild, mappedBy: $mappedBy, parent: null);
-                    }
-                }
-            }
-            $this->setRaw($relationName, null);
-            return;
-        }
-
-        $targetRepo = $relation->targetEntity ? $repo->getRepository($relation->targetEntity) : $repo;
+    protected function normalizeHasManyChildren(
+        RepositoryInterface $ownerRepo,
+        HasMany $relation,
+        iterable|EntityCollection $children
+    ): EntityCollection {
+        $targetRepo = $relation->targetEntity ? $ownerRepo->getRepository($relation->targetEntity) : $ownerRepo;
         $newChildren = $children instanceof EntityCollection
             ? $children
             : new EntityCollection(
@@ -251,102 +215,77 @@ trait EntityActionsTrait
                 $targetRepo
             );
 
-        // Filter invalid items defensively
         $filtered = [];
         foreach ($newChildren as $c) {
             if ($c instanceof EntityInterface) {
                 $filtered[] = $c;
             }
         }
-        $newChildren = new EntityCollection($filtered, $targetRepo);
+
+        return new EntityCollection($filtered, $targetRepo);
+    }
+
+    /**
+     * Associates a HasMany relation (one-to-many, inverse side).
+     *
+     * Collection shape is built via {@see self::normalizeHasManyChildren} and assigned with
+     * {@see HasMany::associate}; children update their owning BelongsTo via {@see associate()}.
+     *
+     * @param iterable<EntityInterface>|EntityCollection|null $children
+     */
+    protected function associateHasMany(HasMany $relation, iterable|EntityCollection|null $children): void
+    {
+        $repo = self::_repository();
+        $mappedBy = $relation->mappedBy;
+        $prop = $relation->propertyName;
+        $current = $this->getRaw($prop);
+
+        if ($children === null) {
+            if ($current instanceof EntityCollection) {
+                foreach ($current as $oldChild) {
+                    if ($oldChild instanceof EntityInterface) {
+                        $oldChild->associate($mappedBy, null);
+                    }
+                }
+            }
+            $relation->associate($this, null);
+            return;
+        }
+
+        $newChildren = $this->normalizeHasManyChildren($repo, $relation, $children);
 
         if ($current instanceof EntityCollection) {
-            // Detach children that are no longer present
             foreach ($current as $oldChild) {
                 if (!$oldChild instanceof EntityInterface) {
                     continue;
                 }
                 if (!$newChildren->hasEntity($oldChild)) {
-                    self::syncMappedBelongsToOnTarget(target: $oldChild, mappedBy: $mappedBy, parent: null);
+                    $oldChild->associate($mappedBy, null);
                 }
             }
         }
 
-        // Set collection on this entity
-        $this->setRaw($relationName, $newChildren);
+        $relation->associate($this, $newChildren);
 
-        // Attach/update all children
         foreach ($newChildren as $child) {
             if (!$child instanceof EntityInterface) {
                 continue;
             }
-            self::syncMappedBelongsToOnTarget(target: $child, mappedBy: $mappedBy, parent: $this);
+            $child->associate($mappedBy, $this);
         }
     }
 
     /**
      * Associates a ManyToMany relation on the entity side (in-memory only).
      *
-     * Sets the in-memory collection; does not write to the join table.
-     * Use repository's syncManyToMany() to persist join-table changes.
+     * Delegates to {@see ManyToMany::associate}. Does not write the join table; use the repository's
+     * syncManyToMany() to persist join-table changes.
      *
-     * @param string $relationName ManyToMany property name on this entity (e.g. 'roles')
      * @param iterable<EntityInterface>|EntityCollection|null $targets
      */
-    protected function associateManyToMany(string $relationName, iterable|EntityCollection|null $targets): void
+    protected function associateManyToMany(ManyToMany $relation, iterable|EntityCollection|null $targets): void
     {
-        $repo = self::_repository();
-        $relation = $repo->getRelation($relationName);
-        if (!($relation instanceof ManyToMany)) {
-            throw new \RuntimeException('associateManyToMany requires ManyToMany: ' . $relationName);
-        }
-
-        if ($targets === null) {
-            $this->setRaw($relationName, null);
-            return;
-        }
-
-        $targetRepo = $relation->targetEntity ? $repo->getRepository($relation->targetEntity) : null;
-
-        $list = [];
-        if ($targets instanceof EntityCollection) {
-            foreach ($targets as $t) {
-                if ($t instanceof EntityInterface) {
-                    $list[] = $t;
-                }
-            }
-        } elseif ($targets !== null) {
-            foreach ($targets as $t) {
-                if ($t instanceof EntityInterface) {
-                    $list[] = $t;
-                }
-            }
-        }
-
-        // De-duplicate by reference or ID
-        $seenRef = [];
-        $seenId = [];
-        $list2 = [];
-        foreach ($list as $t) {
-            $id = $t->getId();
-            if ($id !== null) {
-                if (isset($seenId[(string) $id])) {
-                    continue;
-                }
-                $seenId[(string) $id] = true;
-            } else {
-                // avoid duplicate references for unsaved entities
-                $hash = spl_object_hash($t);
-                if (isset($seenRef[$hash])) {
-                    continue;
-                }
-                $seenRef[$hash] = true;
-            }
-            $list2[] = $t;
-        }
-
-        $collection = new EntityCollection($list2, $targetRepo);
-        $this->setRaw($relationName, $collection);
+        $relation->associate(self::_repository(), $this, $targets);
     }
 
     /**
@@ -364,10 +303,11 @@ trait EntityActionsTrait
         }
 
         $targetRepo = $relation->targetEntity ? $repo->getRepository($relation->targetEntity) : $repo;
-        $current = $this->getRaw($relationName);
+        $prop = $relation->propertyName;
+        $current = $this->getRaw($prop);
         if (!($current instanceof EntityCollection)) {
             $current = new EntityCollection([], $targetRepo);
-            $this->setRaw($relationName, $current);
+            $this->setRaw($prop, $current);
         }
 
         if ($current->hasEntity($child)) {
@@ -375,7 +315,7 @@ trait EntityActionsTrait
         }
         $current->add($child);
 
-        self::syncMappedBelongsToOnTarget(target: $child, mappedBy: $relation->mappedBy, parent: $this);
+        $child->associate($relation->mappedBy, $this);
     }
 
     /**
@@ -392,54 +332,13 @@ trait EntityActionsTrait
             throw new \RuntimeException('removeHasMany requires HasMany: ' . $relationName);
         }
 
-        $current = $this->getRaw($relationName);
+        $prop = $relation->propertyName;
+        $current = $this->getRaw($prop);
         if ($current instanceof EntityCollection) {
             $current->delEntity($child);
         }
 
-        self::syncMappedBelongsToOnTarget(target: $child, mappedBy: $relation->mappedBy, parent: null);
-    }
-
-    /**
-     * Updates a target entity that owns the FK (BelongsTo/BelongsToOne) for a HasOne relation.
-     *
-     * mappedBy is the BelongsTo/BelongsToOne property name on the target entity.
-     */
-    private static function syncMappedBelongsToOnTarget(
-        EntityInterface $target,
-        string $mappedBy,
-        ?EntityInterface $parent
-    ): void {
-        $targetRepo = OrmManager::getRepository($target::getRepositoryClass());
-        $belongs = $targetRepo->getRelation($mappedBy);
-        if (!($belongs instanceof BelongsTo) && !($belongs instanceof BelongsToOne)) {
-            throw new \RuntimeException('HasOne mappedBy must point to BelongsTo/BelongsToOne: ' . $mappedBy);
-        }
-
-        $fkProp = $belongs->foreignKey; // property name
-
-        $oldParent = $target->getRaw($mappedBy);
-        if ($oldParent === $parent) {
-            return;
-        }
-
-        // Set FK owner side
-        $target->setRaw($mappedBy, $parent);
-        $target->setRaw($fkProp, $parent?->getId());
-
-        // If old parent had inverse loaded and it pointed to this target, clear it.
-        if ($belongs->inversedBy !== null && $oldParent instanceof EntityInterface) {
-            if ($oldParent->getRaw($belongs->inversedBy) === $target) {
-                $oldParent->setRaw($belongs->inversedBy, null);
-            }
-        }
-        // If new parent has inverse already loaded (or is being set via its own setter), set it.
-        if ($belongs->inversedBy !== null && $parent instanceof EntityInterface) {
-            $existing = $parent->getRaw($belongs->inversedBy);
-            if ($existing === null || $existing === $target) {
-                $parent->setRaw($belongs->inversedBy, $target);
-            }
-        }
+        $child->associate($relation->mappedBy, null);
     }
 
     public function getHandler(): EntityHandler

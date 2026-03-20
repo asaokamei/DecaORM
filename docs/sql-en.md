@@ -7,6 +7,8 @@ DecaORM’s SQL builder lets you build type-safe, flexible SQL for queries and u
 ## Contents
 
 - [Query (SELECT)](#query-select)
+- [Raw SELECT and FROM](#raw-select-and-from)
+- [DISTINCT, GROUP BY, HAVING, FOR UPDATE](#distinct-group-by-having-for-update)
 - [Insert (INSERT)](#insert-insert)
 - [Update (UPDATE)](#update-update)
 - [Delete (DELETE)](#delete-delete)
@@ -34,17 +36,24 @@ $users = $repository->sqlQuery()
 | Method | Description |
 |--------|-------------|
 | `select(string ...$columns)` | SELECT columns |
+| `selectRaw(string $expression, array $bindings = [])` | Append a raw SELECT expression (after existing columns) |
 | `from(string $table)` | FROM clause (usually set automatically) |
+| `fromRaw(string $fragment, array $bindings = [])` | FROM clause from a raw fragment (e.g. derived table) |
 | `where(string $column, mixed $value, string $operator = '=')` | Add WHERE condition |
 | `whereIn(string $column, array $values)` | WHERE IN |
 | `whereRaw(string $sql_snippet, array $bindings = [])` | Raw WHERE fragment |
 | `joinRaw(string $raw_join_sql)` | Add JOIN |
 | `withRaw(string $cte_sql)` | WITH (CTE) |
+| `distinct(bool $on = true)` | `SELECT DISTINCT` (default off) |
+| `groupBy(string ...$columns)` | GROUP BY (repeatable; columns are appended) |
+| `having(string $column, mixed $value, string $operator = '=')` | HAVING condition (AND-combined) |
+| `havingRaw(string $sql_snippet, array $bindings = [])` | Raw HAVING fragment |
 | `orderBy(string $column)` | ORDER BY |
 | `limit(?int $limit)` | LIMIT |
 | `offset(?int $offset)` | OFFSET |
+| `forUpdate(bool $on = true)` | Append `FOR UPDATE` (after LIMIT/OFFSET) |
 | `getResult()` | Run query and get `EntityCollection` |
-| `executeCountQuery()` | Run COUNT(*) and return count (int) |
+| `executeCountQuery()` | Run COUNT(*) and return count (int); clears `FOR UPDATE` on the internal clone |
 
 ### Examples
 
@@ -99,6 +108,68 @@ $count = $repository->sqlQuery()
     ->where('status', 'active')
     ->limit(10)->offset(20)  // ignored for count
     ->executeCountQuery();
+```
+
+### Raw SELECT and FROM
+
+Use **`selectRaw()`** and **`fromRaw()`** when you need expressions, scalar subqueries, or derived tables, but still want **one parameter bag**, **`whereIn()`**, and **`:_EXPAND_`** handling on the final SQL (same as `whereRaw` / `joinRaw`).
+
+- **`selectRaw($expr, $bindings)`** — **Appends** after whatever `select()` already set. Call `select(...)` first if you must replace the default `table.*` from `sqlQuery()`; otherwise you can accidentally produce `SELECT *, expr ...`.
+- **`fromRaw($fragment, $bindings)`** — Replaces the whole `FROM` body with your fragment (include parentheses and alias for a subquery, e.g. `(SELECT …) AS t`). **`:_EXPAND_`** markers inside the fragment are expanded; use `setParameters()` with the same rules as [IN clause expansion](#in-clause-and-array-expansion) (e.g. SQL `:_EXPAND_uid` + `['uid' => [1, 2, 3]]`).
+
+```php
+// Correlated scalar in SELECT list
+$rows = $repository->sqlQuery()
+    ->select('o.id', 'o.total')
+    ->selectRaw(
+        '(SELECT COUNT(*) FROM order_items i WHERE i.order_id = o.id) AS line_count'
+    )
+    ->from('orders o')
+    ->getResult();
+
+// Derived table + IN expansion inside FROM
+$rows = $repository->sqlQuery()
+    ->select('sub.id')
+    ->fromRaw('(SELECT id FROM users WHERE id IN (:_EXPAND_uid)) AS sub')
+    ->setParameters(['uid' => $userIds])
+    ->getResult();
+```
+
+UNION and other multi-statement shapes are still best written as a single raw SQL string executed with `fetch()` if the builder cannot express them cleanly.
+
+### DISTINCT, GROUP BY, HAVING, FOR UPDATE
+
+These clauses are emitted in SQL order: **WHERE → GROUP BY → HAVING → ORDER BY → LIMIT/OFFSET → FOR UPDATE**.
+
+- **`distinct()`** — Adds `DISTINCT` after `SELECT`. Default is off (no `DISTINCT`). Use `distinct(false)` to turn it off again on the same builder.
+- **`groupBy()`** — One or more column expressions per call; multiple calls append columns (e.g. `groupBy('a', 'b')->groupBy('c')` → `GROUP BY a, b, c`).
+- **`having()` / `havingRaw()`** — Same placeholder style as `where()` / `whereRaw()`; bindings share the query’s parameter bag with WHERE. For aggregates, `havingRaw('COUNT(*) > :n', [':n' => $min])` is portable across databases; relying on a SELECT alias in HAVING is not portable (e.g. strict SQL or PostgreSQL).
+- **`forUpdate()`** — Row-level lock hint for **PostgreSQL, MySQL, etc.** It is **not** supported by SQLite in the same way; omit it when targeting SQLite. `executeCountQuery()` runs on a clone with **`forUpdate(false)`** so `COUNT(*)` does not keep a lock clause.
+
+```php
+// DISTINCT (e.g. after JOINs that duplicate parent rows)
+$rows = $repository->sqlQuery()
+    ->select('u.id', 'u.name')
+    ->from('users u')
+    ->joinRaw('INNER JOIN orders o ON o.user_id = u.id')
+    ->distinct()
+    ->getResult();
+
+// GROUP BY + HAVING
+$stats = $repository->sqlQuery()
+    ->select('status', 'COUNT(*) AS cnt')
+    ->from('users')
+    ->groupBy('status')
+    ->havingRaw('COUNT(*) >= :min_cnt', [':min_cnt' => 5])
+    ->orderBy('status')
+    ->getResult();
+
+// FOR UPDATE (inside a transaction, PostgreSQL / MySQL)
+$users = $repository->sqlQuery()
+    ->where('id', $id)
+    ->limit(1)
+    ->forUpdate()
+    ->getResult();
 ```
 
 ---
@@ -395,7 +466,7 @@ $repository->sqlUpdate()
 
 ### 3. Placeholder naming
 
-- Placeholders from `where()` / `set()` are derived from column name and a counter.
+- Placeholders from `where()` / `having()` / `set()` are derived from column name and a counter.
 - For manual IN expansion use the `:_EXPAND_` prefix.
 - In `setParameters()` use the name **without** the `_EXPAND_` prefix.
 
@@ -434,7 +505,7 @@ $params1 = $query->getParameters();  // Uses cache if already expanded
 
 ## Summary
 
-- **Query:** build SELECT, get entities with `getResult()`.
+- **Query:** build SELECT, get entities with `getResult()`; optional `distinct()`, `groupBy()`, `having()` / `havingRaw()`, `forUpdate()`.
 - **Insert:** build INSERT, run with `execute()`.
 - **Update:** build UPDATE (WHERE required), run with `execute()`.
 - **Delete:** build DELETE (WHERE required), run with `execute()`.
