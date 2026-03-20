@@ -8,6 +8,7 @@ class QueryBuilder
 
     private string $queryType = 'SELECT';
     private array $selects = ['*'];
+    private bool $distinct = false;
     private string $fromTable = '';
     private array $joins = [];
     private string $withSql = '';
@@ -18,6 +19,15 @@ class QueryBuilder
     public function select(string ...$columns): static
     {
         $this->selects = $columns;
+        return $this;
+    }
+
+    /**
+     * When true, generates SELECT DISTINCT. Default is false.
+     */
+    public function distinct(bool $on = true): static
+    {
+        $this->distinct = $on;
         return $this;
     }
 
@@ -82,7 +92,8 @@ class QueryBuilder
 
         // SELECT句
         $select = empty($this->selects) ? '*' : implode(', ', $this->selects);
-        $sql .= "{$this->queryType} {$select} " . "\n" . "FROM {$this->fromTable}" . "\n";
+        $selectKeyword = $this->distinct ? 'SELECT DISTINCT' : $this->queryType;
+        $sql .= "{$selectKeyword} {$select} " . "\n" . "FROM {$this->fromTable}" . "\n";
 
         // JOIN句
         if (!empty($this->joins)) {

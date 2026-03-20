@@ -105,4 +105,47 @@ END_SQL;
             $this->assertStringContainsString($key, $sql);
         }
     }
+
+    public function testDistinctIsOmittedByDefault(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder->from('users')->select('id', 'name')->getSql();
+
+        $this->assertStringNotContainsString('DISTINCT', $sql);
+        $this->assertStringContainsString('SELECT id, name', $sql);
+    }
+
+    public function testDistinctPrependedToSelect(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder->from('users u')->select('u.id', 'u.name')->distinct()->getSql();
+
+        $this->assertStringContainsString('SELECT DISTINCT u.id, u.name', $sql);
+        $this->assertStringContainsString('FROM users u', $sql);
+    }
+
+    public function testDistinctFalseRestoresPlainSelect(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder->from('users')->select('id')->distinct()->distinct(false)->getSql();
+
+        $this->assertStringNotContainsString('DISTINCT', $sql);
+        $this->assertStringContainsString('SELECT id', $sql);
+    }
+
+    public function testDistinctWithWhereAndJoin(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->select('u.id')
+            ->from('users u')
+            ->joinRaw('INNER JOIN orders o ON o.user_id = u.id')
+            ->where('u.status', 'active')
+            ->distinct()
+            ->getSql();
+
+        $this->assertStringContainsString('SELECT DISTINCT u.id', $sql);
+        $this->assertStringContainsString('INNER JOIN orders o', $sql);
+        $this->assertStringContainsString('WHERE', $sql);
+    }
 }
