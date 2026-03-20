@@ -278,10 +278,10 @@ class EntityCollection extends Collection
      */
     public function getIds(): array
     {
-        $callback = function ($entity) {
-            return $entity->getId();
-        };
-        return $this->map($callback);
+        if ($this->idMap === null) {
+            $this->buildIdMap();
+        }
+        return array_keys($this->idMap);
     }
 
     /**
@@ -289,17 +289,10 @@ class EntityCollection extends Collection
      */
     public function getIdMap(): array
     {
-        $map = [];
-        foreach ($this->items as $entity) {
-            $id = $entity->getId();
-            if ($id === null) {
-                continue;
-            }
-            if (!isset($map[$id])) {
-                $map[$id] = $entity;
-            }
+        if ($this->idMap === null) {
+            $this->buildIdMap();
         }
-        return $map;
+        return $this->idMap;
     }
 
     /**
@@ -347,6 +340,7 @@ class EntityCollection extends Collection
             throw new InvalidArgumentException('invalid callback.');
         }
         usort($this->items, $callback);
+        $this->idMap = null;
         return $this;
     }
 
