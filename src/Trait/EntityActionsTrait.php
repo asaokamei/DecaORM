@@ -102,22 +102,22 @@ trait EntityActionsTrait
             if ($targetOrTargets !== null && !$targetOrTargets instanceof EntityInterface) {
                 throw new \InvalidArgumentException('associate for BelongsTo/BelongsToOne expects EntityInterface|null, got ' . get_debug_type($targetOrTargets));
             }
-            $this->associateBelongsTo($relationName, $targetOrTargets);
+            $this->associateBelongsTo($relation, $targetOrTargets);
             return;
         }
         if ($relation instanceof HasOne) {
             if ($targetOrTargets !== null && !$targetOrTargets instanceof EntityInterface) {
                 throw new \InvalidArgumentException('associate for HasOne expects EntityInterface|null, got ' . get_debug_type($targetOrTargets));
             }
-            $this->associateHasOne($relationName, $targetOrTargets);
+            $this->associateHasOne($relation, $targetOrTargets);
             return;
         }
         if ($relation instanceof HasMany) {
-            $this->associateHasMany($relationName, $targetOrTargets);
+            $this->associateHasMany($relation, $targetOrTargets);
             return;
         }
         if ($relation instanceof ManyToMany) {
-            $this->associateManyToMany($relationName, $targetOrTargets);
+            $this->associateManyToMany($relation, $targetOrTargets);
             return;
         }
         throw new \RuntimeException('Unsupported relation type for associate: ' . $relationName);
@@ -129,15 +129,10 @@ trait EntityActionsTrait
      * Delegates owning-side assignment to the attribute's {@see BelongsTo::associate} /
      * {@see BelongsToOne::associate}, then updates inverse HasMany collections when inversedBy is set.
      */
-    protected function associateBelongsTo(string $relationName, ?EntityInterface $target): void
+    protected function associateBelongsTo(BelongsTo|BelongsToOne $relation, ?EntityInterface $target): void
     {
-        $repo = self::_repository();
-        $relation = $repo->getRelation($relationName);
-        if (!($relation instanceof BelongsTo) && !($relation instanceof BelongsToOne)) {
-            throw new \RuntimeException('associateBelongsTo requires BelongsTo/BelongsToOne: ' . $relationName);
-        }
-
-        $current = $this->getRaw($relationName);
+        $prop = $relation->propertyName;
+        $current = $this->getRaw($prop);
         if ($current === $target) {
             return;
         }
@@ -172,15 +167,10 @@ trait EntityActionsTrait
      * Owning-side property is set via {@see HasOne::associate}; this method then syncs the target's
      * mappedBy BelongsTo/BelongsToOne and FK (see {@see syncMappedBelongsToOnTarget}).
      */
-    protected function associateHasOne(string $relationName, ?EntityInterface $target): void
+    protected function associateHasOne(HasOne $relation, ?EntityInterface $target): void
     {
-        $repo = self::_repository();
-        $relation = $repo->getRelation($relationName);
-        if (!($relation instanceof HasOne)) {
-            throw new \RuntimeException('associateHasOne requires HasOne: ' . $relationName);
-        }
-
-        $current = $this->getRaw($relationName);
+        $prop = $relation->propertyName;
+        $current = $this->getRaw($prop);
         if ($current === $target) {
             return;
         }
@@ -235,19 +225,14 @@ trait EntityActionsTrait
      * Collection shape is built via {@see self::normalizeHasManyChildren} and assigned with
      * {@see HasMany::associate}; this method detaches removed children and attaches mappedBy on each child.
      *
-     * @param string $relationName HasMany property name on this entity (e.g. 'posts')
      * @param iterable<EntityInterface>|EntityCollection|null $children
      */
-    protected function associateHasMany(string $relationName, iterable|EntityCollection|null $children): void
+    protected function associateHasMany(HasMany $relation, iterable|EntityCollection|null $children): void
     {
         $repo = self::_repository();
-        $relation = $repo->getRelation($relationName);
-        if (!($relation instanceof HasMany)) {
-            throw new \RuntimeException('associateHasMany requires HasMany: ' . $relationName);
-        }
-
         $mappedBy = $relation->mappedBy;
-        $current = $this->getRaw($relationName);
+        $prop = $relation->propertyName;
+        $current = $this->getRaw($prop);
 
         if ($children === null) {
             if ($current instanceof EntityCollection) {
@@ -290,18 +275,11 @@ trait EntityActionsTrait
      * Delegates to {@see ManyToMany::associate}. Does not write the join table; use the repository's
      * syncManyToMany() to persist join-table changes.
      *
-     * @param string $relationName ManyToMany property name on this entity (e.g. 'roles')
      * @param iterable<EntityInterface>|EntityCollection|null $targets
      */
-    protected function associateManyToMany(string $relationName, iterable|EntityCollection|null $targets): void
+    protected function associateManyToMany(ManyToMany $relation, iterable|EntityCollection|null $targets): void
     {
-        $repo = self::_repository();
-        $relation = $repo->getRelation($relationName);
-        if (!($relation instanceof ManyToMany)) {
-            throw new \RuntimeException('associateManyToMany requires ManyToMany: ' . $relationName);
-        }
-
-        $relation->associate($repo, $this, $targets);
+        $relation->associate(self::_repository(), $this, $targets);
     }
 
     /**
@@ -319,10 +297,11 @@ trait EntityActionsTrait
         }
 
         $targetRepo = $relation->targetEntity ? $repo->getRepository($relation->targetEntity) : $repo;
-        $current = $this->getRaw($relationName);
+        $prop = $relation->propertyName;
+        $current = $this->getRaw($prop);
         if (!($current instanceof EntityCollection)) {
             $current = new EntityCollection([], $targetRepo);
-            $this->setRaw($relationName, $current);
+            $this->setRaw($prop, $current);
         }
 
         if ($current->hasEntity($child)) {
@@ -347,7 +326,8 @@ trait EntityActionsTrait
             throw new \RuntimeException('removeHasMany requires HasMany: ' . $relationName);
         }
 
-        $current = $this->getRaw($relationName);
+        $prop = $relation->propertyName;
+        $current = $this->getRaw($prop);
         if ($current instanceof EntityCollection) {
             $current->delEntity($child);
         }
