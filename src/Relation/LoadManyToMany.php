@@ -71,13 +71,11 @@ class LoadManyToMany
             return [];
         }
 
-        // Load target entities
-        $query = $targetRepository->sqlQuery()
-            ->whereIn($targetRepository->getHydrator()->getPrimaryKeyColumn(), $relatedIds);
-        if ($relation->orderBy !== null) {
-            $query->orderBy($relation->orderBy);
-        }
-        $targetEntities = $query->getResult();
+        $targetEntities = $targetRepository->find(
+            $relatedIds,
+            $targetRepository->getHydrator()->getPrimaryKeyColumn(),
+            $relation->orderBy
+        );
 
         // Note: We do NOT set bidirectional links for ManyToMany relations.
         // Unlike HasOne/BelongsToOne (1:1), ManyToMany relations may have multiple
@@ -137,14 +135,12 @@ class LoadManyToMany
             return [];
         }
 
-        // Load all target entities
         $uniqueRelatedIds = array_unique($allRelatedIds);
-        $query = $targetRepository->sqlQuery()
-            ->whereIn($targetRepository->getHydrator()->getPrimaryKeyColumn(), $uniqueRelatedIds);
-        if ($relation->orderBy !== null) {
-            $query->orderBy($relation->orderBy);
-        }
-        $targetEntities = $query->getResult();
+        $targetEntities = $targetRepository->find(
+            $uniqueRelatedIds,
+            $targetRepository->getHydrator()->getPrimaryKeyColumn(),
+            $relation->orderBy
+        );
 
         $targetEntityMap = $targetEntities->getIdMap();
 

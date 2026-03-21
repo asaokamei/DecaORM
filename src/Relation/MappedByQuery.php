@@ -47,11 +47,7 @@ final class MappedByQuery
             }
             $fkCol = $childRepository->getHydrator()->getColumnNameForProperty($inverse->foreignKey)
                 ?? $inverse->foreignKey;
-            $query = $childRepository->sqlQuery()->whereIn($fkCol, $parentIds);
-            if ($orderBy !== null) {
-                $query->orderBy($orderBy);
-            }
-            return $query->getResult();
+            return $childRepository->find($parentIds, $fkCol, $orderBy);
         }
 
         if ($inverse instanceof MorphTo || $inverse instanceof MorphToOne) {

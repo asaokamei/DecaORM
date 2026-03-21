@@ -83,11 +83,10 @@ class LoadBelongsToOne
             return [];
         }
 
-        // Batch load all parents using WHERE IN
-        $parents = $targetRepository
-            ->sqlQuery()
-            ->whereIn($targetRepository->getHydrator()->getPrimaryKeyColumn(), $parentIds)
-            ->getResult();
+        $parents = $targetRepository->find(
+            $parentIds,
+            $targetRepository->getHydrator()->getPrimaryKeyColumn()
+        );
         $allParents = self::getParents($parents, $childRelation, $children);
 
         // Set child on parent if inversedBy is specified and parent has HasOne

@@ -77,11 +77,10 @@ class LoadBelongsTo
             return [];
         }
 
-        // Batch load all parents using WHERE IN
-        $parents = $targetRepository
-            ->sqlQuery()
-            ->whereIn($targetRepository->getHydrator()->getPrimaryKeyColumn(), $parentIds)
-            ->getResult();
+        $parents = $targetRepository->find(
+            $parentIds,
+            $targetRepository->getHydrator()->getPrimaryKeyColumn()
+        );
         $allParents = self::getParents($parents, $childRelation, $children);
 
         return array_unique($allParents, SORT_REGULAR);

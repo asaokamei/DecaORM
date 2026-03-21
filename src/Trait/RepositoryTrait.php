@@ -109,11 +109,24 @@ trait RepositoryTrait
         return new EntityCollection($list, $this);
     }
 
-    public function find(int|string $id, string|null $column = null, string|null $orderBy = null): EntityCollection
+    public function find(int|string|array $id, ?string $column = null, ?string $orderBy = null): EntityCollection
     {
         $column = $column ?? $this->hydrator->getPrimaryKeyColumn();
-        $orderBy = $orderBy ?? $column;
 
+        if (is_array($id)) {
+            if ($id === []) {
+                return new EntityCollection([], $this);
+            }
+            $query = $this->sqlQuery()->whereIn($column, $id);
+            if ($orderBy !== null) {
+                $query->orderBy($orderBy);
+            }
+            $sql = $query->getSql();
+            $data = $query->getParameters();
+            return $this->fetch($sql, $data);
+        }
+
+        $orderBy = $orderBy ?? $column;
         $query = $this->sqlQuery()
             ->where($column, $id)
             ->orderBy($orderBy);
