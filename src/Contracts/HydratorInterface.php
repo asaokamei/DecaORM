@@ -89,7 +89,7 @@ interface HydratorInterface
      * Get relation information for a specific property
      * 
      * @param string $propertyName The property name
-     * @return mixed|null|Attribute\HasMany|Attribute\HasOne|Attribute\BelongsTo|Attribute\BelongsToOne
+     * @return mixed|null|Attribute\HasMany|Attribute\HasOne|Attribute\BelongsTo|Attribute\BelongsToOne|Attribute\MorphTo|Attribute\MorphToOne
      */
     public function getRelation(string $propertyName): mixed;
 }

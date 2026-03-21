@@ -16,6 +16,8 @@ use WScore\DecaORM\Attribute\CustomLoader;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Attribute\ManyToMany;
+use WScore\DecaORM\Attribute\MorphTo;
+use WScore\DecaORM\Attribute\MorphToOne;
 use WScore\DecaORM\Collection;
 use WScore\DecaORM\DirtyTracker;
 use WScore\DecaORM\EntityCache;
@@ -28,6 +30,8 @@ use WScore\DecaORM\Relation\LoadCustomLoader;
 use WScore\DecaORM\Relation\LoadHasMany;
 use WScore\DecaORM\Relation\LoadHasOne;
 use WScore\DecaORM\Relation\LoadManyToMany;
+use WScore\DecaORM\Relation\LoadMorphTo;
+use WScore\DecaORM\Relation\LoadMorphToOne;
 use WScore\DecaORM\Contracts\RepositoryInterface;
 use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Sql\Insert;
@@ -137,7 +141,7 @@ trait RepositoryTrait
     }
 
     /**
-     * @return HasMany|HasOne|BelongsTo|BelongsToOne|ManyToMany|null
+     * @return HasMany|HasOne|BelongsTo|BelongsToOne|MorphTo|MorphToOne|ManyToMany|null
      */
     public function getRelation(string $propertyName): mixed
     {
@@ -228,21 +232,27 @@ trait RepositoryTrait
             // retrieve property names to load: $childBackRefProperty and $childForeignKey.
             $childRepo = $this->getRepository($relation->targetEntity);
             $childRel = $childRepo->getRelation($relation->mappedBy);
-            if (!$childRel instanceof BelongsTo && !$childRel instanceof BelongsToOne) {
-                continue;
-            }
-            $childBackRefProperty = $childRel->propertyName ?? $relation->mappedBy; // fallback to mappedBy
-            $childForeignKey = $childRel->foreignKey ?? null;
+            if ($childRel instanceof BelongsTo || $childRel instanceof BelongsToOne) {
+                $childBackRefProperty = $childRel->propertyName ?? $relation->mappedBy; // fallback to mappedBy
+                $childForeignKey = $childRel->foreignKey ?? null;
 
-            foreach ($children as $child) {
-                if (!$child instanceof EntityInterface) {
-                    continue; // ignore invalid child
+                foreach ($children as $child) {
+                    if (!$child instanceof EntityInterface) {
+                        continue; // ignore invalid child
+                    }
+                    $child->setRaw($childBackRefProperty, $entity);
+
+                    // Set child's foreign key to parent's id when known
+                    if ($childForeignKey !== null) {
+                        $child->setRaw($childForeignKey, $entity->getId());
+                    }
                 }
-                $child->setRaw($childBackRefProperty, $entity);
-
-                // Set child's foreign key to parent's id when known
-                if ($childForeignKey !== null) {
-                    $child->setRaw($childForeignKey, $entity->getId());
+            } elseif ($childRel instanceof MorphTo || $childRel instanceof MorphToOne) {
+                foreach ($children as $child) {
+                    if (!$child instanceof EntityInterface) {
+                        continue;
+                    }
+                    $childRel->associate($child, $entity);
                 }
             }
         }
@@ -331,9 +341,10 @@ trait RepositoryTrait
             $entities = new EntityCollection($entities, $this);
         }
         $relation = $this->hydrator->getRelation($relationName);
-        $targetRepo = $relation->targetEntity 
-            ? $this->getRepository($relation->targetEntity) 
-            : null;
+        $targetRepo = null;
+        if (property_exists($relation, 'targetEntity') && $relation->targetEntity) {
+            $targetRepo = $this->getRepository($relation->targetEntity);
+        }
 
         // Use standard loading (loader is handled inside LoadHasMany/LoadHasOne if specified)
         if ($relation instanceof HasMany) {
@@ -348,6 +359,12 @@ trait RepositoryTrait
         } elseif ($relation instanceof BelongsToOne) {
             $results = LoadBelongsToOne::load($entities, $relation, $targetRepo);
             return new EntityCollection($results, $targetRepo);
+        } elseif ($relation instanceof MorphTo) {
+            $results = LoadMorphTo::load($entities, $relation);
+            return new Collection($results);
+        } elseif ($relation instanceof MorphToOne) {
+            $results = LoadMorphToOne::load($entities, $relation);
+            return new Collection($results);
         } elseif ($relation instanceof ManyToMany) {
             $results = LoadManyToMany::load($entities, $relation, $this, $targetRepo);
             return new EntityCollection($results, $targetRepo);

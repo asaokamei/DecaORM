@@ -7,6 +7,8 @@ use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\ManyToMany;
+use WScore\DecaORM\Attribute\MorphTo;
+use WScore\DecaORM\Attribute\MorphToOne;
 use WScore\DecaORM\Attribute\CustomLoader;
 use WScore\DecaORM\Collection;
 use WScore\DecaORM\EntityCollection;
@@ -65,6 +67,8 @@ trait EntityActionsTrait
                 $relation instanceof HasOne
                 || $relation instanceof BelongsTo
                 || $relation instanceof BelongsToOne
+                || $relation instanceof MorphTo
+                || $relation instanceof MorphToOne
             ) {
                 $this->setRaw($relationName, null);
                 return null;
@@ -105,6 +109,13 @@ trait EntityActionsTrait
             $this->associateBelongsTo($relation, $targetOrTargets);
             return;
         }
+        if ($relation instanceof MorphTo || $relation instanceof MorphToOne) {
+            if ($targetOrTargets !== null && !$targetOrTargets instanceof EntityInterface) {
+                throw new \InvalidArgumentException('associate for MorphTo/MorphToOne expects EntityInterface|null, got ' . get_debug_type($targetOrTargets));
+            }
+            $this->associateMorphTo($relation, $targetOrTargets);
+            return;
+        }
         if ($relation instanceof HasOne) {
             if ($targetOrTargets !== null && !$targetOrTargets instanceof EntityInterface) {
                 throw new \InvalidArgumentException('associate for HasOne expects EntityInterface|null, got ' . get_debug_type($targetOrTargets));
@@ -140,6 +151,48 @@ trait EntityActionsTrait
         $relation->associate($this, $target);
 
         // Keep inverse side in memory when already loaded (HasMany collection or HasOne single ref).
+        if ($relation->inversedBy === null) {
+            return;
+        }
+        $inverseName = $relation->inversedBy;
+
+        if ($current instanceof EntityInterface) {
+            $inverse = $current->getRaw($inverseName);
+            $inverseRel = OrmManager::getRepository($current::getRepositoryClass())->getRelation($inverseName);
+            if ($inverseRel instanceof HasMany || $inverseRel instanceof ManyToMany) {
+                if ($inverse instanceof EntityCollection) {
+                    $inverse->delEntity($this);
+                }
+            } elseif ($inverse === $this) {
+                $current->setRaw($inverseName, null);
+            }
+        }
+        if ($target instanceof EntityInterface) {
+            $inverse = $target->getRaw($inverseName);
+            $inverseRel = OrmManager::getRepository($target::getRepositoryClass())->getRelation($inverseName);
+            if ($inverseRel instanceof HasMany || $inverseRel instanceof ManyToMany) {
+                if ($inverse instanceof EntityCollection && !$inverse->hasEntity($this)) {
+                    $inverse->add($this);
+                }
+            } elseif ($inverse === null || $inverse === $this) {
+                $target->setRaw($inverseName, $this);
+            }
+        }
+    }
+
+    /**
+     * Same inverse bookkeeping as {@see associateBelongsTo} for polymorphic owning sides.
+     */
+    protected function associateMorphTo(MorphTo|MorphToOne $relation, ?EntityInterface $target): void
+    {
+        $prop = $relation->propertyName;
+        $current = $this->getRaw($prop);
+        if ($current === $target) {
+            return;
+        }
+
+        $relation->associate($this, $target);
+
         if ($relation->inversedBy === null) {
             return;
         }

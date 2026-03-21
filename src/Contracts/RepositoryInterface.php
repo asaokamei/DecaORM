@@ -9,6 +9,8 @@ use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Attribute\ManyToMany;
+use WScore\DecaORM\Attribute\MorphTo;
+use WScore\DecaORM\Attribute\MorphToOne;
 use WScore\DecaORM\Collection;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Sql\Delete;
@@ -143,7 +145,7 @@ interface RepositoryInterface
     /**
      * Gets the relation metadata for the given property name.
      *
-     * @return HasMany|HasOne|BelongsTo|BelongsToOne|ManyToMany|null
+     * @return HasMany|HasOne|BelongsTo|BelongsToOne|MorphTo|MorphToOne|ManyToMany|null
      */
     public function getRelation(string $propertyName): mixed;
 
