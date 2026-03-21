@@ -30,7 +30,7 @@ class LoadHasOne
         $loader = self::getLoader($parentRelation, $sourceRepository);
 
         if ($entities instanceof EntityInterface) {
-            return self::loadSingle($entities, $parentRelation, $targetRepository, $loader);
+            return self::loadSingle($entities, $parentRelation, $targetRepository, $loader, $sourceRepository);
         }
         if (count($entities) === 0) {
             return [];
@@ -40,9 +40,9 @@ class LoadHasOne
             if (!$first instanceof EntityInterface) {
                 return [];
             }
-            return self::loadSingle($first, $parentRelation, $targetRepository, $loader);
+            return self::loadSingle($first, $parentRelation, $targetRepository, $loader, $sourceRepository);
         }
-        return self::loadBatch($entities, $parentRelation, $targetRepository, $loader);
+        return self::loadBatch($entities, $parentRelation, $targetRepository, $loader, $sourceRepository);
     }
 
     /**
@@ -52,19 +52,24 @@ class LoadHasOne
         EntityInterface $parentEntity,
         HasOne $parentRelation,
         RepositoryInterface $targetRepository,
-        ?callable $loader = null
+        ?callable $loader = null,
+        ?RepositoryInterface $sourceRepository = null
     ): array {
         $parentProperty = $parentRelation->propertyName;
         $childProperty = $parentRelation->mappedBy;
-        $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
 
         if ($loader !== null) {
             $children = call_user_func($loader, $parentEntity);
             $children = $children instanceof EntityCollection ? $children : new EntityCollection((array)$children, $targetRepository);
         } else {
-            $foreignKey = $targetRepository->getHydrator()->getColumnNameForProperty($childRelation->foreignKey)
-                ?? $childRelation->foreignKey;
-            $children = $targetRepository->find($parentEntity->getId(), $foreignKey);
+            $parentRepo = self::resolveParentRepositoryForInverse($parentEntity, $sourceRepository);
+            $children = MappedByQuery::fetch(
+                $targetRepository,
+                $parentRelation->mappedBy,
+                $parentEntity,
+                $parentRepo,
+                null
+            );
         }
 
         if (count($children) === 0) {
@@ -93,7 +98,8 @@ class LoadHasOne
         EntityCollection $parentEntities,
         HasOne $parentRelation,
         RepositoryInterface $targetRepository,
-        ?callable $loader = null
+        ?callable $loader = null,
+        ?RepositoryInterface $sourceRepository = null
     ): array {
         if (count($parentEntities) === 0) {
             return [];
@@ -104,14 +110,14 @@ class LoadHasOne
             $children = call_user_func($loader, $parentEntities);
             $children = $children instanceof EntityCollection ? $children : new EntityCollection((array)$children, $targetRepository);
         } else {
-            // Batch load all children using WHERE IN
-            $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
-            $parentIds = array_keys($parentEntities->getIdMap());
-            $foreignKey = $targetRepository->getHydrator()->getColumnNameForProperty($childRelation->foreignKey)
-                ?? $childRelation->foreignKey;
-            $query = $targetRepository->sqlQuery()
-                ->whereIn($foreignKey, $parentIds);
-            $children = $query->getResult();
+            $parentRepo = self::resolveParentRepositoryForInverse($parentEntities, $sourceRepository);
+            $children = MappedByQuery::fetch(
+                $targetRepository,
+                $parentRelation->mappedBy,
+                $parentEntities,
+                $parentRepo,
+                null
+            );
         }
 
         // Use applyLoaderResult to map children to parents

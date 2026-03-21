@@ -29,7 +29,7 @@ class LoadHasMany
         $loader = self::getLoader($parentRelation, $sourceRepository);
 
         if ($entities instanceof EntityInterface) {
-            return self::loadSingle($entities, $parentRelation, $targetRepository, $loader);
+            return self::loadSingle($entities, $parentRelation, $targetRepository, $loader, $sourceRepository);
         }
         if (count($entities) === 0) {
             return [];
@@ -39,9 +39,9 @@ class LoadHasMany
             if (!$first instanceof EntityInterface) {
                 return [];
             }
-            return self::loadSingle($first, $parentRelation, $targetRepository, $loader);
+            return self::loadSingle($first, $parentRelation, $targetRepository, $loader, $sourceRepository);
         }
-        return self::loadBatch($entities, $parentRelation, $targetRepository, $loader);
+        return self::loadBatch($entities, $parentRelation, $targetRepository, $loader, $sourceRepository);
     }
 
     /**
@@ -51,7 +51,8 @@ class LoadHasMany
         EntityInterface $parentEntity,
         HasMany $parentRelation,
         RepositoryInterface $targetRepository,
-        ?callable $loader = null
+        ?callable $loader = null,
+        ?RepositoryInterface $sourceRepository = null
     ): array {
         $parentProperty = $parentRelation->propertyName;
         $childProperty = $parentRelation->mappedBy;
@@ -60,11 +61,14 @@ class LoadHasMany
             $children = call_user_func($loader, $parentEntity);
             $children = $children instanceof EntityCollection ? $children : new EntityCollection((array)$children, $targetRepository);
         } else {
-            // Find posts by foreign key
-            $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
-            $foreignKey = $targetRepository->getHydrator()->getColumnNameForProperty($childRelation->foreignKey)
-                ?? $childRelation->foreignKey;
-            $children = $targetRepository->find($parentEntity->getId(), $foreignKey, $parentRelation->orderBy);
+            $parentRepo = self::resolveParentRepositoryForInverse($parentEntity, $sourceRepository);
+            $children = MappedByQuery::fetch(
+                $targetRepository,
+                $parentRelation->mappedBy,
+                $parentEntity,
+                $parentRepo,
+                $parentRelation->orderBy
+            );
         }
         if (count($children) === 0) {
             $parentEntity->setRaw($parentProperty, new EntityCollection([], $targetRepository));
@@ -93,7 +97,8 @@ class LoadHasMany
         EntityCollection $parentEntities,
         HasMany $parentRelation,
         RepositoryInterface $targetRepository,
-        ?callable $loader = null
+        ?callable $loader = null,
+        ?RepositoryInterface $sourceRepository = null
     ): array {
         if (count($parentEntities) === 0) {
             return [];
@@ -104,17 +109,14 @@ class LoadHasMany
             $children = call_user_func($loader, $parentEntities);
             $children = $children instanceof EntityCollection ? $children : new EntityCollection((array)$children, $targetRepository);
         } else {
-            // Batch load all children using WHERE IN
-            $childRelation = $targetRepository->getRelation($parentRelation->mappedBy);
-            $parentIds = array_keys($parentEntities->getIdMap());
-            $foreignKey = $targetRepository->getHydrator()->getColumnNameForProperty($childRelation->foreignKey)
-                ?? $childRelation->foreignKey;
-            $query = $targetRepository->sqlQuery()
-                ->whereIn($foreignKey, $parentIds);
-            if ($parentRelation->orderBy !== null) {
-                $query->orderBy($parentRelation->orderBy);
-            }
-            $children = $query->getResult();
+            $parentRepo = self::resolveParentRepositoryForInverse($parentEntities, $sourceRepository);
+            $children = MappedByQuery::fetch(
+                $targetRepository,
+                $parentRelation->mappedBy,
+                $parentEntities,
+                $parentRepo,
+                $parentRelation->orderBy
+            );
         }
 
         // Use applyLoaderResult to map children to parents

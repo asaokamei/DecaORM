@@ -9,6 +9,8 @@ use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Attribute\ManyToMany;
+use WScore\DecaORM\Attribute\MorphTo;
+use WScore\DecaORM\Attribute\MorphToOne;
 use WScore\DecaORM\Collection;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Sql\Delete;
@@ -83,14 +85,15 @@ interface RepositoryInterface
     public function fetch(string $sql, array $data = []): EntityCollection;
 
     /**
-     * Finds entities for a simple condition (column = value).
+     * Finds entities by primary key or another column.
      *
-     * @param int|string $id
-     * @param string|null $column
-     * @param string|null $orderBy
-     * @return EntityCollection
+     * - Scalar: `WHERE column = :id` (default ORDER BY is that column).
+     * - Non-empty array: `WHERE column IN (...)` (ORDER BY only if $orderBy is not null).
+     * - Empty array: empty result, no query.
+     *
+     * @param int|string|array<int|string> $id
      */
-    public function find(int|string $id, ?string $column = null, ?string $orderBy = null): EntityCollection;
+    public function find(int|string|array $id, ?string $column = null, ?string $orderBy = null): EntityCollection;
 
     /**
      * Finds a single entity by ID.
@@ -143,7 +146,7 @@ interface RepositoryInterface
     /**
      * Gets the relation metadata for the given property name.
      *
-     * @return HasMany|HasOne|BelongsTo|BelongsToOne|ManyToMany|null
+     * @return HasMany|HasOne|BelongsTo|BelongsToOne|MorphTo|MorphToOne|ManyToMany|null
      */
     public function getRelation(string $propertyName): mixed;
 

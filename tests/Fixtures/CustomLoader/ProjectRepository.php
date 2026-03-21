@@ -36,9 +36,7 @@ class ProjectRepository extends AbstractRepository
         }
 
         $taskRepo = $this->getRepository(Task::class);
-        $tasks = $taskRepo->sqlQuery()
-            ->whereIn('project_id', $projectIds)
-            ->getResult();
+        $tasks = $taskRepo->find($projectIds, 'project_id');
 
         $tasksByProjectId = [];
         foreach ($tasks as $task) {

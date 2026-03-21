@@ -13,7 +13,7 @@ Databases: SQLite, MySQL, PostgreSQL
 
 - **Attribute mapping** — Define mapping with attributes on the entity: `#[Table]`, `#[Column]`, `#[Id]`, etc.
 - **Repository pattern** — Data access logic lives in repositories for clearer, maintainable code.
-- **Relations** — One-to-one, one-to-many, and many-to-many via `#[HasOne]`, `#[HasMany]`, `#[BelongsTo]`, `#[BelongsToOne]`, `#[ManyToMany]`.
+- **Relations** — One-to-one, one-to-many, many-to-many, and **polymorphic** (`#[MorphTo]`, `#[MorphToOne]`) via `#[HasOne]`, `#[HasMany]`, `#[BelongsTo]`, `#[BelongsToOne]`, `#[ManyToMany]`.
 - **Lazy loading** — Call `load()` inside a getter so the relation is loaded on first access.
 - **Batch loading** — Load relations for many entities in one query to avoid N+1.
 - **Identity map** — Ensures a single in-memory instance per primary key.
@@ -233,6 +233,7 @@ $posts = $user->load('posts');  // Returns cached value
 Use the public API `associate($relationName, $targetOrTargets)` to set relations. DecaORM updates FKs and inverse references accordingly.
 
 - **BelongsTo / BelongsToOne / HasOne**: pass a single entity or `null`.
+- **MorphTo / MorphToOne**: pass a single entity or `null`.
 - **HasMany / ManyToMany**: pass an `EntityCollection` or iterable, or `null`.
 
 **Note:** `associate()` only updates in-memory links. For ManyToMany, call the repository’s `syncManyToMany($entity, $relationName)` to persist the join table.
@@ -320,6 +321,17 @@ $user->getRoles()->add($role2);
 $user->getRoles()->delEntity($role3);
 $userRepo->syncManyToMany($user, 'roles');
 ```
+
+### Polymorphic (Morph) relations
+
+When a child row can point to **more than one parent type** (e.g. a comment on either a post or a video), use:
+
+- **Child:** `#[MorphTo]` (many-to-one) or `#[MorphToOne]` (one-to-one on the FK side) with `foreignKey`, `typeColumn` (discriminator stored in the DB), and `typeMap` (discriminator string → entity class). Optional `inversedBy` matches the parent’s `#[HasMany]` / `#[HasOne]` property name.
+- **Parent:** unchanged `#[HasMany]` / `#[HasOne]` with `mappedBy` set to the child’s morph property name.
+
+Loading the morph parent from the child returns a generic **`Collection`**, not `EntityCollection`, because parent instances may belong to different classes. Parents are resolved **per child row**. There is no extra method on `RepositoryInterface`; inverse queries are built in `MappedByQuery` using the usual repository API.
+
+See **README-ja.md** (Japanese) for a longer explanation and examples.
 
 ---
 

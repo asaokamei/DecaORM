@@ -15,6 +15,8 @@ use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\ManyToMany;
+use WScore\DecaORM\Attribute\MorphTo;
+use WScore\DecaORM\Attribute\MorphToOne;
 use WScore\DecaORM\Attribute\Table;
 use WScore\DecaORM\Attribute\UpdatedAt;
 use WScore\DecaORM\Contracts\EntityInterface;
@@ -240,6 +242,12 @@ class AttributeHydrator implements HydratorInterface
             if ($instance instanceof BelongsTo) {
                 $this->relations[$propertyName] = $instance;
                 $instance->propertyName = $propertyName;
+            } elseif ($instance instanceof MorphTo) {
+                $this->relations[$propertyName] = $instance;
+                $instance->propertyName = $propertyName;
+            } elseif ($instance instanceof MorphToOne) {
+                $this->relations[$propertyName] = $instance;
+                $instance->propertyName = $propertyName;
             } elseif ($instance instanceof HasMany) {
                 $this->relations[$propertyName] = $instance;
                 $instance->propertyName = $propertyName;
@@ -349,7 +357,7 @@ class AttributeHydrator implements HydratorInterface
      * Get relation information for a specific property
      * 
      * @param string $propertyName The property name
-     * @return mixed|null|HasMany|HasOne|BelongsTo
+     * @return mixed|null|HasMany|HasOne|BelongsTo|MorphTo|MorphToOne
      */
     public function getRelation(string $propertyName): mixed
     {
