@@ -39,6 +39,8 @@ DecaORMでは、アトリビュートを使用してエンティティ間のリ�
 *   `#[HasMany(targetEntity: ..., mappedBy: ...)]`
 *   `#[BelongsTo(targetEntity: ..., foreignKey: ..., inversedBy: ...)]`
 *   `#[ManyToMany(targetEntity: ..., joinTable: ..., foreignKey: ..., inverseForeignKey: ...)]`
+*   `#[MorphTo(foreignKey: ..., typeColumn: ..., typeMap: [...], inversedBy: ...)]` — 多対1の多態（子が FK + 型で複数種の親を指す）
+*   `#[MorphToOne(foreignKey: ..., typeColumn: ..., typeMap: [...], inversedBy: ...)]` — 1対1の多態（子側が FK + 型）
 
 ### HasMany と BelongsTo (1対多)
 
@@ -98,6 +100,7 @@ $user->load('profile');
 リレーションを設定するときは、公開 API の `associate($relationName, $targetOrTargets)` を使います。FK の更新や逆参照の整合はトレイト側で行われるため、自前で双方向の更新やループ防止を書く必要はありません。
 
 - **BelongsTo / BelongsToOne / HasOne**: 第2引数は単一エンティティまたは `null`
+- **MorphTo / MorphToOne**: 第2引数は単一エンティティまたは `null`（FK・`typeColumn`・リレーションプロパティが更新される）
 - **HasMany / ManyToMany**: 第2引数は `EntityCollection` または `iterable` または `null`
 
 setter から呼び出す例です。
@@ -174,6 +177,14 @@ private string $user_id = '';
 private ?User $user = null;
 ```
 
+### MorphTo / MorphToOne（多態）
+
+1つの子が **複数種類の親**のいずれかを参照するときに使います（例: コメントが「投稿」または「動画」に付く）。親側は通常どおり `#[HasMany]` / `#[HasOne]` とし、`mappedBy` に子の Morph プロパティ名を指定します。
+
+*   **MorphTo**: `foreignKey`（親 ID）、`typeColumn`（判別子）、`typeMap`（DB の文字列 ⇒ エンティティクラス）、任意で `inversedBy`。
+*   **MorphToOne**: 上記と同様。親が `#[HasOne]` のときに対応。
+
+子から親へ `load()` した結果は **`Collection`** になります（親のクラスが混在しうるため `EntityCollection` にはできない）。詳細は [README-ja.md](../README-ja.md) の「多態（Morph）リレーション」を参照してください。
 
 ## Entityの操作
 

@@ -7,7 +7,7 @@ DecaORMは、PHP 8のアトリビュート（Attribute）を活用した、シ�
 
 *   **Attribute Mapping**: PHP 8のアトリビュート（`#[Table]`, `#[Column]`, `#[Id]`など）を使用して、マッピング情報をエンティティクラスに直接記述できます。
 *   **Repository Pattern**: データアクセスロジックをリポジトリに分離し、保守性の高いコードを実現します。
-*   **Relations**: `#[HasOne]`, `#[HasMany]`, `#[BelongsTo]`, `#[BelongsToOne]`, `#[ManyToMany]` アトリビュートによるリレーションシップ（1対1、1対多、多対多）をサポートしています。
+*   **Relations**: `#[HasOne]`, `#[HasMany]`, `#[BelongsTo]`, `#[BelongsToOne]`, `#[ManyToMany]` に加え、多態関連の `#[MorphTo]`, `#[MorphToOne]`（子が FK + 型判別子で複数種の親を指す）をサポートしています。
 *   **Lazy Loading**: ゲッター内で `load()` を呼ぶことで、リレーションに初回アクセスしたタイミングで読み込む遅延読み込みパターンが利用できます。
 *   **Batch Loading**: N+1問題を解決するためのバッチローディング機能を提供します。
 *   **Identity Map**: 同じ主キーを持つエンティティインスタンスが複数存在しないことを保証し、メモリ上の一意性を管理します。
@@ -236,6 +236,7 @@ $user->associate('roles', $roleCollection);
 **補足**: `associate()` はエンティティのメモリ上での関連づけのみ行います。ManyToMany の中間テーブルへ反映するには、リポジトリの `syncManyToMany($entity, $relationName)` を別途呼び出してください。
 
 - **BelongsTo / BelongsToOne / HasOne**: 単一エンティティまたは `null` を渡す。
+- **MorphTo / MorphToOne**: 単一エンティティまたは `null` を渡す（FK・型判別子・プロパティが `associate()` で更新される）。
 - **HasMany / ManyToMany**: コレクション（`EntityCollection` または `iterable`）または `null` を渡す。
 
 setter から呼び出すと、型安全にリレーションを更新できます。
@@ -392,6 +393,45 @@ $userRepo->syncManyToMany($user, 'roles');
 ```
 
 `syncManyToMany()`は、エンティティのリレーションプロパティに設定されたエンティティの状態をデータベースに反映します。現在のDBの状態と比較し、必要なINSERT/DELETEを自動的に実行します。
+
+### 多態（Morph）リレーション
+
+1つの子テーブル行が、**複数種類の親エンティティ**（例: 投稿と動画）のどちらかを指す場合に使います。Rails の polymorphic / Laravel の morph に相当します。
+
+- **子側**: `#[MorphTo]`（多対1）または `#[MorphToOne]`（多対1で親側が HasOne のとき）。  
+  - `foreignKey` … 親の ID を持つプロパティ名  
+  - `typeColumn` … **判別子**（どの親クラスか）を保存するプロパティ名  
+  - `typeMap` … **DB に保存する文字列** ⇒ **エンティティクラス** の対応表（1 クラス 1 エントリ）  
+  - `inversedBy` … 親エンティティ上の `#[HasMany]` / `#[HasOne]` のプロパティ名（任意・双方向のメモリ整合用）
+- **親側**: 従来どおり `#[HasMany]` または `#[HasOne]` を使い、`mappedBy` に子の MorphTo / MorphToOne の**プロパティ名**を指定します。追加の専用アトリビュートは不要です。
+
+```php
+// 子: Comment が post または video を指す
+#[MorphTo(
+    foreignKey: 'commentable_id',
+    typeColumn: 'commentable_type',
+    typeMap: [
+        'post' => MorphPost::class,
+        'video' => MorphVideo::class,
+    ],
+    inversedBy: 'comments',
+)]
+private MorphPost|MorphVideo|null $commentable = null;
+
+// 親: Post
+#[HasMany(targetEntity: MorphComment::class, mappedBy: 'commentable')]
+private ?EntityCollection $comments = null;
+```
+
+**読み込みの挙動**
+
+- 親から `load('comments')` すると、子リポジトリ側で `mappedBy` のメタデータを見て、`type` + `fk` で絞り込んだ SELECT が実行されます（`MappedByQuery`）。
+- 子から親へ `load('commentable')` すると、判別子と ID から対象リポジトリを選び **親を 1 件ずつ解決**します。親のクラスが混在しうるため、戻り値は **`EntityCollection` ではなく `Collection`** です（`EntityCollection` は同一エンティティクラス前提のため）。
+- 親を INSERT する際、子がメモリ上で紐づいていれば、`MorphTo` / `MorphToOne` も `BelongsTo` と同様に **INSERT 後に FK・型・プロパティが埋まる**ようになっています。
+
+**リポジトリ API**
+
+多態用の特別なメソッドは `RepositoryInterface` にはありません。逆参照のクエリ組み立ては Relation 層の `MappedByQuery` が、公開 API（`getRelation` / `find` / `sqlQuery` など）だけで行います。
 
 ## エンティティの保存と依存性の管理
 

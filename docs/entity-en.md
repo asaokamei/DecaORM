@@ -41,6 +41,8 @@ Relations between entities are defined with these attributes:
 - `#[HasMany(targetEntity: ..., mappedBy: ...)]`
 - `#[BelongsTo(targetEntity: ..., foreignKey: ..., inversedBy: ...)]`
 - `#[ManyToMany(targetEntity: ..., joinTable: ..., foreignKey: ..., inverseForeignKey: ...)]`
+- `#[MorphTo(foreignKey: ..., typeColumn: ..., typeMap: [...], inversedBy: ...)]` — polymorphic many-to-one (child holds FK + type discriminator).
+- `#[MorphToOne(foreignKey: ..., typeColumn: ..., typeMap: [...], inversedBy: ...)]` — polymorphic one-to-one on the FK side.
 
 ### HasMany and BelongsTo (one-to-many)
 
@@ -100,6 +102,7 @@ $user->load('profile');
 Use the public API `associate($relationName, $targetOrTargets)` so that FKs and inverse references stay in sync.
 
 - **BelongsTo / BelongsToOne / HasOne**: pass a single entity or `null`.
+- **MorphTo / MorphToOne**: pass a single entity or `null` (FK, type column, and relation property are updated).
 - **HasMany / ManyToMany**: pass `EntityCollection`, iterable, or `null`.
 
 Example in setters:
@@ -174,6 +177,15 @@ private string $user_id = '';
 #[BelongsToOne(targetEntity: User::class, foreignKey: 'user_id', inversedBy: 'profile')]
 private ?User $user = null;
 ```
+
+### MorphTo and MorphToOne (polymorphic)
+
+Use when one child can reference **more than one parent type** (e.g. a comment on a post or a video). On the parent, use normal `#[HasMany]` / `#[HasOne]` with `mappedBy` pointing at the child’s morph property.
+
+- **MorphTo**: `foreignKey`, `typeColumn`, `typeMap` (DB string → entity class), optional `inversedBy`.
+- **MorphToOne**: same shape; pairs with `#[HasOne]` on the parent when appropriate.
+
+Loading the parent from the child returns a **`Collection`**, not `EntityCollection`, because parent classes may differ. See **README.md** for details and **README-ja.md** for longer examples.
 
 ---
 
