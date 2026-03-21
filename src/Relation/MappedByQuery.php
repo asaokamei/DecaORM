@@ -32,21 +32,19 @@ final class MappedByQuery
         }
 
         if ($inverse instanceof BelongsTo || $inverse instanceof BelongsToOne) {
+            $fkCol = $childRepository->getHydrator()->getColumnNameForProperty($inverse->foreignKey)
+                ?? $inverse->foreignKey;
             if ($parents instanceof EntityInterface) {
                 $parentId = $parents->getId();
                 if ($parentId === null) {
                     return new EntityCollection([], $childRepository);
                 }
-                $fkCol = $childRepository->getHydrator()->getColumnNameForProperty($inverse->foreignKey)
-                    ?? $inverse->foreignKey;
                 return $childRepository->find($parentId, $fkCol, $orderBy);
             }
-            $parentIds = array_keys($parents->getIdMap());
+            $parentIds = $parents->getIds();
             if ($parentIds === []) {
                 return new EntityCollection([], $childRepository);
             }
-            $fkCol = $childRepository->getHydrator()->getColumnNameForProperty($inverse->foreignKey)
-                ?? $inverse->foreignKey;
             return $childRepository->find($parentIds, $fkCol, $orderBy);
         }
 
@@ -59,25 +57,21 @@ final class MappedByQuery
                 ?? $inverse->typeColumn;
 
             if ($parents instanceof EntityInterface) {
-                $parentId = $parents->getId();
-                if ($parentId === null) {
+                $pid = $parents->getId();
+                if ($pid === null) {
                     return new EntityCollection([], $childRepository);
                 }
-                $query = $childRepository->sqlQuery()
-                    ->where($typeCol, $disc)
-                    ->where($fkCol, $parentId);
-                if ($orderBy !== null) {
-                    $query->orderBy($orderBy);
+                $fkValues = [$pid];
+            } else {
+                $fkValues = $parents->getIds();
+                if ($fkValues === []) {
+                    return new EntityCollection([], $childRepository);
                 }
-                return $query->getResult();
             }
-            $parentIds = array_keys($parents->getIdMap());
-            if ($parentIds === []) {
-                return new EntityCollection([], $childRepository);
-            }
+
             $query = $childRepository->sqlQuery()
                 ->where($typeCol, $disc)
-                ->whereIn($fkCol, $parentIds);
+                ->whereIn($fkCol, $fkValues);
             if ($orderBy !== null) {
                 $query->orderBy($orderBy);
             }
