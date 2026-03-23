@@ -23,7 +23,10 @@ class Query extends QueryBuilder
 
     public function newQuery(): static
     {
-        return new static($this->repository);
+        $query = new static($this->repository);
+        $this->repository->applyHooksToQuery($query);
+
+        return $query;
     }
 
     public function getResult(): EntityCollection

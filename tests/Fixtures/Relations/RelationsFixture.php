@@ -18,7 +18,7 @@ class RelationsFixture
     public CommentRepository $comments;
     public ProfileRepository $profiles;
     public RoleRepository $roles;
-    private OrmManager $manager;
+    public OrmManager $manager;
 
     public static function create(?LoggerInterface $logger = null, int $slowQueryThresholdMs = 100): self
     {

@@ -54,6 +54,14 @@ interface RepositoryInterface
      */
     public function sqlQuery(): Query;
 
+    /**
+     * Applies {@see RepositoryHooksInterface::beforeQuery()} for this repository.
+     *
+     * Invoked automatically from {@see sqlQuery()} and {@see Query::newQuery()}.
+     * Call manually if you construct {@see Query} directly (unusual).
+     */
+    public function applyHooksToQuery(Query $query): void;
+
     public function sqlInsert(array $data): Insert;
 
     public function sqlUpdate(int|string|null $id = null, array $data = []): Update;

@@ -24,6 +24,7 @@ use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Contracts\HydratorInterface;
+use WScore\DecaORM\Contracts\RepositoryHooksInterface;
 use WScore\DecaORM\Relation\LoadBelongsTo;
 use WScore\DecaORM\Relation\LoadBelongsToOne;
 use WScore\DecaORM\Relation\LoadCustomLoader;
@@ -34,10 +35,11 @@ use WScore\DecaORM\Relation\LoadMorphTo;
 use WScore\DecaORM\Relation\LoadMorphToOne;
 use WScore\DecaORM\Contracts\RepositoryInterface;
 use WScore\DecaORM\OrmManager;
+use WScore\DecaORM\Persistence\NoOpHooks;
+use WScore\DecaORM\Sql\Delete;
 use WScore\DecaORM\Sql\Insert;
 use WScore\DecaORM\Sql\Query;
 use WScore\DecaORM\Sql\Update;
-use WScore\DecaORM\Sql\Delete;
 
 /**
  * @template T of EntityInterface
@@ -48,6 +50,11 @@ trait RepositoryTrait
     protected PDO $db;
     protected HydratorInterface $hydrator;
     protected DateTimeInterface $now;
+
+    /**
+     * Optional ordered hooks; defaults to {@see NoOpHooks} via {@see getHooks()}.
+     */
+    protected ?RepositoryHooksInterface $hooks = null;
 
     public function getDb(): PDO
     {
@@ -61,7 +68,23 @@ trait RepositoryTrait
 
     public function sqlQuery(): Query
     {
-        return new Query($this);
+        $query = new Query($this);
+        $this->applyHooksToQuery($query);
+
+        return $query;
+    }
+
+    public function applyHooksToQuery(Query $query): void
+    {
+        $this->getHooks()->beforeQuery($query);
+    }
+
+    /**
+     * @internal Prefer assigning {@see $hooks} from a concrete repository constructor.
+     */
+    protected function getHooks(): RepositoryHooksInterface
+    {
+        return $this->hooks ?? new NoOpHooks();
     }
 
     public function isNew(EntityInterface $entity): bool
@@ -189,6 +212,7 @@ trait RepositoryTrait
                 unset($data[$pkCol]);
             }
         }
+        $this->getHooks()->beforeInsert($entity, $data);
         $stmt = $this->sqlInsert($data)->execute();
 
         if (!$stmt) {
@@ -206,6 +230,7 @@ trait RepositoryTrait
 
         // DirtyTracking: INSERT後の状態をスナップショットとして記録
         DirtyTracker::takeEntity($this->hydrator, $entity);
+        $this->getHooks()->afterInsert($entity);
     }
 
     public function sqlInsert(array $data): Insert
@@ -302,9 +327,12 @@ trait RepositoryTrait
             }
         }
 
-        $this->sqlUpdate($id, $data)->execute();
+        $update = $this->sqlUpdate($id, $data);
+        $this->getHooks()->beforeUpdate($update, $entity, $data, $original);
+        $result = $update->execute();
+        $stmt = $result instanceof PDOStatement ? $result : null;
+        $this->getHooks()->afterUpdate($entity, $stmt);
         DirtyTracker::takeEntity($this->hydrator, $entity);
-
     }
 
     public function sqlUpdate(int|string|null $id = null, array $data = []): Update
@@ -325,10 +353,13 @@ trait RepositoryTrait
         if ($id === null) {
             throw new RuntimeException('Entity does not have an ID:' . $this->hydrator->getEntityClass());
         }
-        $this->sqlDelete($id)->execute();
+        $delete = $this->sqlDelete($id);
+        $this->getHooks()->beforeDelete($delete, $entity);
+        $delete->execute();
 
         // DirtyTracking: 削除後はスナップショットを破棄
         DirtyTracker::forget($entity);
+        $this->getHooks()->afterDelete($entity);
     }
 
     public function sqlDelete(int|string|null $id = null): Delete

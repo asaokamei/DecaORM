@@ -21,6 +21,7 @@ Databases: SQLite, MySQL, PostgreSQL
 - **Lifecycle** — `#[CreatedAt]` and `#[UpdatedAt]` for automatic timestamps.
 - **Hydrator** — Default `AttributeHydrator` plus support for custom hydrators.
 - **Explicit design** — Behavior is predictable from reading the code.
+- **Repository hooks** — Optional `RepositoryHooksInterface` for cross-cutting rules (tenant scope, soft delete, optimistic locking); see [repository-hooks-en.md](docs/repository-hooks-en.md).
 
 ### Not supported
 
@@ -46,8 +47,9 @@ composer require wscore/decaorm
 
 - [Entity mapping (entity-en.md)](docs/entity-en.md)
 - [SQL builder (sql-en.md)](docs/sql-en.md)
+- [Repository hooks (repository-hooks-en.md)](docs/repository-hooks-en.md)
 
-**Japanese:** [README.md](README-ja.md) | [Entity mapping](docs/entity-ja.md) | [SQL builders](docs/sql-ja.md)
+**Japanese:** [README.md](README-ja.md) | [Entity mapping](docs/entity-ja.md) | [SQL builders](docs/sql-ja.md) | [Repository hooks](docs/repository-hooks-ja.md)
 
 ---
 

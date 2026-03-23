@@ -20,6 +20,7 @@ PHP: 8.1, 8.2, 8.3, 8.4
 *   **Lifecycle Callbacks**: `#[CreatedAt]`, `#[UpdatedAt]` によるタイムスタンプの自動更新に対応しています。
 *   **Flexible Hydrator**: 標準の `AttributeHydrator` に加え、パフォーマンスを重視したカスタムHydratorの実装も可能です。
 *   **Simple & Explicit**: シンプルで明示的な設計により、コードを見ただけで何が起きるか予測できます。
+*   **Repository hooks**: 任意の `RepositoryHooksInterface` により、テナント境界・論理削除・楽観ロックなど横断ルールを差し込めます（[repository-hooks-ja.md](docs/repository-hooks-ja.md)）。
 
 ### サポートされていない機能
 
@@ -45,8 +46,9 @@ composer require wscore/decaorm
 
 * [entity.md](docs/entity-ja.md)
 * [sql.md](docs/sql-ja.md)
+* [repository-hooks.md](docs/repository-hooks-ja.md)
 
-**English:** [README-en.md](README-en.md) | [entity-en.md](docs/entity-en.md) | [sql-en.md](docs/sql-en.md)
+**English:** [README.md](README.md) | [entity-en.md](docs/entity-en.md) | [sql-en.md](docs/sql-en.md) | [repository-hooks-en.md](docs/repository-hooks-en.md)
 
 ## 使い方
 
