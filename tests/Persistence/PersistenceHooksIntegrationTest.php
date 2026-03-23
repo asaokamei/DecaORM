@@ -17,26 +17,54 @@ use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
 use WScore\DecaORM\Tests\Support\DbConnection;
 
 /**
- * Exercises sample hooks through {@see HookItemRepository} and real SQLite — not only mocks.
+ * Exercises sample hooks through {@see HookItemRepository} and a real DB (SQLite / MySQL / PostgreSQL in CI).
  *
  * Complements {@see SamplePersistenceHooksTest} (isolated SQL/exception checks) and
  * {@see \WScore\DecaORM\Tests\PersistenceHooksTest} (generic hook wiring on User).
  */
 class PersistenceHooksIntegrationTest extends TestCase
 {
-    private function managerWithFreshDb(): OrmManager
+    private static function hookItemsTableDdl(): string
     {
-        $pdo = DbConnection::get();
-        $pdo->exec('DROP TABLE IF EXISTS hook_items');
-        $pdo->exec(
-            'CREATE TABLE hook_items (
+        $type = getenv('DB_TYPE') ?: 'sqlite';
+
+        return match ($type) {
+            'sqlite' => 'CREATE TABLE hook_items (
                 hook_item_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 version INTEGER NOT NULL DEFAULT 1,
                 tenant_id INTEGER NOT NULL DEFAULT 0,
                 deleted_at TEXT NULL
-            )'
-        );
+            )',
+            'postgresql' => 'CREATE TABLE hook_items (
+                hook_item_id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                version INTEGER NOT NULL DEFAULT 1,
+                tenant_id INTEGER NOT NULL DEFAULT 0,
+                deleted_at TEXT NULL
+            )',
+            'mysql' => 'CREATE TABLE hook_items (
+                hook_item_id INTEGER PRIMARY KEY AUTO_INCREMENT,
+                name TEXT NOT NULL,
+                version INTEGER NOT NULL DEFAULT 1,
+                tenant_id INTEGER NOT NULL DEFAULT 0,
+                deleted_at TEXT NULL
+            )',
+            default => 'CREATE TABLE hook_items (
+                hook_item_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                version INTEGER NOT NULL DEFAULT 1,
+                tenant_id INTEGER NOT NULL DEFAULT 0,
+                deleted_at TEXT NULL
+            )',
+        };
+    }
+
+    private function managerWithFreshDb(): OrmManager
+    {
+        $pdo = DbConnection::get();
+        $pdo->exec('DROP TABLE IF EXISTS hook_items');
+        $pdo->exec(self::hookItemsTableDdl());
 
         EntityCache::clear();
 
@@ -103,7 +131,7 @@ class PersistenceHooksIntegrationTest extends TestCase
         $repo->save($item);
     }
 
-    public function testTenantScopeAndSoftDeleteHooksFilterSqliteQuery(): void
+    public function testTenantScopeAndSoftDeleteHooksFilterQuery(): void
     {
         $manager = $this->managerWithFreshDb();
         $pdo = $manager->getPDO();
