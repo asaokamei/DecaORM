@@ -307,6 +307,11 @@ class AttributeHydrator implements HydratorInterface
         return $this->hydrateEntity($data);
     }
 
+    public function hydrateDetached(array $data): EntityInterface
+    {
+        return $this->hydrateEntityDetached($data);
+    }
+
     public function dehydrate(EntityInterface $entity): array
     {
         return $this->dehydrateEntity($entity);

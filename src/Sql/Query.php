@@ -3,6 +3,7 @@
 namespace WScore\DecaORM\Sql;
 
 use Countable;
+use PDOStatement;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Contracts\RepositoryInterface;
@@ -40,6 +41,28 @@ class Query extends QueryBuilder
     }
 
     /**
+     * Yields one entity per row like {@see RepositoryInterface::fetchStream()}.
+     *
+     * @return \Generator<int, EntityInterface>
+     */
+    public function fetchStream(): \Generator
+    {
+        yield from $this->repository->fetchStream($this->getSql(), $this->getParameters());
+    }
+
+    /**
+     * Runs this query and returns the PDO statement without hydrating entities.
+     *
+     * Fetch mode is {@see \PDO::FETCH_ASSOC} (see {@see \WScore\DecaORM\SqlExecutor::execute}).
+     *
+     * @return bool|PDOStatement
+     */
+    public function getPdoStatement(): bool|PDOStatement
+    {
+        return $this->repository->execute($this->getSql(), $this->getParameters());
+    }
+
+    /**
      * Retrieves the total count of records based on the query.
      *
      * @return int The total count of records.
@@ -58,13 +81,4 @@ class Query extends QueryBuilder
         $row = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
         return (int)($row['COUNT(*)'] ?? 0);
     }
-
-    /**
-     * @deprecated Use getResult() instead.
-     */
-    public function getCollection(): EntityCollection
-    {
-        return $this->getResult();
-    }
-
 }

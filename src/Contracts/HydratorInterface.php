@@ -62,6 +62,11 @@ interface HydratorInterface
     public function hydrate(array $data): EntityInterface;
 
     /**
+     * Hydrate from a DB row without using {@see EntityCache} (streaming / bulk read).
+     */
+    public function hydrateDetached(array $data): EntityInterface;
+
+    /**
      * Convert an entity to an associative array (dehydration)
      */
     public function dehydrate(EntityInterface $entity): array;

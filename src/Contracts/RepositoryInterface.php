@@ -93,6 +93,15 @@ interface RepositoryInterface
     public function fetch(string $sql, array $data = []): EntityCollection;
 
     /**
+     * Executes SQL and yields one entity per row without {@see EntityCache} or DirtyTracker.
+     *
+     * For large reads (e.g. export). Returned instances are not tracked; treat as read-only snapshots.
+     *
+     * @return \Generator<int, EntityInterface>
+     */
+    public function fetchStream(string $sql, array $data = []): \Generator;
+
+    /**
      * Finds entities by primary key or another column.
      *
      * - Scalar: `WHERE column = :id` (default ORDER BY is that column).

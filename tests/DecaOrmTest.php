@@ -86,6 +86,39 @@ class DecaOrmTest extends TestCase
         $this->assertEquals($id, $entity->getId());
     }
 
+    public function testFetchStreamYieldsOneEntityPerRowWithoutTracking(): void
+    {
+        $this->pdo->exec("INSERT INTO users (user_name, email) VALUES ('A', 'a@example.com')");
+        $this->pdo->exec("INSERT INTO users (user_name, email) VALUES ('B', 'b@example.com')");
+
+        $seen = [];
+        foreach ($this->repo->fetchStream('SELECT * FROM users ORDER BY user_id', []) as $user) {
+            $seen[] = $user;
+        }
+        $this->assertCount(2, $seen);
+        $this->assertNotSame($seen[0], $seen[1]);
+        $this->assertSame('A', $seen[0]->getName());
+        $this->assertSame('B', $seen[1]->getName());
+
+        $fromQuery = iterator_to_array(
+            $this->repo->sqlQuery()->orderBy('user_id')->fetchStream(),
+            false
+        );
+        $this->assertCount(2, $fromQuery);
+        $this->assertNotSame($fromQuery[0], $fromQuery[1]);
+    }
+
+    public function testQueryGetPdoStatementReturnsAssocRowsWithoutHydration(): void
+    {
+        $this->pdo->exec("INSERT INTO users (user_name, email) VALUES ('StreamRow', 'sr@example.com')");
+
+        $stmt = $this->repo->sqlQuery()->orderBy('user_id')->getPdoStatement();
+        $this->assertInstanceOf(\PDOStatement::class, $stmt);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $this->assertCount(1, $rows);
+        $this->assertSame('StreamRow', $rows[0]['user_name']);
+    }
+
     public function testUpdateUser()
     {
         $user = new User();

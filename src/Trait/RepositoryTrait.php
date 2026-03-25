@@ -132,6 +132,17 @@ trait RepositoryTrait
         return new EntityCollection($list, $this);
     }
 
+    public function fetchStream(string $sql, array $data = []): \Generator
+    {
+        $stmt = $this->execute($sql, $data);
+        if (!$stmt) {
+            return;
+        }
+        foreach ($stmt as $item) {
+            yield $this->hydrator->hydrateDetached($item);
+        }
+    }
+
     public function find(int|string|array $id, ?string $column = null, ?string $orderBy = null): EntityCollection
     {
         $column = $column ?? $this->hydrator->getPrimaryKeyColumn();

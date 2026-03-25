@@ -29,16 +29,35 @@ trait HydratorTrait
             EntityCache::set($class, $pKey, $targetEntity);
         }
 
-        // Set data to the target entity (update with latest data even if cached)
-        // Data comes from DB with column names, need to map to property names
+        $this->applyRowDataToEntity($targetEntity, $data);
+        return $targetEntity;
+    }
+
+    /**
+     * Hydrates a new entity from a row without {@see EntityCache} (for streaming / large reads).
+     */
+    protected function hydrateEntityDetached(array $data): EntityInterface
+    {
+        if (!isset($data[$this->getPrimaryKeyColumn()])) {
+            throw new \RuntimeException('Primary key is not set in the data.');
+        }
+        $class = $this->getEntityClass();
+        $targetEntity = new $class();
+        $this->applyRowDataToEntity($targetEntity, $data);
+        return $targetEntity;
+    }
+
+    /**
+     * Maps DB column values onto an entity (column names in $data).
+     */
+    protected function applyRowDataToEntity(EntityInterface $entity, array $data): void
+    {
         foreach ($this->listProperties() as $propertyName) {
             $columnName = $this->getColumnNameForProperty($propertyName);
             if (isset($data[$columnName])) {
-                // set Column value as string; this is for compatibility with the EntityTrait
-                $targetEntity->setRaw($propertyName, (string) $data[$columnName]);
+                $entity->setRaw($propertyName, (string) $data[$columnName]);
             }
         }
-        return $targetEntity;
     }
 
     /**
