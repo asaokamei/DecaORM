@@ -307,11 +307,6 @@ class AttributeHydrator implements HydratorInterface
         return $this->materializeFromRow($data);
     }
 
-    public function hydrateDetached(array $data): EntityInterface
-    {
-        return $this->materializeFromRow($data);
-    }
-
     public function dehydrate(EntityInterface $entity): array
     {
         return $this->dehydrateEntity($entity);

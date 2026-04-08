@@ -58,14 +58,10 @@ interface HydratorInterface
 
     /**
      * Build a new entity from a DB row (no identity map). For cached / single-instance-per-id hydration,
-     * use the repository fetch path, which applies {@see \WScore\DecaORM\EntityCache} and ORM context.
+     * use the repository {@see \WScore\DecaORM\Trait\RepositoryTrait::fetch()} path, which applies
+     * {@see \WScore\DecaORM\EntityCache} and ORM context.
      */
     public function hydrate(array $data): EntityInterface;
-
-    /**
-     * Same as {@see hydrate()}: new instance per call. Kept for readability at call sites (streaming / bulk).
-     */
-    public function hydrateDetached(array $data): EntityInterface;
 
     /**
      * Applies column values from a DB row onto an existing entity instance.

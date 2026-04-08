@@ -139,7 +139,7 @@ trait RepositoryTrait
             return;
         }
         foreach ($stmt as $item) {
-            $entity = $this->hydrator->hydrateDetached($item);
+            $entity = $this->hydrator->hydrate($item);
             $this->attachOrmContext($entity);
             yield $entity;
         }
