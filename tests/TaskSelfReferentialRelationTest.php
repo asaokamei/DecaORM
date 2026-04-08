@@ -4,7 +4,6 @@ namespace WScore\DecaORM\Tests;
 
 use PDO;
 use PHPUnit\Framework\TestCase;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Fixtures\CustomLoader\Project;
@@ -23,19 +22,18 @@ class TaskSelfReferentialRelationTest extends TestCase
     private PDO $pdo;
     private ProjectRepository $projectRepo;
     private TaskRepository $taskRepo;
+    private OrmManager $manager;
 
     protected function setUp(): void
     {
         $this->pdo = DbConnection::get();
         TaskHierarchyFixture::loadProjectsAndTasksSchema($this->pdo);
 
-        EntityCache::clear();
-
         $container = new TestContainer();
         $container->set(PDO::class, $this->pdo);
-        $manager = OrmManager::initialize($container);
-        $this->projectRepo = new ProjectRepository($manager);
-        $this->taskRepo = new TaskRepository($manager);
+        $this->manager = OrmManager::initialize($container);
+        $this->projectRepo = new ProjectRepository($this->manager);
+        $this->taskRepo = new TaskRepository($this->manager);
         $container->set(ProjectRepository::class, $this->projectRepo);
         $container->set(TaskRepository::class, $this->taskRepo);
     }
@@ -60,7 +58,7 @@ class TaskSelfReferentialRelationTest extends TestCase
         ]);
         $this->taskRepo->save($child);
 
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $child = $this->taskRepo->findById($child->getId());
         $this->assertNotNull($child);
 
@@ -99,7 +97,7 @@ class TaskSelfReferentialRelationTest extends TestCase
         ]);
         $this->taskRepo->save($c2);
 
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $root = $this->taskRepo->findById($root->getId());
         $this->assertNotNull($root);
 
@@ -125,7 +123,7 @@ class TaskSelfReferentialRelationTest extends TestCase
         ]);
         $this->taskRepo->save($root);
 
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $root = $this->taskRepo->findById($root->getId());
         $this->taskRepo->load($root, 'children');
 

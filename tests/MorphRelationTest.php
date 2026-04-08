@@ -7,7 +7,6 @@ namespace WScore\DecaORM\Tests;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\Collection;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Fixtures\Morph\MorphComment;
 use WScore\DecaORM\Tests\Fixtures\Morph\MorphCommentRepository;
@@ -37,8 +36,6 @@ class MorphRelationTest extends TestCase
         foreach (['morph_comments', 'morph_thumbnails', 'morph_posts', 'morph_videos'] as $t) {
             $this->pdo->exec(MorphSchema::loadTable($t));
         }
-
-        EntityCache::clear();
 
         $container = new TestContainer();
         $container->set(PDO::class, $this->pdo);

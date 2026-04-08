@@ -19,8 +19,6 @@ use WScore\DecaORM\Attribute\ManyToMany;
 use WScore\DecaORM\Attribute\MorphTo;
 use WScore\DecaORM\Attribute\MorphToOne;
 use WScore\DecaORM\Collection;
-use WScore\DecaORM\DirtyTracker;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Contracts\HydratorInterface;
@@ -95,7 +93,7 @@ trait RepositoryTrait
             }
             return false;
         }
-        return !EntityCache::has($this->hydrator->getEntityClass(), $entity->getId());
+        return !$this->getManager()->getEntityCache()->has($this->hydrator->getEntityClass(), $entity->getId());
     }
 
     /**
@@ -126,7 +124,7 @@ trait RepositoryTrait
         $list = [];
         foreach ($stmt as $item) {
             $entity = $this->hydrateManagedFromRow($item);
-            DirtyTracker::takeEntity($this->hydrator, $entity);
+            $this->getManager()->getDirtyTracker()->takeEntity($this->hydrator, $entity);
             $list[] = $entity;
         }
         return new EntityCollection($list, $this);
@@ -159,11 +157,12 @@ trait RepositoryTrait
         }
         $class = $hydrator->getEntityClass();
         $pKey = $row[$pkCol];
-        if (EntityCache::has($class, $pKey)) {
-            $entity = EntityCache::get($class, $pKey);
+        $cache = $this->getManager()->getEntityCache();
+        if ($cache->has($class, $pKey)) {
+            $entity = $cache->get($class, $pKey);
         } else {
             $entity = new $class();
-            EntityCache::set($class, $pKey, $entity);
+            $cache->set($class, $pKey, $entity);
         }
         $hydrator->applyRowData($entity, $row);
         $this->attachOrmContext($entity);
@@ -265,14 +264,14 @@ trait RepositoryTrait
             $pKey = $this->hydrator->getPrimaryKey();
             $entity->setRaw($pKey, $this->db->lastInsertId());
         }
-        EntityCache::cache($entity);
+        $this->getManager()->getEntityCache()->cache($entity);
 
         if ($this->hydrator->isPkAutoNumber()) {
             $this->loadAllForeignKeys($entity);
         }
 
         // DirtyTracking: INSERT後の状態をスナップショットとして記録
-        DirtyTracker::takeEntity($this->hydrator, $entity);
+        $this->getManager()->getDirtyTracker()->takeEntity($this->hydrator, $entity);
         $this->getHooks()->afterInsert($entity);
     }
 
@@ -349,12 +348,13 @@ trait RepositoryTrait
             throw new RuntimeException('Entity does not have an ID:' . $this->hydrator->getEntityClass());
         }
 
-        $original = DirtyTracker::get($entity);
+        $dirty = $this->getManager()->getDirtyTracker();
+        $original = $dirty->get($entity);
 
         // まず「更新対象データ」を決める（スナップショット無しなら全更新、あれば差分のみ）
-        $data = DirtyTracker::snapshotFromEntity($this->hydrator, $entity);
+        $data = $dirty->snapshotFromEntity($this->hydrator, $entity);
         if ($original !== null) {
-            $data = DirtyTracker::diffColumns($data, $original);
+            $data = $dirty->diffColumns($data, $original);
             if (empty($data)) {
                 return; // 差分ゼロ -> SQLを発行しない
             }
@@ -375,7 +375,7 @@ trait RepositoryTrait
         $result = $update->execute();
         $stmt = $result instanceof PDOStatement ? $result : null;
         $this->getHooks()->afterUpdate($entity, $stmt);
-        DirtyTracker::takeEntity($this->hydrator, $entity);
+        $dirty->takeEntity($this->hydrator, $entity);
     }
 
     public function sqlUpdate(int|string|null $id = null, array $data = []): Update
@@ -401,7 +401,7 @@ trait RepositoryTrait
         $delete->execute();
 
         // DirtyTracking: 削除後はスナップショットを破棄
-        DirtyTracker::forget($entity);
+        $this->getManager()->getDirtyTracker()->forget($entity);
         $this->getHooks()->afterDelete($entity);
     }
 

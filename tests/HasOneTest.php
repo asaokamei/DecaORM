@@ -1,7 +1,7 @@
 <?php
 
 use PHPUnit\Framework\TestCase;
-use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Fixtures\Relations\Profile;
 use WScore\DecaORM\Tests\Fixtures\Relations\ProfileRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\RelationsFixture;
@@ -13,6 +13,7 @@ class HasOneTest extends TestCase
     private PDO $pdo;
     private UserRepository $userRepo;
     private ProfileRepository $profileRepo;
+    private OrmManager $manager;
 
     protected function setUp(): void
     {
@@ -20,6 +21,7 @@ class HasOneTest extends TestCase
         $this->pdo = $fixture->pdo;
         $this->userRepo = $fixture->users;
         $this->profileRepo = $fixture->profiles;
+        $this->manager = $fixture->manager;
     }
 
     public function testCreateUserAndProfile(): void
@@ -60,7 +62,7 @@ class HasOneTest extends TestCase
         $this->profileRepo->save($profile);
 
         $userId = $user->getId();
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
 
         $user = $this->userRepo->findById($userId);
         $this->userRepo->loadProfile($user);
@@ -87,7 +89,7 @@ class HasOneTest extends TestCase
         $this->profileRepo->save($profile);
 
         $profileId = $profile->getId();
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
 
         // Reload profile
         $profile = $this->profileRepo->findById($profileId);
@@ -142,7 +144,7 @@ class HasOneTest extends TestCase
         $this->profileRepo->save($profile2);
 
         // Clear cache and reload
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $profiles = [
             $this->profileRepo->findById($profile1->getId()),
             $this->profileRepo->findById($profile2->getId())

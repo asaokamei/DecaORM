@@ -53,8 +53,8 @@ interface RepositoryHooksInterface
      *                                           or null if the driver returned a non-statement result.
      *                                           Use {@see PDOStatement::rowCount()} inside hooks (e.g. optimistic locking).
      *
-     * Use this to align in-memory fields (e.g. version) so {@see \WScore\DecaORM\DirtyTracker::takeEntity()}
-     * records the post-persist state.
+     * Use this to align in-memory fields (e.g. version) so the repository can refresh dirty snapshots
+     * ({@see \WScore\DecaORM\DirtyTracker::takeEntity()}) with the post-persist state.
      */
     public function afterUpdate(EntityInterface $entity, ?PDOStatement $updateStatement = null): void;
 

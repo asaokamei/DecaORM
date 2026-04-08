@@ -6,7 +6,6 @@ use PDO;
 use WScore\DecaORM\Tests\Support\DbConnection;
 use WScore\DecaORM\Tests\Support\SchemaLoader;
 use Psr\Log\LoggerInterface;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\OrmManager;
 
 class RelationsFixture
@@ -44,7 +43,7 @@ class RelationsFixture
             }
         }
 
-        EntityCache::clear();
+        $fixture->manager->getEntityCache()->clear();
 
         $fixture->users = new UserRepository($fixture->manager);
         $fixture->posts = new PostRepository($fixture->manager);

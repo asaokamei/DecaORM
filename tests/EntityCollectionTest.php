@@ -4,7 +4,6 @@ namespace WScore\DecaORM\Tests;
 
 use PDO;
 use PHPUnit\Framework\TestCase;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Contracts\HydratorInterface;
 use WScore\DecaORM\Contracts\RepositoryInterface;
@@ -165,7 +164,7 @@ class EntityCollectionTest extends TestCase
         $post1 = $postsRepo->create(['user_id' => $user2->getId(), 'title' => 'U2/P3', 'content' => 'Content 5']);
         $postsRepo->save($post1);
 
-        EntityCache::clear();
+        $manager->getEntityCache()->clear();
 
         $users = $userRepo->sqlQuery()->getResult();
         $this->assertEquals(2, $users->count());

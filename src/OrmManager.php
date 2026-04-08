@@ -30,9 +30,33 @@ class OrmManager
     private ?SqlExecutor $sqlExecutor = null;
     private int $slowQueryThresholdMs = 100;
 
+    private EntityCache $entityCache;
+
+    private DirtyTracker $dirtyTracker;
+
     private function __construct(private ContainerInterface $container)
     {
         $this->logger = new NullLogger();
+        $this->entityCache = new EntityCache();
+        $this->dirtyTracker = new DirtyTracker();
+    }
+
+    public function getEntityCache(): EntityCache
+    {
+        return $this->entityCache;
+    }
+
+    public function getDirtyTracker(): DirtyTracker
+    {
+        return $this->dirtyTracker;
+    }
+
+    /**
+     * Returns the singleton instance after {@see initialize()} (for app code that needs cache/tracker without a repository).
+     */
+    public static function getInstance(): self
+    {
+        return self::instance();
     }
 
     public static function initialize(ContainerInterface $container): static
@@ -89,7 +113,7 @@ class OrmManager
     private static function instance(): static
     {
         if (self::$_self === null) {
-            throw new RuntimeException('RepositoryManager is not initialized. Call RepositoryManager::initialize() first.');
+            throw new RuntimeException('OrmManager is not initialized. Call OrmManager::initialize() first.');
         }
 
         return self::$_self;

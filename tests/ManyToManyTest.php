@@ -4,8 +4,8 @@ namespace WScore\DecaORM\Tests;
 
 use PDO;
 use PHPUnit\Framework\TestCase;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
+use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Fixtures\ArrayLogger;
 use WScore\DecaORM\Tests\Fixtures\Relations\RelationsFixture;
 use WScore\DecaORM\Tests\Fixtures\Relations\Role;
@@ -18,6 +18,7 @@ class ManyToManyTest extends TestCase
     private PDO $pdo;
     private UserRepository $userRepo;
     private RoleRepository $roleRepo;
+    private OrmManager $manager;
 
     protected function setUp(): void
     {
@@ -25,6 +26,7 @@ class ManyToManyTest extends TestCase
         $this->pdo = $fixture->pdo;
         $this->userRepo = $fixture->users;
         $this->roleRepo = $fixture->roles;
+        $this->manager = $fixture->manager;
     }
 
     public function testFillRolesForUser(): void
@@ -42,7 +44,7 @@ class ManyToManyTest extends TestCase
         $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user->getId()}, {$admin->getId()})");
         $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user->getId()}, {$editor->getId()})");
 
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $user = $this->userRepo->findById($user->getId());
         $roles = $this->userRepo->load($user, 'roles');
 
@@ -66,7 +68,7 @@ class ManyToManyTest extends TestCase
         $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user1->getId()}, {$role->getId()})");
         $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user2->getId()}, {$role->getId()})");
 
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $role = $this->roleRepo->findById($role->getId());
         $users = $this->roleRepo->load($role, 'users');
 
@@ -93,7 +95,7 @@ class ManyToManyTest extends TestCase
         $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user2->getId()}, {$role2->getId()})");
         $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user2->getId()}, {$role3->getId()})");
 
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $user1 = $this->userRepo->findById($user1->getId());
         $user2 = $this->userRepo->findById($user2->getId());
 
@@ -166,7 +168,7 @@ class ManyToManyTest extends TestCase
         $user->setRoles(new EntityCollection([$role]));
         $userRepo->syncManyToMany($user, 'roles');
 
-        EntityCache::clear();
+        $fixture->manager->getEntityCache()->clear();
         $user = $userRepo->findById($user->getId());
         $userRepo->load($user, 'roles');
 

@@ -6,8 +6,6 @@ namespace WScore\DecaORM\Tests;
 
 use PDO;
 use PHPUnit\Framework\TestCase;
-use WScore\DecaORM\DirtyTracker;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Support\SpyUserRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\User;
@@ -19,18 +17,17 @@ final class DirtyTrackingTest extends TestCase
 {
     private PDO $pdo;
     private SpyUserRepository $repo;
+    private OrmManager $manager;
 
     protected function setUp(): void
     {
         $this->pdo = DbConnection::get();
         $this->pdo->exec(SchemaLoader::loadTable('users'));
 
-        EntityCache::clear();
-
         $container = new TestContainer();
         $container->set(PDO::class, $this->pdo);
-        $manager = OrmManager::initialize($container);
-        $this->repo = new SpyUserRepository($manager);
+        $this->manager = OrmManager::initialize($container);
+        $this->repo = new SpyUserRepository($this->manager);
         $container->set(SpyUserRepository::class, $this->repo);
     }
 
@@ -69,7 +66,7 @@ final class DirtyTrackingTest extends TestCase
         $entity->setRaw('name', 'A2');
         $entity->setRaw('email', 'a@example.com');
 
-        $this->assertFalse(DirtyTracker::has($entity));
+        $this->assertFalse($this->manager->getDirtyTracker()->has($entity));
 
         $this->repo->executedSql = [];
         $this->repo->save($entity);
@@ -100,10 +97,10 @@ final class DirtyTrackingTest extends TestCase
         $loaded = $this->repo->findById($user->getId());
         $this->assertInstanceOf(User::class, $loaded);
 
-        $this->assertTrue(DirtyTracker::has($loaded));
+        $this->assertTrue($this->manager->getDirtyTracker()->has($loaded));
 
         $this->repo->delete($loaded);
 
-        $this->assertFalse(DirtyTracker::has($loaded));
+        $this->assertFalse($this->manager->getDirtyTracker()->has($loaded));
     }
 }

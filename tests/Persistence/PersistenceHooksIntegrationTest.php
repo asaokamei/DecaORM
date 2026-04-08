@@ -5,7 +5,6 @@ namespace WScore\DecaORM\Tests\Persistence;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\Contracts\OptimisticLockException;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Persistence\CompositeHooks;
 use WScore\DecaORM\Persistence\SoftDeleteHooks;
@@ -65,8 +64,6 @@ class PersistenceHooksIntegrationTest extends TestCase
         $pdo = DbConnection::get();
         $pdo->exec('DROP TABLE IF EXISTS hook_items');
         $pdo->exec(self::hookItemsTableDdl());
-
-        EntityCache::clear();
 
         $container = new TestContainer();
         $container->set(PDO::class, $pdo);
