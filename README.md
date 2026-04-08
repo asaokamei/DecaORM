@@ -369,15 +369,9 @@ use WScore\DecaORM\OrmManager;
 $manager = OrmManager::initialize($container);
 ```
 
-### Scoped execution (per-tenant container)
+### Per-request container (e.g. multi-tenant)
 
-For “one request = one tenant”, wrap the request in `runWithContainer()` after resolving the tenant’s container:
-
-```php
-return $manager->runWithContainer($tenantContainer, function () use ($handler, $request) {
-    return $handler->handle($request);
-});
-```
+`OrmManager` resolves `PDO::class` and repository entries from the single container passed to `initialize()`. After you know the tenant, build a container that already holds that tenant’s `PDO` (and repositories), then call `OrmManager::initialize($container)` for that request—or inject an `OrmManager` constructed for that container. For more than one connection in the same process, use separate `OrmManager` instances (each has its own identity map and dirty tracker); nested container scopes are not supported.
 
 ---
 

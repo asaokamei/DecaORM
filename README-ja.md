@@ -518,19 +518,9 @@ use WScore\DecaORM\OrmManager;
 $manager = OrmManager::initialize($container);
 ```
 
-### スコープ実行（テナントごとのコンテナ切り替え）
+### リクエストごとのコンテナ（マルチテナントなど）
 
-Webアプリで「1リクエスト = 1テナント」のように扱う場合は、ミドルウェア（またはフロントコントローラ）で、
-テナント確定後に `runWithContainer()` で処理全体を包むのが安全です。
-
-```php
-use WScore\DecaORM\OrmManager;
-// tenantContainer は tenantId に対応するPDO/Repository群を持つコンテナ
-return $manager->runWithContainer($tenantContainer, 
-    function () use ($handler, $request) { // PSR-15想定なら: 
-        return $handler->handle(request);
-    });
-```
+`OrmManager` は `initialize()` に渡した**1 つのコンテナ**から `PDO::class` とリポジトリを解決します。テナント確定後に、そのテナント用の `PDO`（とリポジトリ登録）が入ったコンテナを組み立て、そのリクエストで一度 `OrmManager::initialize($container)` するか、そのコンテナ用に組み立てた `OrmManager` を DI する形が想定です。同一プロセスで複数接続を扱う場合は **`OrmManager` をインスタンスごとに分ける**（アイデンティティマップ／ダーティ追跡も別になる）ことになり、コンテナのネスト切り替え API は提供しません。
 
 
 ## 制限事項と注意点

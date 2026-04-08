@@ -17,13 +17,6 @@ class OrmManager
 {
     private static ?OrmManager $_self = null;
 
-    /**
-     * Scoped containers stack (per request/job/tenant).
-     *
-     * @var ContainerInterface[]
-     */
-    private array $containerStack = [];
-
     private ?PDO $pdo = null;
     private ?DateTimeImmutable $now = null;
     private LoggerInterface $logger;
@@ -120,70 +113,14 @@ class OrmManager
     }
 
     /**
-     * Enters a scoped container.
-     *
-     * Typical usage: middleware/job wrapper sets a tenant container here.
-     */
-    public function enterScope(ContainerInterface $container): void
-    {
-        $this->containerStack[] = $container;
-        $this->pdo = null;
-    }
-
-    /**
-     * Leaves the current scope.
-     *
-     * Always pair with enterScope() (prefer runWithContainer()).
-     */
-    public function leaveScope(): void
-    {
-        array_pop($this->containerStack);
-        $this->pdo = null;
-    }
-
-    /**
-     * Runs callback within a scoped container and always restores the scope.
-     *
-     * @template TReturn
-     * @param ContainerInterface $container
-     * @param callable():TReturn $callback
-     * @return TReturn
-     */
-    public function runWithContainer(ContainerInterface $container, callable $callback)
-    {
-        $this->enterScope($container);
-        try {
-            return $callback();
-        } finally {
-            $this->leaveScope();
-        }
-    }
-
-    /**
-     * @return ContainerInterface|null
-     */
-    private function getCurrentContainer(): ?ContainerInterface
-    {
-        if (!empty($this->containerStack)) {
-            return $this->containerStack[count($this->containerStack) - 1];
-        }
-        return $this->container;
-    }
-
-    /**
      * @template T
      * @param class-string<T> $class
      * @return T|mixed
      */
     public function get(string $class): mixed
     {
-        $container = $this->getCurrentContainer();
-
-        if ($container === null) {
-            throw new RuntimeException('RepositoryManager container is not set.');
-        }
         try {
-            $repo = $container->get($class);
+            $repo = $this->container->get($class);
         } catch (NotFoundExceptionInterface $e) {
             throw new RuntimeException("Could not found {$class} in container.", 0, $e);
         } catch (ContainerExceptionInterface $e) {
@@ -196,7 +133,7 @@ class OrmManager
     public function getPDO(): PDO
     {
         if ($this->pdo === null) {
-            $this->pdo = $this->getCurrentContainer()->get(PDO::class);
+            $this->pdo = $this->container->get(PDO::class);
         }
         return $this->pdo;
     }
