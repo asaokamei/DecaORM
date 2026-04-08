@@ -4,7 +4,6 @@ namespace WScore\DecaORM\Tests;
 
 use PDO;
 use PHPUnit\Framework\TestCase;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Fixtures\ArrayLogger;
@@ -26,6 +25,7 @@ class DecaOrmTest extends TestCase
 {
     private PDO $pdo;
     private UserRepository $repo;
+    private OrmManager $manager;
 
     protected function setUp(): void
     {
@@ -33,13 +33,10 @@ class DecaOrmTest extends TestCase
         $this->pdo->exec(SchemaLoader::loadTable('drop_all'));
         $this->pdo->exec(SchemaLoader::loadTable('users'));
 
-        // Clear cache before each test
-        \WScore\DecaORM\EntityCache::clear();
-
         $container = new TestContainer();
         $container->set(PDO::class, $this->pdo);
-        $manager = OrmManager::initialize($container);
-        $this->repo = new UserRepository($manager);
+        $this->manager = OrmManager::initialize($container);
+        $this->repo = new UserRepository($this->manager);
         $container->set(UserRepository::class, $this->repo);
     }
 
@@ -72,12 +69,12 @@ class DecaOrmTest extends TestCase
         $this->assertEquals('Jane Doe', $user->getName());
         $this->assertEquals('jane@example.com', $user->getEmail());
 
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $stmt = $this->repo->execute('SELECT * FROM users WHERE user_id = ?', [$id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $this->assertEquals('Jane Doe', $row['user_name']);
 
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $entities = $this->repo->fetch('SELECT * FROM users WHERE user_id = ?', [$id]);
         $this->assertCount(1, $entities);
         /** @var User $entity */

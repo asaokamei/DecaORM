@@ -1,7 +1,6 @@
 <?php
 
 use PHPUnit\Framework\TestCase;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Tests\Fixtures\Relations\Post;
 use WScore\DecaORM\Tests\Fixtures\Relations\PostRepository;

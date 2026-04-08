@@ -4,7 +4,6 @@ namespace WScore\DecaORM\Tests;
 
 use PDO;
 use PHPUnit\Framework\TestCase;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Contracts\HydratorInterface;
 use WScore\DecaORM\Contracts\RepositoryInterface;
@@ -106,9 +105,8 @@ class EntityCollectionTest extends TestCase
         $this->assertCount(1, $chunks[1]);
         $this->assertInstanceOf(EntityCollection::class, $chunks[0]);
         $ref = new \ReflectionProperty(EntityCollection::class, 'repository');
-        $ref->setAccessible(true);
-        $this->assertSame($repo, $ref->getValue($chunks[0]));
-        $this->assertSame($repo, $ref->getValue($chunks[1]));
+        $this->assertSame($repo, $this->getPrivatePropertyValue($ref, $chunks[0]));
+        $this->assertSame($repo, $this->getPrivatePropertyValue($ref, $chunks[1]));
     }
 
     public function testGroupByReturnsEntityCollections()
@@ -130,9 +128,8 @@ class EntityCollectionTest extends TestCase
         $this->assertEquals([1, 3], $grouped['a']->getIds());
         $this->assertEquals([2], $grouped['b']->getIds());
         $ref = new \ReflectionProperty(EntityCollection::class, 'repository');
-        $ref->setAccessible(true);
-        $this->assertSame($repo, $ref->getValue($grouped['a']));
-        $this->assertSame($repo, $ref->getValue($grouped['b']));
+        $this->assertSame($repo, $this->getPrivatePropertyValue($ref, $grouped['a']));
+        $this->assertSame($repo, $this->getPrivatePropertyValue($ref, $grouped['b']));
     }
 
     public function testFillAndUniqueness()
@@ -167,7 +164,7 @@ class EntityCollectionTest extends TestCase
         $post1 = $postsRepo->create(['user_id' => $user2->getId(), 'title' => 'U2/P3', 'content' => 'Content 5']);
         $postsRepo->save($post1);
 
-        EntityCache::clear();
+        $manager->getEntityCache()->clear();
 
         $users = $userRepo->sqlQuery()->getResult();
         $this->assertEquals(2, $users->count());
@@ -315,5 +312,14 @@ class EntityCollectionTest extends TestCase
         // DI 済みなので load() で OrmManager からリポジトリが解決される
         $posts = $restored->load('posts');
         $this->assertInstanceOf(EntityCollection::class, $posts);
+    }
+
+    /** Before PHP 8.5, {@see \ReflectionProperty::setAccessible()} is required to read private properties; 8.5+ deprecates it as a no-op. */
+    private function getPrivatePropertyValue(\ReflectionProperty $property, object $object): mixed
+    {
+        if (\PHP_VERSION_ID < 80500) {
+            $property->setAccessible(true);
+        }
+        return $property->getValue($object);
     }
 }

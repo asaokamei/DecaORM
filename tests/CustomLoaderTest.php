@@ -5,7 +5,6 @@ namespace WScore\DecaORM\Tests;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\Tests\Fixtures\CustomLoader\InvalidProject;
 use WScore\DecaORM\Tests\Fixtures\CustomLoader\InvalidProjectRepository;
 use WScore\DecaORM\Tests\Fixtures\CustomLoader\Project;
@@ -23,6 +22,7 @@ class CustomLoaderTest extends TestCase
     private PDO $pdo;
     private ProjectRepository $projectRepo;
     private TaskRepository $taskRepo;
+    private OrmManager $manager;
 
     protected function setUp(): void
     {
@@ -30,14 +30,11 @@ class CustomLoaderTest extends TestCase
         $this->pdo->exec(SchemaLoader::loadTable('projects'));
         $this->pdo->exec(SchemaLoader::loadTable('tasks'));
 
-        // Clear cache before each test
-        EntityCache::clear();
-
         $container = new TestContainer();
         $container->set(PDO::class, $this->pdo);
-        $manager = OrmManager::initialize($container);
-        $this->projectRepo = new ProjectRepository($manager);
-        $this->taskRepo = new TaskRepository($manager);
+        $this->manager = OrmManager::initialize($container);
+        $this->projectRepo = new ProjectRepository($this->manager);
+        $this->taskRepo = new TaskRepository($this->manager);
         $container->set(ProjectRepository::class, $this->projectRepo);
         $container->set(TaskRepository::class, $this->taskRepo);
     }
@@ -66,7 +63,7 @@ class CustomLoaderTest extends TestCase
         $this->taskRepo->save($task2);
 
         // Clear cache and reload
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $project = $this->projectRepo->findById($project->getId());
 
         // Load tasks using CustomLoader
@@ -119,7 +116,7 @@ class CustomLoaderTest extends TestCase
         $this->taskRepo->save($task3);
 
         // Clear cache and reload
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $projects = [
             $this->projectRepo->findById($project1->getId()),
             $this->projectRepo->findById($project2->getId())
@@ -150,7 +147,7 @@ class CustomLoaderTest extends TestCase
         $this->projectRepo->save($project);
 
         // Clear cache and reload
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $project = $this->projectRepo->findById($project->getId());
 
         // Load tasks using CustomLoader
@@ -218,7 +215,7 @@ class CustomLoaderTest extends TestCase
         $this->taskRepo->save($task1);
 
         // Clear cache and reload
-        EntityCache::clear();
+        $manager->getEntityCache()->clear();
         $project = $repo->findById($project->getId());
 
         // Load tasks using CustomLoader

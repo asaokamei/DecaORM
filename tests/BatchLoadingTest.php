@@ -5,7 +5,7 @@ namespace WScore\DecaORM\Tests;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCollection;
-use WScore\DecaORM\EntityCache;
+use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Fixtures\Relations\Post;
 use WScore\DecaORM\Tests\Fixtures\Relations\PostRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\Profile;
@@ -20,6 +20,7 @@ class BatchLoadingTest extends TestCase
     private UserRepository $userRepo;
     private PostRepository $postsRepo;
     private ProfileRepository $profileRepo;
+    private OrmManager $manager;
 
     protected function setUp(): void
     {
@@ -28,6 +29,7 @@ class BatchLoadingTest extends TestCase
         $this->userRepo = $fixture->users;
         $this->postsRepo = $fixture->posts;
         $this->profileRepo = $fixture->profiles;
+        $this->manager = $fixture->manager;
     }
 
     public function testBatchLoadHasMany(): void
@@ -65,7 +67,7 @@ class BatchLoadingTest extends TestCase
         $this->postsRepo->save($post3);
 
         // Clear cache and reload
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $users = [
             $this->userRepo->findById($user1->getId()),
             $this->userRepo->findById($user2->getId())
@@ -123,7 +125,7 @@ class BatchLoadingTest extends TestCase
         $this->profileRepo->save($profile2);
 
         // Clear cache and reload
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $users = [
             $this->userRepo->findById($user1->getId()),
             $this->userRepo->findById($user2->getId())
@@ -175,7 +177,7 @@ class BatchLoadingTest extends TestCase
         $this->postsRepo->save($post2);
 
         // Clear cache and reload
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $posts = [
             $this->postsRepo->findById($post1->getId()),
             $this->postsRepo->findById($post2->getId())
@@ -221,7 +223,7 @@ class BatchLoadingTest extends TestCase
         $this->userRepo->save($user2);
 
         // Clear cache and reload
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $users = [
             $this->userRepo->findById($user1->getId()),
             $this->userRepo->findById($user2->getId())
@@ -273,7 +275,7 @@ class BatchLoadingTest extends TestCase
         $this->postsRepo->save($post2);
 
         // Clear cache and reload
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $users = [
             $this->userRepo->findById($user1->getId()),
             $this->userRepo->findById($user2->getId())
@@ -318,7 +320,7 @@ class BatchLoadingTest extends TestCase
         $this->postsRepo->save($post2);
 
         // Clear cache and reload
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $user = $this->userRepo->findById($user->getId());
 
         // Single entity fill (existing behavior)

@@ -4,7 +4,6 @@ namespace WScore\DecaORM\Tests;
 
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\AttributeHydrator;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\Tests\Fixtures\Relations\User;
 
 class AttributeHydratorTest extends TestCase
@@ -52,9 +51,8 @@ class AttributeHydratorTest extends TestCase
         $this->assertEquals('test@example.com', $entity->getRaw('email'));
     }
 
-    public function testHydrateDetachedProducesNewInstancesAndSkipsEntityCache(): void
+    public function testHydrateAlwaysMaterializesNewInstances(): void
     {
-        EntityCache::clear();
         $hydrator = new AttributeHydrator(User::class);
         $data = [
             'user_id' => 1,
@@ -64,17 +62,11 @@ class AttributeHydratorTest extends TestCase
             'updated_at' => '2024-01-01 00:00:00',
         ];
 
-        $first = $hydrator->hydrateDetached($data);
-        $second = $hydrator->hydrateDetached($data);
+        $first = $hydrator->hydrate($data);
+        $second = $hydrator->hydrate($data);
         $this->assertNotSame($first, $second);
         $this->assertEquals('Test User', $second->getRaw('name'));
-
-        EntityCache::clear();
-        $cached = $hydrator->hydrate($data);
-        $this->assertSame($cached, $hydrator->hydrate($data));
-        $detached = $hydrator->hydrateDetached($data);
-        $this->assertNotSame($cached, $detached);
-        $this->assertEquals($cached->getRaw('name'), $detached->getRaw('name'));
+        $this->assertEquals($first->getRaw('name'), $second->getRaw('name'));
     }
 
     public function testDehydrate(): void

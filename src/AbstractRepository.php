@@ -61,6 +61,7 @@ abstract class AbstractRepository implements RepositoryInterface
         foreach ($this->hydrator->listProperties() as $property) {
             $entity->setRaw($property, $data[$property] ?? null);
         }
+        $this->attachOrmContext($entity);
         return $entity;
     }
 

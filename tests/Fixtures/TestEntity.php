@@ -4,6 +4,7 @@ namespace WScore\DecaORM\Tests\Fixtures;
 
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\EntityCollection;
+use WScore\DecaORM\Trait\OrmContextTrait;
 
 /**
  * Test stub implementing EntityInterface.
@@ -12,6 +13,8 @@ use WScore\DecaORM\EntityCollection;
  */
 class TestEntity implements EntityInterface
 {
+    use OrmContextTrait;
+
     public static function getRepositoryClass(): string
     {
         return TestRepository::class;

@@ -3,6 +3,7 @@
 namespace WScore\DecaORM\Contracts;
 
 use WScore\DecaORM\EntityCollection;
+use WScore\DecaORM\OrmManager;
 
 interface EntityInterface
 {
@@ -30,4 +31,11 @@ interface EntityInterface
      * Associates a relation by property name (in-memory; FK / inverse handling per relation type).
      */
     public function associate(string $relationName, EntityInterface|iterable|EntityCollection|null $targetOrTargets): void;
+
+    /**
+     * Optional ORM context (repositories set this after hydrate / createEntity).
+     */
+    public function setOrm(?OrmManager $orm): void;
+
+    public function getOrm(): ?OrmManager;
 }

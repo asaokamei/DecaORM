@@ -10,6 +10,7 @@ use WScore\DecaORM\OrmManager;
 trait EntityTrait
 {
     use EntityActionsTrait;
+    use OrmContextTrait;
 
     private static string $repositoryClass;
 

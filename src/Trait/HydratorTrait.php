@@ -2,7 +2,6 @@
 
 namespace WScore\DecaORM\Trait;
 
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\Contracts\EntityInterface;
 
 trait HydratorTrait
@@ -13,30 +12,10 @@ trait HydratorTrait
     abstract public function getEntityClass(): string;
 
     /**
-     * Converts an associative array (DB row) to an entity (hydration)
+     * Maps a DB row onto a new entity instance. Does not use {@see \WScore\DecaORM\EntityCache};
+     * identity mapping is handled by repositories ({@see RepositoryTrait::hydrateManagedFromRow}).
      */
-    protected function hydrateEntity(array $data): EntityInterface
-    {
-        if (!isset($data[$this->getPrimaryKeyColumn()])) {
-            throw new \RuntimeException('Primary key is not set in the data.');
-        }
-        $class = $this->getEntityClass();
-        $pKey = $data[$this->getPrimaryKeyColumn()];
-        if (EntityCache::has($class, $pKey)) {
-            $targetEntity = EntityCache::get($class, $pKey);
-        } else {
-            $targetEntity = new $class();
-            EntityCache::set($class, $pKey, $targetEntity);
-        }
-
-        $this->applyRowDataToEntity($targetEntity, $data);
-        return $targetEntity;
-    }
-
-    /**
-     * Hydrates a new entity from a row without {@see EntityCache} (for streaming / large reads).
-     */
-    protected function hydrateEntityDetached(array $data): EntityInterface
+    protected function materializeFromRow(array $data): EntityInterface
     {
         if (!isset($data[$this->getPrimaryKeyColumn()])) {
             throw new \RuntimeException('Primary key is not set in the data.');
@@ -45,6 +24,14 @@ trait HydratorTrait
         $targetEntity = new $class();
         $this->applyRowDataToEntity($targetEntity, $data);
         return $targetEntity;
+    }
+
+    /**
+     * Maps DB column values onto an entity (column names in $data).
+     */
+    public function applyRowData(EntityInterface $entity, array $data): void
+    {
+        $this->applyRowDataToEntity($entity, $data);
     }
 
     /**

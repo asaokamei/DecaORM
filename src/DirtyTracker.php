@@ -5,48 +5,46 @@ namespace WScore\DecaORM;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Contracts\HydratorInterface;
 
+/**
+ * Column snapshot tracking for dirty detection (per {@see OrmManager} instance).
+ */
 final class DirtyTracker
 {
     /**
-     * @var array<int, array<string, mixed>> snapshots by spl_object_id
+     * @var array<int, array<string, mixed>>
      */
-    private static array $snapshots = [];
+    private array $snapshots = [];
 
-    /**
-     * 現在のエンティティ状態からスナップショットを作り、保存する
-     */
-    public static function takeEntity(HydratorInterface $hydrator, EntityInterface $entity): void
+    public function takeEntity(HydratorInterface $hydrator, EntityInterface $entity): void
     {
-        self::take($entity, self::snapshotFromEntity($hydrator, $entity));
+        $this->take($entity, $this->snapshotFromEntity($hydrator, $entity));
     }
 
-    public static function take(EntityInterface $entity, array $data): void
+    public function take(EntityInterface $entity, array $data): void
     {
-        self::$snapshots[\spl_object_id($entity)] = $data;
+        $this->snapshots[\spl_object_id($entity)] = $data;
     }
 
-    public static function has(EntityInterface $entity): bool
+    public function has(EntityInterface $entity): bool
     {
-        return \array_key_exists(\spl_object_id($entity), self::$snapshots);
+        return \array_key_exists(\spl_object_id($entity), $this->snapshots);
     }
 
-    public static function get(EntityInterface $entity): ?array
+    public function get(EntityInterface $entity): ?array
     {
         $key = \spl_object_id($entity);
-        return self::$snapshots[$key] ?? null;
+        return $this->snapshots[$key] ?? null;
     }
 
-    public static function forget(EntityInterface $entity): void
+    public function forget(EntityInterface $entity): void
     {
-        unset(self::$snapshots[\spl_object_id($entity)]);
+        unset($this->snapshots[\spl_object_id($entity)]);
     }
 
     /**
-     * DirtyTracking用: リレーションなどを除外し、カラムのみスナップショット化する（PKは除外）
-     *
      * @return array<string, mixed> column => value
      */
-    public static function snapshotFromEntity(HydratorInterface $hydrator, EntityInterface $entity): array
+    public function snapshotFromEntity(HydratorInterface $hydrator, EntityInterface $entity): array
     {
         $data = [];
         $pkColumn = $hydrator->getPrimaryKeyColumn();
@@ -57,7 +55,7 @@ final class DirtyTracker
                 continue;
             }
             if ($column === $pkColumn) {
-                continue; // PKはUPDATE対象にしない
+                continue;
             }
             $data[$column] = $entity->getRaw($property);
         }
@@ -66,18 +64,16 @@ final class DirtyTracker
     }
 
     /**
-     * DirtyTracking: current - original の差分を返す（差分ゼロなら空配列）
-     *
-     * @param array<string,mixed> $current
-     * @param array<string,mixed> $original
-     * @return array<string,mixed>
+     * @param array<string, mixed> $current
+     * @param array<string, mixed> $original
+     * @return array<string, mixed>
      */
-    public static function diffColumns(array $current, array $original): array
+    public function diffColumns(array $current, array $original): array
     {
         $changes = [];
         foreach ($current as $col => $curVal) {
-            $cur = self::normalizeForCompare($curVal);
-            $org = self::normalizeForCompare($original[$col] ?? null);
+            $cur = $this->normalizeForCompare($curVal);
+            $org = $this->normalizeForCompare($original[$col] ?? null);
             if ($cur !== $org) {
                 $changes[$col] = $curVal;
             }
@@ -85,10 +81,7 @@ final class DirtyTracker
         return $changes;
     }
 
-    /**
-     * DirtyTracking用: 文字列寄せで比較するための正規化
-     */
-    private static function normalizeForCompare(mixed $value): ?string
+    private function normalizeForCompare(mixed $value): ?string
     {
         if ($value === null) {
             return null;
@@ -99,7 +92,6 @@ final class DirtyTracker
         if (\is_scalar($value)) {
             return (string) $value;
         }
-        // 配列・オブジェクトは追跡対象外にしたいが、万一入った場合は「変化した」扱いに寄せる
         return \json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '[[non-scalar]]';
     }
 }

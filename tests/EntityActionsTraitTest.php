@@ -6,7 +6,6 @@ namespace WScore\DecaORM\Tests;
 
 use PDO;
 use PHPUnit\Framework\TestCase;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityHandler;
 use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Tests\Fixtures\EntityActions\ActionUser;
@@ -27,8 +26,6 @@ final class EntityActionsTraitTest extends TestCase
     {
         $this->pdo = DbConnection::get();
         $this->pdo->exec(SchemaLoader::loadTable('action_users'));
-
-        EntityCache::clear();
 
         $this->container = new TestContainer();
         $this->container->set(PDO::class, $this->pdo);

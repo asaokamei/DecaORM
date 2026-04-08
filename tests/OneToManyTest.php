@@ -4,7 +4,6 @@ namespace WScore\DecaORM\Tests;
 
 use PDO;
 use PHPUnit\Framework\TestCase;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Tests\Fixtures\Relations\Comment;
@@ -13,12 +12,14 @@ use WScore\DecaORM\Tests\Fixtures\Relations\PostRepository;
 use WScore\DecaORM\Tests\Fixtures\Relations\RelationsFixture;
 use WScore\DecaORM\Tests\Fixtures\Relations\User;
 use WScore\DecaORM\Tests\Fixtures\Relations\UserRepository;
+use WScore\DecaORM\OrmManager;
 
 class OneToManyTest extends TestCase
 {
     private PDO $pdo;
     private UserRepository $userRepo;
     private PostRepository $postsRepo;
+    private OrmManager $manager;
 
     protected function setUp(): void
     {
@@ -26,6 +27,7 @@ class OneToManyTest extends TestCase
         $this->pdo = $fixture->pdo;
         $this->userRepo = $fixture->users;
         $this->postsRepo = $fixture->posts;
+        $this->manager = $fixture->manager;
     }
 
     public function createAndSaveUser(string|int $name): User|EntityInterface|null
@@ -302,7 +304,7 @@ class OneToManyTest extends TestCase
         $this->createAndSavePost($user2, 3);
 
         // check saved entities.
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $user1 = $this->userRepo->findById(1);
         $user2 = $this->userRepo->findById(2);
         $this->userRepo->loadPosts($user1);
@@ -320,7 +322,7 @@ class OneToManyTest extends TestCase
         $this->postsRepo->save($postMoved);
 
         // check saved entities.
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $user1 = $this->userRepo->findById(1);
         $user2 = $this->userRepo->findById(2);
         $this->userRepo->loadPosts($user1);
@@ -353,7 +355,7 @@ class OneToManyTest extends TestCase
             $this->postsRepo->save($post);
         }
 
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $user = $this->userRepo->findById($user2->getId());
         $this->userRepo->loadPosts($user);
         $this->assertCount(3, $user->getRaw('posts'));
@@ -373,7 +375,7 @@ class OneToManyTest extends TestCase
             "INSERT INTO comments (post_id, body, created_at) VALUES ({$post->getId()}, 'Comment 2', '{$now2}')"
         );
 
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $post = $this->postsRepo->findById($post->getId());
         $this->postsRepo->loadComments($post);
 

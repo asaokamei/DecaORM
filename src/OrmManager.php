@@ -17,22 +17,39 @@ class OrmManager
 {
     private static ?OrmManager $_self = null;
 
-    /**
-     * Scoped containers stack (per request/job/tenant).
-     *
-     * @var ContainerInterface[]
-     */
-    private array $containerStack = [];
-
     private ?PDO $pdo = null;
     private ?DateTimeImmutable $now = null;
     private LoggerInterface $logger;
     private ?SqlExecutor $sqlExecutor = null;
     private int $slowQueryThresholdMs = 100;
 
+    private EntityCache $entityCache;
+
+    private DirtyTracker $dirtyTracker;
+
     private function __construct(private ContainerInterface $container)
     {
         $this->logger = new NullLogger();
+        $this->entityCache = new EntityCache();
+        $this->dirtyTracker = new DirtyTracker();
+    }
+
+    public function getEntityCache(): EntityCache
+    {
+        return $this->entityCache;
+    }
+
+    public function getDirtyTracker(): DirtyTracker
+    {
+        return $this->dirtyTracker;
+    }
+
+    /**
+     * Returns the singleton instance after {@see initialize()} (for app code that needs cache/tracker without a repository).
+     */
+    public static function getInstance(): self
+    {
+        return self::instance();
     }
 
     public static function initialize(ContainerInterface $container): static
@@ -89,61 +106,10 @@ class OrmManager
     private static function instance(): static
     {
         if (self::$_self === null) {
-            throw new RuntimeException('RepositoryManager is not initialized. Call RepositoryManager::initialize() first.');
+            throw new RuntimeException('OrmManager is not initialized. Call OrmManager::initialize() first.');
         }
 
         return self::$_self;
-    }
-
-    /**
-     * Enters a scoped container.
-     *
-     * Typical usage: middleware/job wrapper sets a tenant container here.
-     */
-    public function enterScope(ContainerInterface $container): void
-    {
-        $this->containerStack[] = $container;
-        $this->pdo = null;
-    }
-
-    /**
-     * Leaves the current scope.
-     *
-     * Always pair with enterScope() (prefer runWithContainer()).
-     */
-    public function leaveScope(): void
-    {
-        array_pop($this->containerStack);
-        $this->pdo = null;
-    }
-
-    /**
-     * Runs callback within a scoped container and always restores the scope.
-     *
-     * @template TReturn
-     * @param ContainerInterface $container
-     * @param callable():TReturn $callback
-     * @return TReturn
-     */
-    public function runWithContainer(ContainerInterface $container, callable $callback)
-    {
-        $this->enterScope($container);
-        try {
-            return $callback();
-        } finally {
-            $this->leaveScope();
-        }
-    }
-
-    /**
-     * @return ContainerInterface|null
-     */
-    private function getCurrentContainer(): ?ContainerInterface
-    {
-        if (!empty($this->containerStack)) {
-            return $this->containerStack[count($this->containerStack) - 1];
-        }
-        return $this->container;
     }
 
     /**
@@ -153,13 +119,8 @@ class OrmManager
      */
     public function get(string $class): mixed
     {
-        $container = $this->getCurrentContainer();
-
-        if ($container === null) {
-            throw new RuntimeException('RepositoryManager container is not set.');
-        }
         try {
-            $repo = $container->get($class);
+            $repo = $this->container->get($class);
         } catch (NotFoundExceptionInterface $e) {
             throw new RuntimeException("Could not found {$class} in container.", 0, $e);
         } catch (ContainerExceptionInterface $e) {
@@ -172,7 +133,7 @@ class OrmManager
     public function getPDO(): PDO
     {
         if ($this->pdo === null) {
-            $this->pdo = $this->getCurrentContainer()->get(PDO::class);
+            $this->pdo = $this->container->get(PDO::class);
         }
         return $this->pdo;
     }

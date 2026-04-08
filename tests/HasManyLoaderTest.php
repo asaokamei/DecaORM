@@ -12,8 +12,8 @@ use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
-use WScore\DecaORM\EntityCache;
 use WScore\DecaORM\EntityCollection;
+use WScore\DecaORM\OrmManager;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Trait\EntityTrait;
 use WScore\DecaORM\Tests\Fixtures\Relations\TestContainer;
@@ -131,6 +131,7 @@ class HasManyLoaderTest extends TestCase
     private PDO $pdo;
     private ProjectWithLoaderRepository $projectRepo;
     private TaskWithDateRepository $taskRepo;
+    private OrmManager $manager;
 
     protected function setUp(): void
     {
@@ -138,14 +139,11 @@ class HasManyLoaderTest extends TestCase
         $this->pdo->exec(SchemaLoader::loadTable('projects'));
         $this->pdo->exec(SchemaLoader::loadTable('tasks'));
 
-        // Clear cache before each test
-        EntityCache::clear();
-
         $container = new TestContainer();
         $container->set(PDO::class, $this->pdo);
-        $manager = \WScore\DecaORM\OrmManager::initialize($container);
-        $this->projectRepo = new ProjectWithLoaderRepository($manager);
-        $this->taskRepo = new TaskWithDateRepository($manager);
+        $this->manager = \WScore\DecaORM\OrmManager::initialize($container);
+        $this->projectRepo = new ProjectWithLoaderRepository($this->manager);
+        $this->taskRepo = new TaskWithDateRepository($this->manager);
         $container->set(ProjectWithLoaderRepository::class, $this->projectRepo);
         $container->set(TaskWithDateRepository::class, $this->taskRepo);
     }
@@ -179,7 +177,7 @@ class HasManyLoaderTest extends TestCase
         $this->assertNotNull($oldTask->getId());
 
         // Clear cache and reload
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $project = $this->projectRepo->findById($project->getId());
 
         // Load recentTasks using loader
@@ -245,7 +243,7 @@ class HasManyLoaderTest extends TestCase
         $this->taskRepo->save($task3);
 
         // Clear cache and reload
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $projects = [
             $this->projectRepo->findById($project1->getId()),
             $this->projectRepo->findById($project2->getId())
@@ -302,7 +300,7 @@ class HasManyLoaderTest extends TestCase
         $this->taskRepo->save($oldTask2);
 
         // Clear cache and reload
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $project = $this->projectRepo->findById($project->getId());
 
         // Load recentTasks using loader
@@ -326,7 +324,7 @@ class HasManyLoaderTest extends TestCase
         $this->projectRepo->save($project);
 
         // Clear cache and reload
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $project = $this->projectRepo->findById($project->getId());
 
         // Load recentTasks using loader
@@ -379,7 +377,7 @@ class HasManyLoaderTest extends TestCase
         $this->taskRepo->save($veryOld);
 
         // Clear cache and reload
-        EntityCache::clear();
+        $this->manager->getEntityCache()->clear();
         $project = $this->projectRepo->findById($project->getId());
 
         // Load recentTasks using loader

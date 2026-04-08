@@ -22,7 +22,7 @@ class RepositoryManagerTest extends TestCase
         try {
             $this->expectException(RuntimeException::class);
             $this->expectExceptionMessage(
-                'RepositoryManager is not initialized. Call RepositoryManager::initialize() first.'
+                'OrmManager is not initialized. Call OrmManager::initialize() first.'
             );
 
             OrmManager::getRepository(UserRepository::class);
@@ -38,7 +38,7 @@ class RepositoryManagerTest extends TestCase
         try {
             $this->expectException(RuntimeException::class);
             $this->expectExceptionMessage(
-                'RepositoryManager is not initialized. Call RepositoryManager::initialize() first.'
+                'OrmManager is not initialized. Call OrmManager::initialize() first.'
             );
 
             OrmManager::transaction(static fn() => true);
