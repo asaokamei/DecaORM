@@ -57,14 +57,22 @@ interface HydratorInterface
     public function getUpdatedAt(): ?string;
 
     /**
-     * Convert an associative array (DB row) to an entity (hydration)
+     * Build a new entity from a DB row (no identity map). For cached / single-instance-per-id hydration,
+     * use the repository fetch path, which applies {@see \WScore\DecaORM\EntityCache} and ORM context.
      */
     public function hydrate(array $data): EntityInterface;
 
     /**
-     * Hydrate from a DB row without using {@see EntityCache} (streaming / bulk read).
+     * Same as {@see hydrate()}: new instance per call. Kept for readability at call sites (streaming / bulk).
      */
     public function hydrateDetached(array $data): EntityInterface;
+
+    /**
+     * Applies column values from a DB row onto an existing entity instance.
+     *
+     * @param array<string, mixed> $data
+     */
+    public function applyRowData(EntityInterface $entity, array $data): void;
 
     /**
      * Convert an entity to an associative array (dehydration)

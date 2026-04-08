@@ -52,7 +52,7 @@ class AttributeHydratorTest extends TestCase
         $this->assertEquals('test@example.com', $entity->getRaw('email'));
     }
 
-    public function testHydrateDetachedProducesNewInstancesAndSkipsEntityCache(): void
+    public function testHydrateAndHydrateDetachedAlwaysMaterializeNewInstances(): void
     {
         EntityCache::clear();
         $hydrator = new AttributeHydrator(User::class);
@@ -69,12 +69,12 @@ class AttributeHydratorTest extends TestCase
         $this->assertNotSame($first, $second);
         $this->assertEquals('Test User', $second->getRaw('name'));
 
-        EntityCache::clear();
-        $cached = $hydrator->hydrate($data);
-        $this->assertSame($cached, $hydrator->hydrate($data));
-        $detached = $hydrator->hydrateDetached($data);
-        $this->assertNotSame($cached, $detached);
-        $this->assertEquals($cached->getRaw('name'), $detached->getRaw('name'));
+        $a = $hydrator->hydrate($data);
+        $b = $hydrator->hydrate($data);
+        $this->assertNotSame($a, $b);
+        $c = $hydrator->hydrateDetached($data);
+        $this->assertNotSame($a, $c);
+        $this->assertEquals($a->getRaw('name'), $c->getRaw('name'));
     }
 
     public function testDehydrate(): void

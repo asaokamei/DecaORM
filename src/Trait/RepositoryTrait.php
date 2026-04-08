@@ -125,7 +125,7 @@ trait RepositoryTrait
         }
         $list = [];
         foreach ($stmt as $item) {
-            $entity = $this->hydrator->hydrate($item);
+            $entity = $this->hydrateManagedFromRow($item);
             DirtyTracker::takeEntity($this->hydrator, $entity);
             $list[] = $entity;
         }
@@ -139,8 +139,40 @@ trait RepositoryTrait
             return;
         }
         foreach ($stmt as $item) {
-            yield $this->hydrator->hydrateDetached($item);
+            $entity = $this->hydrator->hydrateDetached($item);
+            $this->attachOrmContext($entity);
+            yield $entity;
         }
+    }
+
+    /**
+     * Identity map + column hydration + ORM context. Used by {@see fetch()}.
+     *
+     * @param array<string, mixed> $row
+     */
+    protected function hydrateManagedFromRow(array $row): EntityInterface
+    {
+        $hydrator = $this->hydrator;
+        $pkCol = $hydrator->getPrimaryKeyColumn();
+        if (!isset($row[$pkCol])) {
+            throw new RuntimeException('Primary key is not set in the data.');
+        }
+        $class = $hydrator->getEntityClass();
+        $pKey = $row[$pkCol];
+        if (EntityCache::has($class, $pKey)) {
+            $entity = EntityCache::get($class, $pKey);
+        } else {
+            $entity = new $class();
+            EntityCache::set($class, $pKey, $entity);
+        }
+        $hydrator->applyRowData($entity, $row);
+        $this->attachOrmContext($entity);
+        return $entity;
+    }
+
+    protected function attachOrmContext(EntityInterface $entity): void
+    {
+        $entity->setOrm($this->getManager());
     }
 
     public function find(int|string|array $id, ?string $column = null, ?string $orderBy = null): EntityCollection
