@@ -101,7 +101,7 @@ trait WhereTrait
     /**
      * @return array<string, mixed>
      */
-    protected function getWhereParameters(): array
+    public function getParameters(): array
     {
         // IN句の展開処理（未処理の場合のみ実行）
         if ($this->expanded_params === null) {
@@ -198,12 +198,5 @@ trait WhereTrait
         return $this->buildWhereClause() !== '';
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    public function getParameters(): array
-    {
-        return $this->getWhereParameters();
-    }
 }
 
