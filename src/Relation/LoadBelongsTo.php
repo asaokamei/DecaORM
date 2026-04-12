@@ -72,8 +72,11 @@ class LoadBelongsTo
         }
 
         $children = $childEntities;
-        $parentIds = $children->getValues($childRelation->foreignKey);
+        $parentIds = array_filter($children->getValues($childRelation->foreignKey));
         if (empty($parentIds)) {
+            foreach ($children as $childEntity) {
+                $childEntity->setRaw($childRelation->propertyName, null);
+            }
             return [];
         }
 
