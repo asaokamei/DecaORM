@@ -21,6 +21,10 @@ trait RelationBelongsToTrait
     ): ?EntityInterface {
 
         $parentId = $childEntity->getRaw($childRelation->foreignKey);
+        if ($parentId === null) {
+            $childEntity->setRaw($childRelation->propertyName, null);
+            return null;
+        }
         $parentEntity = $targetRepository->find($parentId);
         if (empty($parentEntity)) {
             $childEntity->setRaw($childRelation->propertyName, null);
@@ -44,8 +48,6 @@ trait RelationBelongsToTrait
      */
     public static function getParents(EntityCollection $parents, BelongsTo|BelongsToOne $childRelation, EntityCollection $childEntities): array
     {
-        // Set parent for each child entity
-        // Note: BelongsTo does not set child on parent (parent may have HasMany, which is dangerous)
         $allParents = [];
         $childProperty = $childRelation->propertyName;
         foreach ($childEntities as $childEntity) {

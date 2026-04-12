@@ -214,11 +214,4 @@ class QueryBuilder
         return $sql;
     }
 
-    /**
-     * 最終的なバインディングパラメーターを取得する
-     */
-    public function getParameters(): array
-    {
-        return $this->getWhereParameters();
-    }
 }

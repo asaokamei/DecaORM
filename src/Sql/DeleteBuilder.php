@@ -42,9 +42,4 @@ class DeleteBuilder
         return $sql;
     }
 
-    public function getParameters(): array
-    {
-        // SET句のデータとWHERE句のパラメータを統合
-        return $this->getWhereParameters();
-    }
 }
