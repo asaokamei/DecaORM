@@ -27,8 +27,7 @@ trait WhereTrait
      */
     protected function convertEnum($value)
     {
-        /** @noinspection PhpElementIsNotAvailableInCurrentPhpVersionInspection */
-        if (PHP_VERSION_ID >= 80100 && $value instanceof \BackedEnum) {
+        if ($value instanceof \BackedEnum) {
             return $value->value;
         }
         return $value;

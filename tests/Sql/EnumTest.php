@@ -5,9 +5,7 @@ namespace WScore\DecaORM\Tests\Sql;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\Sql\QueryBuilder;
 
-if (PHP_VERSION_ID >= 80100) {
-    require_once __DIR__ . '/EnumDef.php';
-}
+require_once __DIR__ . '/EnumDef.php';
 
 class EnumTest extends TestCase
 {
@@ -15,9 +13,6 @@ class EnumTest extends TestCase
 
     protected function setUp(): void
     {
-        if (PHP_VERSION_ID < 80100) {
-            $this->markTestSkipped('Enum is only available on PHP 8.1 or later.');
-        }
         $this->builder = new QueryBuilder();
     }
 
