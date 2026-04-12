@@ -1,6 +1,7 @@
 <?php
+/** @noinspection PhpLanguageLevelInspection */
 
-namespace tests\Sql;
+namespace WScore\DecaORM\Tests\Sql;
 
 enum Status: string {
     case ACTIVE = 'active';

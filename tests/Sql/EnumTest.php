@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\Sql;
+namespace WScore\DecaORM\Tests\Sql;
 
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\Sql\QueryBuilder;
