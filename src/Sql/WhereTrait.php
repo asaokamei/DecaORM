@@ -20,6 +20,20 @@ trait WhereTrait
     protected ?array $expanded_params = null;
 
     /**
+     * Enum値を変換するユーティリティメソッド
+     * 
+     * @param mixed $value
+     * @return mixed
+     */
+    protected function convertEnum($value)
+    {
+        if (PHP_VERSION_ID >= 80100 && $value instanceof \BackedEnum) {
+            return $value->value;
+        }
+        return $value;
+    }
+
+    /**
      * 生のWHERE句（OR条件のグループ化など）を追加し、バインディングをマージする
      * @param string $sql_snippet (例: (age < :min_age OR score > :max_score))
      * @param array $bindings プレースホルダーと値のマップ
@@ -84,9 +98,6 @@ trait WhereTrait
     }
 
     /**
-     * WHERE句のパラメータを取得
-     * IN句の展開処理も実行される
-     * 
      * @return array<string, mixed>
      */
     protected function getWhereParameters(): array
@@ -95,7 +106,14 @@ trait WhereTrait
         if ($this->expanded_params === null) {
             $this->processExtends();
         }
-        return $this->expanded_params ?? $this->parameters;
+        $params = $this->expanded_params ?? $this->parameters;
+
+        // 全パラメータに対してEnum変換を一括適用
+        foreach ($params as $key => $value) {
+            $params[$key] = $this->convertEnum($value);
+        }
+
+        return $params;
     }
 
     /**
@@ -113,14 +131,11 @@ trait WhereTrait
     protected function processExtends(): void
     {
         $expanded_markers = [];
-        $expanded_params = $this->parameters;
+        $expanded_params = [];
 
-        foreach ($expanded_params as $marker => $values) {
+        foreach ($this->parameters as $marker => $values) {
             // 配列値のみを処理（IN句の展開対象）
             if (is_array($values)) {
-                // 元のマーカーをパラメータから削除
-                unset($expanded_params[$marker]);
-                
                 // マーカーが既に_EXPAND_で始まっているか確認
                 // whereIn()で生成されたマーカーは既に_EXPAND_で始まっている（例: _EXPAND_u_id_0）
                 // setParameters()で設定されたマーカーは_EXPAND_で始まっていない（例: user_id）
@@ -145,6 +160,9 @@ trait WhereTrait
                 // whereIn()の場合: ":_EXPAND_u_id_0" → ":_EXPAND_u_id_0_0, :_EXPAND_u_id_0_1, ..."
                 // setParameters()の場合: ":_EXPAND_user_id" → ":_EXPAND_user_id_0, :_EXPAND_user_id_1, ..."
                 $expanded_markers[':' . $original_marker_key] = implode(', ', $new_placeholders);
+            } else {
+                // 配列でない場合はそのまま追加
+                $expanded_params[$marker] = $values;
             }
         }
 
@@ -184,11 +202,7 @@ trait WhereTrait
      */
     public function getParameters(): array
     {
-        // SET/WHEREを含む全parametersを対象にIN展開する
-        if ($this->expanded_params === null) {
-            $this->processExtends();
-        }
-        return $this->expanded_params ?? $this->parameters;
+        return $this->getWhereParameters();
     }
 }
 
