@@ -177,7 +177,7 @@ class EntityCollection extends Collection
 
         $relatedEntities = [];
         foreach (array_chunk($this->items, $chunkSize) as $chunk) {
-            $collection = $repository->load(new EntityCollection($chunk, $repository), $propertyName);
+            $collection = $repository->load($this->newCollection($chunk), $propertyName);
             $relatedEntities = array_merge($relatedEntities, $collection->getEntities());
         }
 
@@ -350,18 +350,6 @@ class EntityCollection extends Collection
         usort($this->items, $callback);
         $this->idMap = null;
         return $this;
-    }
-
-    /**
-     * @return static[]
-     */
-    public function chunk(int $size = 100, bool $preserveKeys = false): array
-    {
-        $chunks = [];
-        foreach (array_chunk($this->items, $size, $preserveKeys) as $chunk) {
-            $chunks[] = $this->newCollection($chunk);
-        }
-        return $chunks;
     }
 
     /**
