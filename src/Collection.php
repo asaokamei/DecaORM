@@ -24,6 +24,14 @@ class Collection implements IteratorAggregate, Countable, ArrayAccess
     }
 
     /**
+     * @param array<T> $items
+     */
+    protected function newCollection(array $items): static
+    {
+        return new static($items);
+    }
+
+    /**
      * @param T $item
      */
     public function add(mixed $item): void
@@ -61,7 +69,7 @@ class Collection implements IteratorAggregate, Countable, ArrayAccess
     public function filter(callable $callback): static
     {
         $filtered = array_filter($this->items, $callback);
-        return new static($filtered);
+        return $this->newCollection($filtered);
     }
 
     /**
@@ -86,7 +94,7 @@ class Collection implements IteratorAggregate, Countable, ArrayAccess
     {
         $chunks = [];
         foreach (array_chunk($this->items, $size, $preserveKeys) as $chunk) {
-            $chunks[] = new static($chunk);
+            $chunks[] = $this->newCollection($chunk);
         }
         return $chunks;
     }

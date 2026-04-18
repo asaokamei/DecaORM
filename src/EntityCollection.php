@@ -39,6 +39,14 @@ class EntityCollection extends Collection
         parent::__construct($entities);
     }
 
+    /**
+     * @param array<EntityInterface>|T[] $items
+     */
+    protected function newCollection(array $items): static
+    {
+        return new static($items, $this->repository);
+    }
+
     private function resolveEntityClass(array $entities, ?RepositoryInterface $repository): void
     {
         if ($repository instanceof RepositoryInterface) {
@@ -312,7 +320,7 @@ class EntityCollection extends Collection
         }
         $group = [];
         foreach ($buckets as $key => $entities) {
-            $group[$key] = new static($entities, $this->repository);
+            $group[$key] = $this->newCollection($entities);
         }
         return $group;
     }
@@ -351,7 +359,7 @@ class EntityCollection extends Collection
     {
         $chunks = [];
         foreach (array_chunk($this->items, $size, $preserveKeys) as $chunk) {
-            $chunks[] = new static($chunk, $this->repository);
+            $chunks[] = $this->newCollection($chunk);
         }
         return $chunks;
     }
@@ -369,7 +377,7 @@ class EntityCollection extends Collection
         }
         $group = [];
         foreach ($buckets as $key => $entities) {
-            $group[$key] = new static($entities, $this->repository);
+            $group[$key] = $this->newCollection($entities);
         }
         return $group;
     }
