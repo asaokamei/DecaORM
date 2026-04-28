@@ -25,6 +25,7 @@ final class MappedByQuery
         EntityInterface|EntityCollection $parents,
         RepositoryInterface $parentRepository,
         ?string $orderBy = null,
+        ?callable $apply = null,
     ): EntityCollection {
         $inverse = $childRepository->getRelation($mappedByPropertyName);
         if ($inverse === null) {
@@ -39,13 +40,23 @@ final class MappedByQuery
                 if ($parentId === null) {
                     return new EntityCollection([], $childRepository);
                 }
-                return $childRepository->find($parentId, $fkCol, $orderBy);
+                $ids = [$parentId];
+            } else {
+                $ids = $parents->getIds();
+                if ($ids === []) {
+                    return new EntityCollection([], $childRepository);
+                }
             }
-            $parentIds = $parents->getIds();
-            if ($parentIds === []) {
-                return new EntityCollection([], $childRepository);
+
+            $query = $childRepository->sqlQuery()
+                ->whereIn($fkCol, $ids);
+            if ($orderBy !== null) {
+                $query->orderBy($orderBy);
             }
-            return $childRepository->find($parentIds, $fkCol, $orderBy);
+            if ($apply !== null) {
+                $apply($query, $parents, $inverse, $childRepository, $parentRepository);
+            }
+            return $query->getResult();
         }
 
         if ($inverse instanceof MorphTo || $inverse instanceof MorphToOne) {
@@ -74,6 +85,9 @@ final class MappedByQuery
                 ->whereIn($fkCol, $fkValues);
             if ($orderBy !== null) {
                 $query->orderBy($orderBy);
+            }
+            if ($apply !== null) {
+                $apply($query, $parents, $inverse, $childRepository, $parentRepository);
             }
             return $query->getResult();
         }

@@ -8,6 +8,7 @@ use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Contracts\RepositoryInterface;
 use WScore\DecaORM\EntityCollection;
+use WScore\DecaORM\Sql\Query;
 use WScore\DecaORM\OrmManager;
 
 /**
@@ -20,25 +21,58 @@ trait RelationTrait
      * @param RepositoryInterface|null $sourceRepository
      * @return array|null
      */
-    public static function getLoader(HasMany|HasOne $parentRelation, ?RepositoryInterface $sourceRepository): ?array
+    public static function getApply(HasMany|HasOne $parentRelation, ?RepositoryInterface $sourceRepository): ?array
     {
-        $loader = null;
-        if ($parentRelation->loader !== null) {
+        $apply = null;
+        if ($parentRelation->apply !== null) {
             if ($sourceRepository === null) {
                 throw new RuntimeException(
-                    'Source repository is required when using loader. ' .
-                    'Please pass the source repository to LoadHasMany::load()'
+                    'Source repository is required when using apply. ' .
+                    'Please pass the source repository to LoadHasMany/LoadHasOne::load()'
                 );
             }
 
-            if (!method_exists($sourceRepository, $parentRelation->loader)) {
+            if (!method_exists($sourceRepository, $parentRelation->apply)) {
                 throw new RuntimeException(
-                    'Loader method "' . $parentRelation->loader . '" not found in repository: ' . $sourceRepository::class
+                    'Apply method "' . $parentRelation->apply . '" not found in repository: ' . $sourceRepository::class
                 );
             }
-            $loader = [$sourceRepository, $parentRelation->loader];
+            $apply = [$sourceRepository, $parentRelation->apply];
         }
-        return $loader;
+        return $apply;
+    }
+
+    /**
+     * Normalizes apply method to a callable that accepts:
+     *   (Query $query, EntityInterface|EntityCollection $owners, object $inverseRelation, RepositoryInterface $targetRepo, RepositoryInterface $ownerRepo): void
+     */
+    public static function wrapApply(?array $apply): ?callable
+    {
+        if ($apply === null) {
+            return null;
+        }
+
+        return function (
+            Query $query,
+            EntityInterface|EntityCollection $owners,
+            object $inverseRelation,
+            RepositoryInterface $targetRepo,
+            RepositoryInterface $ownerRepo
+        ) use ($apply): void {
+            // Support both signatures:
+            // - (Query $query, EntityInterface|EntityCollection $owners): void
+            // - (Query $query, EntityInterface|EntityCollection $owners, object $inverseRelation, RepositoryInterface $targetRepo, RepositoryInterface $ownerRepo): void
+            $method = $apply[1] ?? null;
+            $argc = is_string($method) && method_exists($apply[0], $method)
+                ? (new \ReflectionMethod($apply[0], $method))->getNumberOfParameters()
+                : 2;
+
+            if ($argc <= 2) {
+                ($apply)($query, $owners);
+                return;
+            }
+            ($apply)($query, $owners, $inverseRelation, $targetRepo, $ownerRepo);
+        };
     }
 
     /**

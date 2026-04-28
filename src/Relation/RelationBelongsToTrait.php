@@ -11,22 +11,50 @@ use WScore\DecaORM\Contracts\RepositoryInterface;
 
 trait RelationBelongsToTrait
 {
+    private static function resolveOwnerKeyColumn(BelongsTo|BelongsToOne $childRelation, RepositoryInterface $targetRepository): string
+    {
+        if ($childRelation->ownerKey === null || $childRelation->ownerKey === '') {
+            return $targetRepository->getHydrator()->getPrimaryKeyColumn();
+        }
+        return $targetRepository->getHydrator()->getColumnNameForProperty($childRelation->ownerKey)
+            ?? $childRelation->ownerKey;
+    }
+
+    private static function resolveOwnerKeyProperty(BelongsTo|BelongsToOne $childRelation, RepositoryInterface $targetRepository): string
+    {
+        if ($childRelation->ownerKey === null || $childRelation->ownerKey === '') {
+            return $targetRepository->getHydrator()->getPrimaryKey();
+        }
+        return $childRelation->ownerKey;
+    }
+
     /**
      * Load BelongsTo relation for a single entity.
      */
     private static function loadSingleEntity(
         EntityInterface $childEntity,
         BelongsTo|BelongsToOne $childRelation,
-        RepositoryInterface $targetRepository
+        RepositoryInterface $targetRepository,
+        ?callable $apply = null,
+        ?RepositoryInterface $sourceRepository = null,
     ): ?EntityInterface {
 
-        $parentId = $childEntity->getRaw($childRelation->foreignKey);
-        if ($parentId === null) {
+        $ownerKeyCol = self::resolveOwnerKeyColumn($childRelation, $targetRepository);
+
+        $matchValue = $childEntity->getRaw($childRelation->foreignKey);
+        if ($matchValue === null) {
             $childEntity->setRaw($childRelation->propertyName, null);
             return null;
         }
-        $parentEntity = $targetRepository->find($parentId);
-        if (empty($parentEntity)) {
+
+        $query = $targetRepository->sqlQuery()
+            ->where($ownerKeyCol, $matchValue);
+        if ($apply !== null) {
+            $apply($query, $childEntity, $childRelation, $targetRepository, $sourceRepository);
+        }
+        $parentEntity = $query->getResult();
+
+        if (count($parentEntity) === 0) {
             $childEntity->setRaw($childRelation->propertyName, null);
             return null;
         }
@@ -46,14 +74,33 @@ trait RelationBelongsToTrait
      * @param EntityCollection<EntityInterface> $childEntities Child entities to link to their respective parents.
      * @return array An array of parent entities that were successfully linked to child entities.
      */
-    public static function getParents(EntityCollection $parents, BelongsTo|BelongsToOne $childRelation, EntityCollection $childEntities): array
+    public static function getParents(
+        EntityCollection $parents,
+        BelongsTo|BelongsToOne $childRelation,
+        EntityCollection $childEntities,
+        RepositoryInterface $targetRepository
+    ): array
     {
+        $ownerKeyProp = self::resolveOwnerKeyProperty($childRelation, $targetRepository);
+        $parentMap = [];
+        foreach ($parents as $p) {
+            $key = $p->getRaw($ownerKeyProp);
+            if ($key === null) {
+                continue;
+            }
+            // If duplicates exist for the same ownerKey, keep first (apply should have prevented this).
+            if (!array_key_exists((string) $key, $parentMap)) {
+                $parentMap[(string) $key] = $p;
+            }
+        }
+
         $allParents = [];
         $childProperty = $childRelation->propertyName;
         foreach ($childEntities as $childEntity) {
-            $parentId = $childEntity->getRaw($childRelation->foreignKey);
-            if ($parentId !== null && $parents->hasId($parentId)) {
-                $parent = $parents->findById($parentId);
+            $matchValue = $childEntity->getRaw($childRelation->foreignKey);
+            $key = $matchValue !== null ? (string) $matchValue : null;
+            if ($key !== null && isset($parentMap[$key])) {
+                $parent = $parentMap[$key];
                 $childEntity->setRaw($childProperty, $parent);
                 $allParents[] = $parent;
             } else {

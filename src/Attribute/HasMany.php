@@ -30,13 +30,13 @@ class HasMany
      * @param string $targetEntity The target entity class name (e.g., Post::class)
      * @param string $mappedBy The property name on the inverse side (e.g., 'user')
      * @param string|null $orderBy Optional ORDER BY clause (e.g., 'created_at DESC')
-     * @param string|null $loader Optional method name in the repository to load this relation (for complex queries)
+     * @param string|null $apply Optional method name in the source repository to modify the target query (Query hook).
      */
     public function __construct(
         public string $targetEntity,
         public string $mappedBy,
         public ?string $orderBy = null,
-        public ?string $loader = null
+        public ?string $apply = null
     ) {
     }
 

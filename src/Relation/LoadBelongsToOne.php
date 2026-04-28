@@ -13,21 +13,58 @@ class LoadBelongsToOne
 {
     use RelationBelongsToTrait;
 
+    private static function getApply(BelongsToOne $relation, ?RepositoryInterface $sourceRepository): ?callable
+    {
+        if ($relation->apply === null || $relation->apply === '') {
+            return null;
+        }
+        if ($sourceRepository === null) {
+            throw new RuntimeException('Source repository is required when using apply for BelongsToOne.');
+        }
+        if (!method_exists($sourceRepository, $relation->apply)) {
+            throw new RuntimeException(
+                'Apply method "' . $relation->apply . '" not found in repository: ' . $sourceRepository::class
+            );
+        }
+        $callable = [$sourceRepository, $relation->apply];
+
+        return function (
+            \WScore\DecaORM\Sql\Query $query,
+            EntityInterface|EntityCollection $children,
+            BelongsToOne $rel,
+            RepositoryInterface $targetRepo,
+            ?RepositoryInterface $srcRepo
+        ) use ($callable): void {
+            $method = $callable[1] ?? null;
+            $argc = is_string($method) && method_exists($callable[0], $method)
+                ? (new \ReflectionMethod($callable[0], $method))->getNumberOfParameters()
+                : 2;
+            if ($argc <= 2) {
+                ($callable)($query, $children);
+                return;
+            }
+            ($callable)($query, $children, $rel, $targetRepo, $srcRepo);
+        };
+    }
+
     /**
      * Load BelongsToOne relation for a single entity or multiple entities.
      * 
      * @param EntityInterface|EntityCollection<EntityInterface> $entities
      * @param BelongsToOne $childRelation
      * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface|null $sourceRepository The repository for the source entities (needed for apply)
      * @return EntityInterface[] All loaded parent entities (array with 0 or 1 elements per child)
      */
     public static function load(
         EntityInterface|EntityCollection $entities,
         BelongsToOne $childRelation,
-        RepositoryInterface $targetRepository
+        RepositoryInterface $targetRepository,
+        ?RepositoryInterface $sourceRepository = null
     ): array {
+        $apply = self::getApply($childRelation, $sourceRepository);
         if ($entities instanceof EntityInterface) {
-            return self::loadSingle($entities, $childRelation, $targetRepository);
+            return self::loadSingle($entities, $childRelation, $targetRepository, $apply, $sourceRepository);
         }
         if (count($entities) === 0) {
             return [];
@@ -37,9 +74,9 @@ class LoadBelongsToOne
             if (!$first instanceof EntityInterface) {
                 return [];
             }
-            return self::loadSingle($first, $childRelation, $targetRepository);
+            return self::loadSingle($first, $childRelation, $targetRepository, $apply, $sourceRepository);
         }
-        return self::loadBatch($entities, $childRelation, $targetRepository);
+        return self::loadBatch($entities, $childRelation, $targetRepository, $apply, $sourceRepository);
     }
 
     /**
@@ -48,9 +85,11 @@ class LoadBelongsToOne
     private static function loadSingle(
         EntityInterface $childEntity,
         BelongsToOne $childRelation,
-        RepositoryInterface $targetRepository
+        RepositoryInterface $targetRepository,
+        ?callable $apply = null,
+        ?RepositoryInterface $sourceRepository = null
     ): array {
-        $parentEntity = self::loadSingleEntity($childEntity, $childRelation, $targetRepository);
+        $parentEntity = self::loadSingleEntity($childEntity, $childRelation, $targetRepository, $apply, $sourceRepository);
 
         // Set child on parent if inversedBy is specified and parent has HasOne
         if ($parentEntity && $childRelation->inversedBy !== null) {
@@ -71,35 +110,46 @@ class LoadBelongsToOne
     public static function loadBatch(
         EntityCollection $childEntities,
         BelongsToOne $childRelation,
-        RepositoryInterface $targetRepository
+        RepositoryInterface $targetRepository,
+        ?callable $apply = null,
+        ?RepositoryInterface $sourceRepository = null
     ): array {
         if (count($childEntities) === 0) {
             return [];
         }
 
         $children = $childEntities;
-        $parentIds = $children->getValues($childRelation->foreignKey);
-        if (empty($parentIds)) {
+        $matchValues = array_filter($children->getValues($childRelation->foreignKey));
+        if (empty($matchValues)) {
             return [];
         }
 
-        $parents = $targetRepository->find(
-            $parentIds,
-            $targetRepository->getHydrator()->getPrimaryKeyColumn()
-        );
-        $allParents = self::getParents($parents, $childRelation, $children);
+        $ownerKeyCol = self::resolveOwnerKeyColumn($childRelation, $targetRepository);
+        $query = $targetRepository->sqlQuery()
+            ->whereIn($ownerKeyCol, $matchValues);
+        if ($apply !== null) {
+            $apply($query, $children, $childRelation, $targetRepository, $sourceRepository);
+        }
+        $parents = $query->getResult();
+
+        $allParents = self::getParents($parents, $childRelation, $children, $targetRepository);
 
         // Set child on parent if inversedBy is specified and parent has HasOne
         if ($childRelation->inversedBy === null) {
             return $allParents;
         }
-        $childrenByParentId = $children->groupBy($childRelation->foreignKey);
-        foreach ($childrenByParentId as $parentId => $child) {
-            if ($parents->hasId($parentId)) {
+        $childrenByMatch = $children->groupBy($childRelation->foreignKey);
+        foreach ($childrenByMatch as $matchValue => $child) {
+            // For ownerKey != PK, we cannot use parents->hasId/findById.
+            // Use already-linked child->propertyName when available.
+            $parent = null;
+            if (count($child) === 1) {
+                $parent = $child[0]->getRaw($childRelation->propertyName);
+            }
+            if ($parent instanceof EntityInterface) {
                 if (count($child) > 1) {
-                    throw new RuntimeException('BelongsToOne relation can only have one child per parent, but multiple children found for parent ID: ' . $parentId);
+                    throw new RuntimeException('BelongsToOne relation can only have one child per parent, but multiple children found for match value: ' . $matchValue);
                 }
-                $parent = $parents->findById($parentId);
                 self::setChildOnParent($parent, $childRelation->inversedBy, $child[0], $targetRepository);
             }
         }
