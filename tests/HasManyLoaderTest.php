@@ -36,7 +36,7 @@ class ProjectWithLoader implements EntityInterface
     #[Column(name: 'name')]
     public string $name = '';
 
-    #[HasMany(targetEntity: TaskWithDate::class, mappedBy: 'project', loader: 'findRecentTasks')]
+    #[HasMany(targetEntity: TaskWithDate::class, mappedBy: 'project', apply: 'findRecentTasks')]
     public ?EntityCollection $recentTasks = null;
 
     public function getId(): ?int
@@ -83,37 +83,15 @@ class ProjectWithLoaderRepository extends \WScore\DecaORM\AbstractRepository
         $this->setUpRepository($manager, null, ProjectWithLoader::class);
     }
 
-    /**
-     * Loader method for recentTasks relation.
-     * Returns tasks created within the last 7 days.
-     * 
-     * @param EntityInterface|EntityCollection<EntityInterface> $projects
-     * @return EntityCollection Array of TaskWithDate entities
-     */
-    public function findRecentTasks(EntityInterface|EntityCollection $projects): EntityCollection
-    {
-        $projects = $projects instanceof EntityCollection
-            ? $projects->getEntities()
-            : [$projects];
-        if ($projects === []) {
-            return new EntityCollection([], $this->getRepository(TaskWithDate::class));
-        }
-        $projectIds = array_filter(array_map(fn($p) => $p->getId(), $projects));
-
-        $taskRepo = $this->getRepository(TaskWithDate::class);
-        // Calculate 7 days ago timestamp
-        $sevenDaysAgo = date('Y-m-d H:i:s', strtotime('-7 days'));
-        
-        // Load tasks created within the last 7 days
-        // This demonstrates complex query conditions that loader can handle
+    public function findRecentTasks(
+        \WScore\DecaORM\Sql\Query $query,
+        EntityInterface|EntityCollection $projects
+    ): void {
         // SQLite can compare datetime strings directly if they're in ISO format (YYYY-MM-DD HH:MM:SS)
-        $tasks = $taskRepo->sqlQuery()
-            ->whereIn('project_id', $projectIds)
+        $sevenDaysAgo = date('Y-m-d H:i:s', strtotime('-7 days'));
+        $query
             ->where('created_at', $sevenDaysAgo, '>=')
-            ->orderBy('created_at DESC')
-            ->getResult();
-
-        return $tasks;
+            ->orderBy('created_at DESC');
     }
 }
 

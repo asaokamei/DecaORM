@@ -26,12 +26,16 @@ class BelongsTo
     /**
      * @param string $targetEntity The target entity class name (e.g., User::class)
      * @param string $foreignKey The foreign key property name (e.g., 'user_id')
+     * @param string|null $ownerKey The target entity property name to match against (defaults to target primary key)
      * @param string|null $inversedBy The property name on the inverse side (for bidirectional relationships)
+     * @param string|null $apply Optional method name in the source repository to modify the target query (Query hook).
      */
     public function __construct(
         public string $targetEntity,
         public string $foreignKey,
-        public ?string $inversedBy = null
+        public ?string $ownerKey = null,
+        public ?string $inversedBy = null,
+        public ?string $apply = null,
     ) {
     }
 

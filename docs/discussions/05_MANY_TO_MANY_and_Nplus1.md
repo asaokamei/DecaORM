@@ -90,7 +90,7 @@ $studentRepo->syncManyToMany($student, 'courses');
 ```PHP
 class User {
 // 複雑な条件はメソッドに丸投げ
-#[HasMany(targetEntity: Order::class, loader: 'findRecentOrders')]
+#[HasMany(targetEntity: Order::class, apply: 'findRecentOrders')]
 public array $recentOrders;
 }
 

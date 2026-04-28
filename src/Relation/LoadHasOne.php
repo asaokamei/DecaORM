@@ -27,10 +27,10 @@ class LoadHasOne
         ?RepositoryInterface $sourceRepository = null
     ): array {
 
-        $loader = self::getLoader($parentRelation, $sourceRepository);
+        $apply = self::wrapApply(self::getApply($parentRelation, $sourceRepository));
 
         if ($entities instanceof EntityInterface) {
-            return self::loadSingle($entities, $parentRelation, $targetRepository, $loader, $sourceRepository);
+            return self::loadSingle($entities, $parentRelation, $targetRepository, $apply, $sourceRepository);
         }
         if (count($entities) === 0) {
             return [];
@@ -40,9 +40,9 @@ class LoadHasOne
             if (!$first instanceof EntityInterface) {
                 return [];
             }
-            return self::loadSingle($first, $parentRelation, $targetRepository, $loader, $sourceRepository);
+            return self::loadSingle($first, $parentRelation, $targetRepository, $apply, $sourceRepository);
         }
-        return self::loadBatch($entities, $parentRelation, $targetRepository, $loader, $sourceRepository);
+        return self::loadBatch($entities, $parentRelation, $targetRepository, $apply, $sourceRepository);
     }
 
     /**
@@ -52,25 +52,21 @@ class LoadHasOne
         EntityInterface $parentEntity,
         HasOne $parentRelation,
         RepositoryInterface $targetRepository,
-        ?callable $loader = null,
+        ?callable $apply = null,
         ?RepositoryInterface $sourceRepository = null
     ): array {
         $parentProperty = $parentRelation->propertyName;
         $childProperty = $parentRelation->mappedBy;
 
-        if ($loader !== null) {
-            $children = call_user_func($loader, $parentEntity);
-            $children = $children instanceof EntityCollection ? $children : new EntityCollection((array)$children, $targetRepository);
-        } else {
-            $parentRepo = self::resolveParentRepositoryForInverse($parentEntity, $sourceRepository);
-            $children = MappedByQuery::fetch(
-                $targetRepository,
-                $parentRelation->mappedBy,
-                $parentEntity,
-                $parentRepo,
-                null
-            );
-        }
+        $parentRepo = self::resolveParentRepositoryForInverse($parentEntity, $sourceRepository);
+        $children = MappedByQuery::fetch(
+            $targetRepository,
+            $parentRelation->mappedBy,
+            $parentEntity,
+            $parentRepo,
+            null,
+            $apply
+        );
 
         if (count($children) === 0) {
             $parentEntity->setRaw($parentProperty, null);
@@ -98,27 +94,22 @@ class LoadHasOne
         EntityCollection $parentEntities,
         HasOne $parentRelation,
         RepositoryInterface $targetRepository,
-        ?callable $loader = null,
+        ?callable $apply = null,
         ?RepositoryInterface $sourceRepository = null
     ): array {
         if (count($parentEntities) === 0) {
             return [];
         }
 
-        // If loader is specified, use it instead of WHERE IN query
-        if ($parentRelation->loader !== null) {
-            $children = call_user_func($loader, $parentEntities);
-            $children = $children instanceof EntityCollection ? $children : new EntityCollection((array)$children, $targetRepository);
-        } else {
-            $parentRepo = self::resolveParentRepositoryForInverse($parentEntities, $sourceRepository);
-            $children = MappedByQuery::fetch(
-                $targetRepository,
-                $parentRelation->mappedBy,
-                $parentEntities,
-                $parentRepo,
-                null
-            );
-        }
+        $parentRepo = self::resolveParentRepositoryForInverse($parentEntities, $sourceRepository);
+        $children = MappedByQuery::fetch(
+            $targetRepository,
+            $parentRelation->mappedBy,
+            $parentEntities,
+            $parentRepo,
+            null,
+            $apply
+        );
 
         // Use applyLoaderResult to map children to parents
         return self::applyLoaderResult($parentEntities, $children, $parentRelation, $targetRepository);

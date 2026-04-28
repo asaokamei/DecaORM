@@ -192,6 +192,12 @@ trait WhereTrait
         return $this;
     }
 
+    public function setParameter(string $key, mixed $value): static
+    {
+        $this->parameters[$key] = $value;
+        return $this;
+    }
+
     public function hasWhere(): bool
     {
         return $this->buildWhereClause() !== '';

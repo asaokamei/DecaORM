@@ -441,10 +441,10 @@ trait RepositoryTrait
             $results = LoadHasOne::load($entities, $relation, $targetRepo, $this);
             return new EntityCollection($results, $targetRepo);
         } elseif ($relation instanceof BelongsTo) {
-            $results = LoadBelongsTo::load($entities, $relation, $targetRepo);
+            $results = LoadBelongsTo::load($entities, $relation, $targetRepo, $this);
             return new EntityCollection($results, $targetRepo);
         } elseif ($relation instanceof BelongsToOne) {
-            $results = LoadBelongsToOne::load($entities, $relation, $targetRepo);
+            $results = LoadBelongsToOne::load($entities, $relation, $targetRepo, $this);
             return new EntityCollection($results, $targetRepo);
         } elseif ($relation instanceof MorphTo) {
             $results = LoadMorphTo::load($entities, $relation);

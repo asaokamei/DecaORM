@@ -11,21 +11,58 @@ class LoadBelongsTo
 {
     use RelationBelongsToTrait;
 
+    private static function getApply(BelongsTo $relation, ?RepositoryInterface $sourceRepository): ?callable
+    {
+        if ($relation->apply === null || $relation->apply === '') {
+            return null;
+        }
+        if ($sourceRepository === null) {
+            throw new \RuntimeException('Source repository is required when using apply for BelongsTo.');
+        }
+        if (!method_exists($sourceRepository, $relation->apply)) {
+            throw new \RuntimeException(
+                'Apply method "' . $relation->apply . '" not found in repository: ' . $sourceRepository::class
+            );
+        }
+        $callable = [$sourceRepository, $relation->apply];
+
+        return function (
+            \WScore\DecaORM\Sql\Query $query,
+            EntityInterface|EntityCollection $children,
+            BelongsTo $rel,
+            RepositoryInterface $targetRepo,
+            ?RepositoryInterface $srcRepo
+        ) use ($callable): void {
+            $method = $callable[1] ?? null;
+            $argc = is_string($method) && method_exists($callable[0], $method)
+                ? (new \ReflectionMethod($callable[0], $method))->getNumberOfParameters()
+                : 2;
+            if ($argc <= 2) {
+                ($callable)($query, $children);
+                return;
+            }
+            ($callable)($query, $children, $rel, $targetRepo, $srcRepo);
+        };
+    }
+
     /**
      * Load BelongsTo relation for single entity or multiple entities.
      * 
      * @param EntityInterface|EntityCollection<EntityInterface> $entities
      * @param BelongsTo $childRelation
      * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
+     * @param \WScore\DecaORM\Contracts\RepositoryInterface|null $sourceRepository The repository for the source entities (needed for apply)
      * @return EntityInterface[] All loaded parent entities (array with 0 or 1 element per child)
      */
     public static function load(
         EntityInterface|EntityCollection $entities,
         BelongsTo $childRelation,
-        RepositoryInterface $targetRepository
+        RepositoryInterface $targetRepository,
+        ?RepositoryInterface $sourceRepository = null
     ): array {
+        $apply = self::getApply($childRelation, $sourceRepository);
         if ($entities instanceof EntityInterface) {
-            return self::loadSingle($entities, $childRelation, $targetRepository);
+            return self::loadSingle($entities, $childRelation, $targetRepository, $apply, $sourceRepository);
         }
         if (count($entities) === 0) {
             return [];
@@ -35,9 +72,9 @@ class LoadBelongsTo
             if (!$first instanceof EntityInterface) {
                 return [];
             }
-            return self::loadSingle($first, $childRelation, $targetRepository);
+            return self::loadSingle($first, $childRelation, $targetRepository, $apply, $sourceRepository);
         }
-        return self::loadBatch($entities, $childRelation, $targetRepository);
+        return self::loadBatch($entities, $childRelation, $targetRepository, $apply, $sourceRepository);
     }
 
     /**
@@ -46,10 +83,12 @@ class LoadBelongsTo
     private static function loadSingle(
         EntityInterface $childEntity,
         BelongsTo $childRelation,
-        RepositoryInterface $targetRepository
+        RepositoryInterface $targetRepository,
+        ?callable $apply = null,
+        ?RepositoryInterface $sourceRepository = null
     ): array {
 
-        $parentEntity = self::loadSingleEntity($childEntity, $childRelation, $targetRepository);
+        $parentEntity = self::loadSingleEntity($childEntity, $childRelation, $targetRepository, $apply, $sourceRepository);
         // Note: BelongsTo does not set child on parent (parent may have HasMany, which is dangerous)
         return $parentEntity ? [$parentEntity]: [];
     }
@@ -65,26 +104,32 @@ class LoadBelongsTo
     public static function loadBatch(
         EntityCollection $childEntities,
         BelongsTo $childRelation,
-        RepositoryInterface $targetRepository
+        RepositoryInterface $targetRepository,
+        ?callable $apply = null,
+        ?RepositoryInterface $sourceRepository = null
     ): array {
         if (count($childEntities) === 0) {
             return [];
         }
 
         $children = $childEntities;
-        $parentIds = array_filter($children->getValues($childRelation->foreignKey));
-        if (empty($parentIds)) {
+        $matchValues = array_filter($children->getValues($childRelation->foreignKey));
+        if (empty($matchValues)) {
             foreach ($children as $childEntity) {
                 $childEntity->setRaw($childRelation->propertyName, null);
             }
             return [];
         }
 
-        $parents = $targetRepository->find(
-            $parentIds,
-            $targetRepository->getHydrator()->getPrimaryKeyColumn()
-        );
-        $allParents = self::getParents($parents, $childRelation, $children);
+        $ownerKeyCol = self::resolveOwnerKeyColumn($childRelation, $targetRepository);
+        $query = $targetRepository->sqlQuery()
+            ->whereIn($ownerKeyCol, $matchValues);
+        if ($apply !== null) {
+            $apply($query, $children, $childRelation, $targetRepository, $sourceRepository);
+        }
+        $parents = $query->getResult();
+
+        $allParents = self::getParents($parents, $childRelation, $children, $targetRepository);
 
         return array_unique($allParents, SORT_REGULAR);
     }

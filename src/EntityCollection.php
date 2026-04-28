@@ -39,6 +39,14 @@ class EntityCollection extends Collection
         parent::__construct($entities);
     }
 
+    /**
+     * @param array<EntityInterface>|T[] $items
+     */
+    protected function newCollection(array $items): static
+    {
+        return new static($items, $this->repository);
+    }
+
     private function resolveEntityClass(array $entities, ?RepositoryInterface $repository): void
     {
         if ($repository instanceof RepositoryInterface) {
@@ -169,7 +177,7 @@ class EntityCollection extends Collection
 
         $relatedEntities = [];
         foreach (array_chunk($this->items, $chunkSize) as $chunk) {
-            $collection = $repository->load(new EntityCollection($chunk, $repository), $propertyName);
+            $collection = $repository->load($this->newCollection($chunk), $propertyName);
             $relatedEntities = array_merge($relatedEntities, $collection->getEntities());
         }
 
@@ -312,7 +320,7 @@ class EntityCollection extends Collection
         }
         $group = [];
         foreach ($buckets as $key => $entities) {
-            $group[$key] = new static($entities, $this->repository);
+            $group[$key] = $this->newCollection($entities);
         }
         return $group;
     }
@@ -345,18 +353,6 @@ class EntityCollection extends Collection
     }
 
     /**
-     * @return static[]
-     */
-    public function chunk(int $size = 100, bool $preserveKeys = false): array
-    {
-        $chunks = [];
-        foreach (array_chunk($this->items, $size, $preserveKeys) as $chunk) {
-            $chunks[] = new static($chunk, $this->repository);
-        }
-        return $chunks;
-    }
-
-    /**
      * @param string $foreignKey
      * @return array<int|string, static> Keyed by raw property value; each value is a sub-collection with the same repository as this collection.
      */
@@ -369,7 +365,7 @@ class EntityCollection extends Collection
         }
         $group = [];
         foreach ($buckets as $key => $entities) {
-            $group[$key] = new static($entities, $this->repository);
+            $group[$key] = $this->newCollection($entities);
         }
         return $group;
     }
