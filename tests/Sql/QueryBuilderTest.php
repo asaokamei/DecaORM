@@ -313,4 +313,25 @@ END_SQL;
         $this->assertArrayHasKey('_EXPAND_uid_0', $builder->getParameters());
         $this->assertArrayHasKey('_EXPAND_uid_1', $builder->getParameters());
     }
+
+    public function testWhereRejectsUnsupportedOperator(): void
+    {
+        $builder = new QueryBuilder();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $builder
+            ->from('users')
+            ->where('id', 1, '= 1 OR 1=1');
+    }
+
+    public function testHavingRejectsUnsupportedOperator(): void
+    {
+        $builder = new QueryBuilder();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $builder
+            ->from('users')
+            ->groupBy('status')
+            ->having('cnt', 1, 'OR 1=1');
+    }
 }

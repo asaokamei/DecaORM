@@ -2,6 +2,8 @@
 
 namespace WScore\DecaORM\Sql;
 
+use InvalidArgumentException;
+
 trait WhereTrait
 {
     use IdentifierQuoteTrait;
@@ -55,6 +57,7 @@ trait WhereTrait
      */
     public function where(string $column, $value, string $operator = '='): static
     {
+        $operator = $this->validateOperator($operator);
         $placeholder = $this->createPlaceholder($column);
         $escapedColumn = $this->escapeColumnIdentifier($column);
         $this->wheres[] = "{$escapedColumn} {$operator} :{$placeholder}" . "\n";
@@ -126,6 +129,26 @@ trait WhereTrait
     {
         $name = preg_replace('/[^a-zA-Z0-9_]/', '_', $baseName);
         return $name . '_' . $this->placeholder_counter++;
+    }
+
+    /**
+     * WHERE/HAVING で利用する比較演算子を検証する。
+     */
+    protected function validateOperator(string $operator): string
+    {
+        $normalized = strtoupper(trim(preg_replace('/\s+/', ' ', $operator) ?? ''));
+        $allowed = [
+            '=', '!=', '<>',
+            '<', '<=', '>', '>=',
+            'LIKE', 'NOT LIKE',
+            'IS', 'IS NOT',
+        ];
+
+        if (!in_array($normalized, $allowed, true)) {
+            throw new InvalidArgumentException("Unsupported operator: {$operator}");
+        }
+
+        return $normalized;
     }
 
     /**

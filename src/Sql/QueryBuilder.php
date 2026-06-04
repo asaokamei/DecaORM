@@ -115,6 +115,7 @@ class QueryBuilder
      */
     public function having(string $column, mixed $value, string $operator = '='): static
     {
+        $operator = $this->validateOperator($operator);
         $placeholder = $this->createPlaceholder('having_' . $column);
         $this->havings[] = "{$this->escapeColumnIdentifier($column)} {$operator} :{$placeholder}\n";
         $this->parameters[$placeholder] = $value;
