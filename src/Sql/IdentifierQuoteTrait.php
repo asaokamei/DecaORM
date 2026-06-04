@@ -2,6 +2,8 @@
 
 namespace WScore\DecaORM\Sql;
 
+use InvalidArgumentException;
+
 trait IdentifierQuoteTrait
 {
     /** @var string|null null = quoting disabled (unknown driver or not configured) */
@@ -59,16 +61,22 @@ trait IdentifierQuoteTrait
             if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $prefix) === 1) {
                 return $this->quoteIdentifierPart($prefix) . '.*';
             }
-            return $identifier;
+            throw new InvalidArgumentException(
+                "Invalid column identifier: {$identifier}. Use a raw method for expressions."
+            );
         }
 
         $parts = explode('.', $identifier);
         if ($parts === [] || count($parts) > 2) {
-            return $identifier;
+            throw new InvalidArgumentException(
+                "Invalid column identifier: {$identifier}. Use a raw method for expressions."
+            );
         }
         foreach ($parts as $part) {
             if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $part) !== 1) {
-                return $identifier;
+                throw new InvalidArgumentException(
+                    "Invalid column identifier: {$identifier}. Use a raw method for expressions."
+                );
             }
         }
         $escaped = array_map(fn(string $part): string => $this->quoteIdentifierPart($part), $parts);
@@ -78,7 +86,9 @@ trait IdentifierQuoteTrait
     protected function escapeTableReference(string $table): string
     {
         if (preg_match('/^([A-Za-z_][A-Za-z0-9_]*)(?:\s+(?:AS\s+)?([A-Za-z_][A-Za-z0-9_]*))?$/i', $table, $matches) !== 1) {
-            return $table;
+            throw new InvalidArgumentException(
+                "Invalid table reference: {$table}. Use fromRaw() for raw FROM fragments."
+            );
         }
         if (!isset($matches[2]) || $matches[2] === '') {
             return $this->quoteIdentifierPart($matches[1]);
