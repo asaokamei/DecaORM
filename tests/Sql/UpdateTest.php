@@ -201,9 +201,9 @@ class UpdateTest extends TestCase
             'email' => 'alice@example.com',
         ])->execute();
 
-        $this->assertStringContainsString('INSERT INTO `users` (`name`, `email`) VALUES (:name, :email);', $captured['sql']);
-        $this->assertSame('Alice', $captured['data']['name']);
-        $this->assertSame('alice@example.com', $captured['data']['email']);
+        $this->assertStringContainsString('INSERT INTO `users` (`name`, `email`) VALUES (:name_0, :email_1);', $captured['sql']);
+        $this->assertSame('Alice', $captured['data']['name_0']);
+        $this->assertSame('alice@example.com', $captured['data']['email_1']);
     }
 
     public function testInsertUsesPostgresIdentifierQuote(): void
@@ -223,6 +223,21 @@ class UpdateTest extends TestCase
             ->data(['name' => 'Alice'])
             ->getSql();
 
-        $this->assertStringContainsString('INSERT INTO "users" ("name") VALUES (:name);', $sql);
+        $this->assertStringContainsString('INSERT INTO "users" ("name") VALUES (:name_0);', $sql);
+    }
+
+    public function testInsertNormalizesPlaceholderNameForSpecialColumnCharacters(): void
+    {
+        $captured = [];
+        $repo = $this->repoStub($captured);
+
+        $insert = new Insert($repo);
+        $insert
+            ->data(['user.name' => 'Alice'])
+            ->execute();
+
+        $this->assertStringContainsString('VALUES (:user_name_0);', $captured['sql']);
+        $this->assertArrayHasKey('user_name_0', $captured['data']);
+        $this->assertSame('Alice', $captured['data']['user_name_0']);
     }
 }

@@ -11,6 +11,9 @@ class Insert
 
     private string $table;
     private array $data = [];
+    private int $placeholderCounter = 0;
+    /** @var array<string, string> */
+    private array $placeholderMap = [];
 
     public function __construct(private RepositoryInterface $repository)
     {
@@ -29,16 +32,29 @@ class Insert
     public function data(array $data): static
     {
         $this->data = $data;
+        $this->placeholderCounter = 0;
+        $this->placeholderMap = [];
         return $this;
+    }
+
+    private function createPlaceholder(string $baseName): string
+    {
+        $name = preg_replace('/[^a-zA-Z0-9_]/', '_', $baseName);
+        return $name . '_' . $this->placeholderCounter++;
     }
 
     public function getSql(): string
     {
+        $this->placeholderCounter = 0;
+        $this->placeholderMap = [];
         $columns = [];
         $values = [];
-        foreach ($this->data as $columnName => $value) {
+        foreach ($this->data as $columnName => $_value) {
+            $columnName = (string) $columnName;
+            $placeholder = $this->createPlaceholder($columnName);
             $columns[] = $this->escapeColumnIdentifier((string) $columnName);
-            $values[] = ':' . $columnName;
+            $values[] = ':' . $placeholder;
+            $this->placeholderMap[$placeholder] = $columnName;
         }
         $columns = implode(', ', $columns);
         $values = implode(', ', $values);
@@ -48,6 +64,19 @@ class Insert
 
     public function getParameters(): array
     {
-        return $this->data;
+        if (empty($this->placeholderMap) && !empty($this->data)) {
+            $this->getSql();
+        }
+
+        if (empty($this->placeholderMap)) {
+            return [];
+        }
+
+        $parameters = [];
+        foreach ($this->placeholderMap as $placeholder => $columnName) {
+            $parameters[$placeholder] = $this->data[$columnName];
+        }
+
+        return $parameters;
     }
 }
