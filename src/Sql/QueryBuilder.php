@@ -8,8 +8,11 @@ class QueryBuilder
 
     private string $queryType = 'SELECT';
     private array $selects = ['*'];
+    /** @var array<int, bool> */
+    private array $selectRaws = [false];
     private bool $distinct = false;
     private string $fromTable = '';
+    private bool $fromRaw = false;
     private array $joins = [];
     private string $withSql = '';
     private array $groupBys = [];
@@ -24,6 +27,19 @@ class QueryBuilder
     public function select(string ...$columns): static
     {
         $this->selects = $columns;
+        $this->selectRaws = array_fill(0, count($columns), false);
+        return $this;
+    }
+
+    /**
+     * Append non-raw columns to SELECT.
+     */
+    public function addSelect(string ...$columns): static
+    {
+        foreach ($columns as $column) {
+            $this->selects[] = $column;
+            $this->selectRaws[] = false;
+        }
         return $this;
     }
 
@@ -39,6 +55,7 @@ class QueryBuilder
     public function from(string $table): static
     {
         $this->fromTable = $table;
+        $this->fromRaw = false;
         return $this;
     }
 
@@ -65,6 +82,7 @@ class QueryBuilder
     public function selectRaw(string $expression, array $bindings = []): static
     {
         $this->selects[] = $expression;
+        $this->selectRaws[] = true;
         $this->parameters = array_merge($this->parameters, $bindings);
         return $this;
     }
@@ -76,6 +94,7 @@ class QueryBuilder
     public function fromRaw(string $fragment, array $bindings = []): static
     {
         $this->fromTable = $fragment;
+        $this->fromRaw = true;
         $this->parameters = array_merge($this->parameters, $bindings);
         return $this;
     }
@@ -138,8 +157,22 @@ class QueryBuilder
     public function groupBy(string ...$columns): static
     {
         foreach ($columns as $column) {
-            $this->groupBys[] = $column;
+            if (preg_match('/\s/', $column) === 1) {
+                throw new \InvalidArgumentException(
+                    "GROUP BY column must not contain whitespace. Use groupByRaw() for raw expressions: {$column}"
+                );
+            }
+            $this->groupBys[] = $this->escapeColumnIdentifier($column);
         }
+        return $this;
+    }
+
+    /**
+     * Add a raw GROUP BY expression.
+     */
+    public function groupByRaw(string $sqlSnippet): static
+    {
+        $this->groupBys[] = $sqlSnippet;
         return $this;
     }
 
@@ -202,10 +235,19 @@ class QueryBuilder
         }
 
         // SELECT句
-        $escapedSelects = array_map(fn(string $column): string => $this->escapeColumnIdentifier($column), $this->selects);
+        $escapedSelects = array_map(
+            fn(string $column, int $index): string => ($this->selectRaws[$index] ?? false)
+                ? $column
+                : $this->escapeColumnIdentifier($column),
+            $this->selects,
+            array_keys($this->selects)
+        );
         $select = empty($escapedSelects) ? '*' : implode(', ', $escapedSelects);
         $selectKeyword = $this->distinct ? 'SELECT DISTINCT' : $this->queryType;
-        $sql .= "{$selectKeyword} {$select} " . "\n" . "FROM {$this->escapeTableReference($this->fromTable)}" . "\n";
+
+        // FROM句
+        $fromClause = $this->fromRaw ? $this->fromTable : $this->escapeTableReference($this->fromTable);
+        $sql .= "{$selectKeyword} {$select} " . "\n" . "FROM {$fromClause}" . "\n";
 
         // JOIN句
         if (!empty($this->joins)) {

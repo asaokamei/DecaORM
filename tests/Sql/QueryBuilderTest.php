@@ -61,7 +61,8 @@ class QueryBuilderTest extends TestCase
 
         $builder
             ->withRaw("recent_orders AS (SELECT user_id, amount FROM orders WHERE order_date > '2024-01-01')")
-            ->select('u.id', 'u.name', 'COUNT(ro.user_id) AS order_count')
+            ->select('u.id', 'u.name')
+            ->selectRaw('COUNT(ro.user_id) AS order_count')
             ->from('users u')
             ->joinRaw("LEFT JOIN recent_orders ro ON u.id = ro.user_id AND ro.user_id IN (:_EXPAND_user_id)")
             ->whereIn('u.id', $user_ids) // IN句
@@ -215,7 +216,8 @@ END_SQL;
     {
         $builder = new QueryBuilder();
         $sql = $builder
-            ->select('status', 'COUNT(*) AS cnt')
+            ->select('status')
+            ->selectRaw('COUNT(*) AS cnt')
             ->from('users')
             ->where('active', 1)
             ->groupBy('status')
@@ -245,6 +247,18 @@ END_SQL;
             ->getSql();
 
         $this->assertStringContainsString('GROUP BY country, city, status', $sql);
+    }
+
+    public function testGroupByRawAddsExpression(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->groupBy('status')
+            ->groupByRaw('DATE(created_at)')
+            ->getSql();
+
+        $this->assertStringContainsString('GROUP BY status, DATE(created_at)', $sql);
     }
 
     public function testHavingRawMergesBindings(): void
@@ -380,6 +394,33 @@ END_SQL;
         $this->assertSame(100, $builder->getParameters()['min_total']);
     }
 
+    public function testAddSelectAppendsColumnsWithoutReplacingSelection(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users u')
+            ->select('u.id')
+            ->addSelect('u.name', 'u.email')
+            ->getSql();
+
+        $this->assertStringContainsString('SELECT u.id, u.name, u.email', $sql);
+    }
+
+    public function testSelectReplacesPreviousAddSelectColumns(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users u')
+            ->select('u.id')
+            ->addSelect('u.name')
+            ->select('u.email')
+            ->getSql();
+
+        $this->assertStringContainsString('SELECT u.email', $sql);
+        $this->assertStringNotContainsString('u.id,', $sql);
+        $this->assertStringNotContainsString('u.name', $sql);
+    }
+
     public function testFromRawWithExpandMarkerInSubquery(): void
     {
         $builder = new QueryBuilder();
@@ -404,6 +445,16 @@ END_SQL;
         $builder
             ->from('users')
             ->where('id', 1, '= 1 OR 1=1');
+    }
+
+    public function testFromRejectsInvalidTableReference(): void
+    {
+        $builder = new QueryBuilder();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $builder
+            ->from('users u, orders o')
+            ->getSql();
     }
 
     public function testHavingRejectsUnsupportedOperator(): void

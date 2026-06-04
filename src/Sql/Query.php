@@ -72,7 +72,8 @@ class Query extends QueryBuilder
     public function executeCountQuery(): int
     {
         $query = clone $this;
-        $query->select('COUNT(*)');
+        $query->select();
+        $query->selectRaw('COUNT(*) AS aggregate_count');
         $query->limit(null);
         $query->offset(null);
         $query->forUpdate(false);
@@ -81,6 +82,6 @@ class Query extends QueryBuilder
             return 0;
         }
         $row = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
-        return (int)($row['COUNT(*)'] ?? 0);
+        return (int)($row['aggregate_count'] ?? 0);
     }
 }
