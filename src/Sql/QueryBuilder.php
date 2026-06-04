@@ -206,7 +206,7 @@ class QueryBuilder
             $sql .= "OFFSET {$this->offset}" . "\n";
         }
 
-        if ($this->forUpdate) {
+        if ($this->forUpdate && !$this->isSqliteDriver()) {
             $sql .= "FOR UPDATE\n";
         }
 

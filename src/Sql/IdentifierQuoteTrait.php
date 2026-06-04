@@ -6,6 +6,7 @@ trait IdentifierQuoteTrait
 {
     /** @var string|null null = quoting disabled (unknown driver or not configured) */
     private ?string $identifierQuote = null;
+    private ?string $driverName = null;
 
     /**
      * Enable identifier quoting for supported PDO drivers only (mysql, pgsql, sqlite).
@@ -14,12 +15,18 @@ trait IdentifierQuoteTrait
     public function setIdentifierQuoteByDriver(?string $driverName): static
     {
         $normalized = strtolower((string) $driverName);
+        $this->driverName = $normalized !== '' ? $normalized : null;
         $this->identifierQuote = match ($normalized) {
             'mysql' => '`',
             'pgsql', 'sqlite' => '"',
             default => null,
         };
         return $this;
+    }
+
+    protected function isSqliteDriver(): bool
+    {
+        return $this->driverName === 'sqlite';
     }
 
     protected function isIdentifierQuotingEnabled(): bool

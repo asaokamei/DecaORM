@@ -283,6 +283,19 @@ END_SQL;
         $this->assertStringNotContainsString('FOR UPDATE', $sql);
     }
 
+    public function testForUpdateIsOmittedForSqliteDriver(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->setIdentifierQuoteByDriver('sqlite')
+            ->from('users')
+            ->where('id', 1)
+            ->forUpdate()
+            ->getSql();
+
+        $this->assertStringNotContainsString('FOR UPDATE', $sql);
+    }
+
     public function testSelectRawAppendsExpressionAndBindings(): void
     {
         $builder = new QueryBuilder();
