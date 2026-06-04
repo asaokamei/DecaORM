@@ -7,10 +7,15 @@ use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class Insert
 {
+    use IdentifierQuoteTrait;
+
     private string $table;
     private array $data = [];
+
     public function __construct(private RepositoryInterface $repository)
     {
+        $driverName = $this->repository->getDb()->getAttribute(\PDO::ATTR_DRIVER_NAME);
+        $this->setIdentifierQuoteByDriver(is_string($driverName) ? $driverName : null);
         $this->table = $this->repository->getHydrator()->getTableName();
     }
 
@@ -29,15 +34,16 @@ class Insert
 
     public function getSql(): string
     {
-        $select = [];
+        $columns = [];
         $values = [];
         foreach ($this->data as $columnName => $value) {
-            $select[] = $columnName;
+            $columns[] = $this->escapeColumnIdentifier((string) $columnName);
             $values[] = ':' . $columnName;
         }
-        $select = implode(', ', $select);
+        $columns = implode(', ', $columns);
         $values = implode(', ', $values);
-        return "INSERT INTO {$this->table} ({$select}) VALUES ({$values});";
+        $table = $this->escapeTableReference($this->table);
+        return "INSERT INTO {$table} ({$columns}) VALUES ({$values});";
     }
 
     public function getParameters(): array

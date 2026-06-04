@@ -19,16 +19,19 @@ class UpdateBuilder
         return $this;
     }
 
+
     /**
      * SET col = :set_col_n
      */
     public function set(string $column, mixed $value): static
     {
         $placeholder = $this->createPlaceholder('set_' . $column);
-        $this->sets[] = "{$column} = :{$placeholder}";
+        $escapedColumn = $this->escapeColumnIdentifier($column);
+        $this->sets[] = "{$escapedColumn} = :{$placeholder}";
         $this->parameters[$placeholder] = $value;
         return $this;
     }
+
 
     /**
      * SET断片（必要なら）
@@ -65,7 +68,7 @@ class UpdateBuilder
             $this->processExtends();
         }
 
-        $sql = "UPDATE {$this->table}" . "\n"
+        $sql = "UPDATE {$this->escapeTableReference($this->table)}" . "\n"
             . "SET " . implode(', ', $this->sets) . "\n";
 
         $where = $this->buildWhereClause();

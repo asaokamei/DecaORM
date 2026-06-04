@@ -4,6 +4,7 @@ namespace WScore\DecaORM\Sql;
 
 trait WhereTrait
 {
+    use IdentifierQuoteTrait;
     /** @var array<string> WHERE条件の配列 */
     protected array $wheres = [];
     
@@ -55,7 +56,8 @@ trait WhereTrait
     public function where(string $column, $value, string $operator = '='): static
     {
         $placeholder = $this->createPlaceholder($column);
-        $this->wheres[] = "{$column} {$operator} :{$placeholder}" . "\n";
+        $escapedColumn = $this->escapeColumnIdentifier($column);
+        $this->wheres[] = "{$escapedColumn} {$operator} :{$placeholder}" . "\n";
         $this->parameters[$placeholder] = $value;
         return $this;
     }
@@ -76,7 +78,8 @@ trait WhereTrait
 
         // 展開が必要なことを示すマーカープレースホルダーを使用
         $marker = $this->createPlaceholder('_EXPAND_' . $column);
-        $this->wheres[] = "{$column} IN (:{$marker})" . "\n";
+        $escapedColumn = $this->escapeColumnIdentifier($column);
+        $this->wheres[] = "{$escapedColumn} IN (:{$marker})" . "\n";
         $this->parameters[$marker] = $values;
         return $this;
     }

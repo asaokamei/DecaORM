@@ -7,7 +7,7 @@ use WScore\DecaORM\Attribute\ManyToMany;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Contracts\RepositoryInterface;
-use WScore\DecaORM\Sql\QueryBuilder;
+use WScore\DecaORM\Sql\Query;
 
 class LoadManyToMany
 {
@@ -197,19 +197,13 @@ class LoadManyToMany
         ManyToMany $relation,
         int|string $entityId
     ): array {
-        $query = (new QueryBuilder())
-            ->select($relation->inverseForeignKey)
-            ->from($relation->joinTable)
+        $query = self::newJoinTableQuery($sourceRepository, $relation)
             ->where($relation->foreignKey, $entityId);
-        
-        if ($relation->orderBy !== null) {
-            $query->orderBy($relation->orderBy);
+
+        $stmt = $query->getPdoStatement();
+        if ($stmt === false) {
+            return [];
         }
-
-        $sql = $query->getSql();
-        $params = $query->getParameters();
-
-        $stmt = $sourceRepository->execute($sql, $params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return array_column($rows, $relation->inverseForeignKey);
@@ -232,19 +226,14 @@ class LoadManyToMany
             return [];
         }
 
-        $query = (new QueryBuilder())
+        $query = self::newJoinTableQuery($sourceRepository, $relation)
             ->select($relation->foreignKey, $relation->inverseForeignKey)
-            ->from($relation->joinTable)
             ->whereIn($relation->foreignKey, $entityIds);
-        
-        if ($relation->orderBy !== null) {
-            $query->orderBy($relation->orderBy);
+
+        $stmt = $query->getPdoStatement();
+        if ($stmt === false) {
+            return [];
         }
-
-        $sql = $query->getSql();
-        $params = $query->getParameters();
-
-        $stmt = $sourceRepository->execute($sql, $params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return array_column($rows, $relation->inverseForeignKey);
@@ -267,19 +256,14 @@ class LoadManyToMany
             return [];
         }
 
-        $query = (new QueryBuilder())
+        $query = self::newJoinTableQuery($sourceRepository, $relation)
             ->select($relation->foreignKey, $relation->inverseForeignKey)
-            ->from($relation->joinTable)
             ->whereIn($relation->foreignKey, $entityIds);
-        
-        if ($relation->orderBy !== null) {
-            $query->orderBy($relation->orderBy);
+
+        $stmt = $query->getPdoStatement();
+        if ($stmt === false) {
+            return [];
         }
-
-        $sql = $query->getSql();
-        $params = $query->getParameters();
-
-        $stmt = $sourceRepository->execute($sql, $params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $grouped = [];
@@ -293,6 +277,22 @@ class LoadManyToMany
         }
 
         return $grouped;
+    }
+
+    /**
+     * Build a {@see Query} for the ManyToMany join (pivot) table via the source repository.
+     */
+    private static function newJoinTableQuery(RepositoryInterface $sourceRepository, ManyToMany $relation): Query
+    {
+        $query = $sourceRepository->sqlQuery()
+            ->from($relation->joinTable)
+            ->select($relation->inverseForeignKey);
+
+        if ($relation->orderBy !== null) {
+            $query->orderBy($relation->orderBy);
+        }
+
+        return $query;
     }
 }
 

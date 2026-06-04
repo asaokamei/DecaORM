@@ -41,6 +41,7 @@ class QueryBuilder
         return $this;
     }
 
+
     // --- 複雑な句への対応（Raw） ---
 
     public function withRaw(string $cte_sql): static
@@ -115,7 +116,7 @@ class QueryBuilder
     public function having(string $column, mixed $value, string $operator = '='): static
     {
         $placeholder = $this->createPlaceholder('having_' . $column);
-        $this->havings[] = "{$column} {$operator} :{$placeholder}\n";
+        $this->havings[] = "{$this->escapeColumnIdentifier($column)} {$operator} :{$placeholder}\n";
         $this->parameters[$placeholder] = $value;
         return $this;
     }
@@ -167,9 +168,10 @@ class QueryBuilder
         }
 
         // SELECT句
-        $select = empty($this->selects) ? '*' : implode(', ', $this->selects);
+        $escapedSelects = array_map(fn(string $column): string => $this->escapeColumnIdentifier($column), $this->selects);
+        $select = empty($escapedSelects) ? '*' : implode(', ', $escapedSelects);
         $selectKeyword = $this->distinct ? 'SELECT DISTINCT' : $this->queryType;
-        $sql .= "{$selectKeyword} {$select} " . "\n" . "FROM {$this->fromTable}" . "\n";
+        $sql .= "{$selectKeyword} {$select} " . "\n" . "FROM {$this->escapeTableReference($this->fromTable)}" . "\n";
 
         // JOIN句
         if (!empty($this->joins)) {

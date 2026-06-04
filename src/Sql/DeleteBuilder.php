@@ -25,7 +25,7 @@ class DeleteBuilder
         }
 
         // 最終的なSQL文字列を構築
-        $sql = "DELETE FROM {$this->table} ";
+        $sql = "DELETE FROM {$this->escapeTableReference($this->table)} ";
 
         // WHERE句の構築
         $whereConditions = $this->buildWhereClause();

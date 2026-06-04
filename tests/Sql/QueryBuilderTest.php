@@ -124,6 +124,68 @@ END_SQL;
         $this->assertStringContainsString('FROM users u', $sql);
     }
 
+    public function testIdentifierQuoteForMysqlDriver(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->setIdentifierQuoteByDriver('mysql')
+            ->from('users u')
+            ->select('u.id', 'u.name')
+            ->where('u.id', 1)
+            ->getSql();
+
+        $this->assertStringContainsString('SELECT `u`.`id`, `u`.`name`', $sql);
+        $this->assertStringContainsString('FROM `users` `u`', $sql);
+        $this->assertStringContainsString('WHERE `u`.`id` = :', $sql);
+    }
+
+    public function testIdentifierQuoteForPostgresStyleDriver(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->setIdentifierQuoteByDriver('pgsql')
+            ->from('users u')
+            ->select('u.id', 'u.name')
+            ->where('u.id', 1)
+            ->getSql();
+
+        $this->assertStringContainsString('SELECT "u"."id", "u"."name"', $sql);
+        $this->assertStringContainsString('FROM "users" "u"', $sql);
+        $this->assertStringContainsString('WHERE "u"."id" = :', $sql);
+    }
+
+    public function testIdentifierQuoteForSqliteDriver(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->setIdentifierQuoteByDriver('sqlite')
+            ->from('users')
+            ->select('id')
+            ->where('id', 1)
+            ->getSql();
+
+        $this->assertStringContainsString('SELECT "id"', $sql);
+        $this->assertStringContainsString('FROM "users"', $sql);
+        $this->assertStringContainsString('WHERE "id" = :', $sql);
+    }
+
+    public function testUnknownDriverDoesNotQuoteIdentifiers(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->setIdentifierQuoteByDriver('sqlsrv')
+            ->from('users u')
+            ->select('u.id')
+            ->where('u.id', 1)
+            ->getSql();
+
+        $this->assertStringContainsString('SELECT u.id', $sql);
+        $this->assertStringContainsString('FROM users u', $sql);
+        $this->assertStringContainsString('WHERE u.id = :', $sql);
+        $this->assertStringNotContainsString('`', $sql);
+        $this->assertStringNotContainsString('"u"', $sql);
+    }
+
     public function testDistinctFalseRestoresPlainSelect(): void
     {
         $builder = new QueryBuilder();

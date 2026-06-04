@@ -12,6 +12,8 @@ class Delete extends DeleteBuilder
     public function __construct(private RepositoryInterface $repository)
     {
         $hydrator = $this->repository->getHydrator();
+        $driverName = $this->repository->getDb()->getAttribute(\PDO::ATTR_DRIVER_NAME);
+        $this->setIdentifierQuoteByDriver(is_string($driverName) ? $driverName : null);
         $this->table($hydrator->getTableName());
         $this->pkColumn = $hydrator->getPrimaryKeyColumn();
     }
