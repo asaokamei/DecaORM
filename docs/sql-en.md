@@ -26,7 +26,7 @@ Get a Query instance from the repository with `sqlQuery()`.
 ```php
 $users = $repository->sqlQuery()
     ->where('status', 'active')
-    ->orderBy('created_at DESC')
+    ->orderBy('created_at', 'DESC')
     ->limit(10)
     ->getResult();
 ```
@@ -48,7 +48,8 @@ $users = $repository->sqlQuery()
 | `groupBy(string ...$columns)` | GROUP BY (repeatable; columns are appended) |
 | `having(string $column, mixed $value, string $operator = '=')` | HAVING condition (AND-combined) |
 | `havingRaw(string $sql_snippet, array $bindings = [])` | Raw HAVING fragment |
-| `orderBy(string $column)` | ORDER BY |
+| `orderBy(string $column, string $direction = 'ASC')` | Safe ORDER BY |
+| `orderByRaw(string $sqlSnippet)` | Raw ORDER BY fragment |
 | `limit(?int $limit)` | LIMIT |
 | `offset(?int $offset)` | OFFSET |
 | `forUpdate(bool $on = true)` | Append `FOR UPDATE` (after LIMIT/OFFSET) |
@@ -98,7 +99,7 @@ $users = $repository->sqlQuery()
 // Pagination
 $users = $repository->sqlQuery()
     ->where('status', 'active')
-    ->orderBy('created_at DESC')
+    ->orderBy('created_at', 'DESC')
     ->limit(20)
     ->offset(40)
     ->getResult();

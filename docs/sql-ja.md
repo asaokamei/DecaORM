@@ -24,7 +24,7 @@ Repositoryから`sqlQuery()`メソッドでQueryオブジェクトを取得し�
 ```php
 $users = $repository->sqlQuery()
     ->where('status', 'active')
-    ->orderBy('created_at DESC')
+    ->orderBy('created_at', 'DESC')
     ->limit(10)
     ->getResult();
 ```
@@ -44,7 +44,8 @@ $users = $repository->sqlQuery()
 - `groupBy(string ...$columns)` - GROUP BY（複数回呼ぶと列が順に追加される）
 - `having(string $column, mixed $value, string $operator = '=')` - HAVING 条件（AND で連結）
 - `havingRaw(string $sql_snippet, array $bindings = [])` - 生の HAVING 断片
-- `orderBy(string $column)` - ORDER BY句を指定
+- `orderBy(string $column, string $direction = 'ASC')` - ORDER BY句を安全に指定
+- `orderByRaw(string $sqlSnippet)` - 生の ORDER BY 断片を追加
 - `limit(?int $limit)` - LIMIT句を指定
 - `offset(?int $offset)` - OFFSET句を指定
 - `forUpdate(bool $on = true)` - 末尾に `FOR UPDATE`（LIMIT/OFFSET の後）
@@ -94,7 +95,7 @@ $users = $repository->sqlQuery()
 // ページネーション
 $users = $repository->sqlQuery()
     ->where('status', 'active')
-    ->orderBy('created_at DESC')
+    ->orderBy('created_at', 'DESC')
     ->limit(20)
     ->offset(40)
     ->getResult();
