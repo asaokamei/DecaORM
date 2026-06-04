@@ -15,7 +15,8 @@ class QueryBuilder
     private array $groupBys = [];
     /** @var array<string> HAVING fragments (same AND style as WHERE) */
     private array $havings = [];
-    private ?string $orderBy = null;
+    /** @var array<string> */
+    private array $orderBys = [];
     private ?int $offset = null;
     private ?int $limit = null;
     private bool $forUpdate = false;
@@ -93,9 +94,41 @@ class QueryBuilder
         return $this;
     }
 
-    public function orderBy(string $column): static
+    public function orderBy(string $column, string $direction = 'ASC'): static
     {
-        $this->orderBy = $column;
+        if (preg_match('/\s/', $column) === 1) {
+            throw new \InvalidArgumentException("ORDER BY column must not contain whitespace. Use orderByRaw() for raw expressions: {$column}");
+        }
+
+        $normalizedDirection = strtoupper(trim($direction));
+        if (!in_array($normalizedDirection, ['ASC', 'DESC'], true)) {
+            throw new \InvalidArgumentException("Unsupported ORDER BY direction: {$direction}");
+        }
+
+        $this->orderBys[] = $this->escapeColumnIdentifier($column) . ' ' . $normalizedDirection;
+        return $this;
+    }
+
+    /**
+     * 安全な ORDER BY 指定（識別子 + 方向の検証）。
+     */
+    public function orderByColumn(string $column, string $direction = 'ASC'): static
+    {
+        return $this->orderBy($column, $direction);
+    }
+
+    /**
+     * 生の ORDER BY 断片を追加する。
+     */
+    public function orderByRaw(string $sqlSnippet): static
+    {
+        $this->orderBys[] = $sqlSnippet;
+        return $this;
+    }
+
+    public function clearOrderBy(): static
+    {
+        $this->orderBys = [];
         return $this;
     }
 
@@ -195,8 +228,8 @@ class QueryBuilder
         }
 
         // ORDER BY
-        if ($this->orderBy) {
-            $sql .= "ORDER BY {$this->orderBy}" . "\n";
+        if ($this->orderBys !== []) {
+            $sql .= 'ORDER BY ' . implode(', ', $this->orderBys) . "\n";
         }
         // LIMIT, OFFSET句
         if (isset($this->limit) && $this->limit > 0) {

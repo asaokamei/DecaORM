@@ -51,7 +51,7 @@ final class MappedByQuery
             $query = $childRepository->sqlQuery()
                 ->whereIn($fkCol, $ids);
             if ($orderBy !== null) {
-                $query->orderBy($orderBy);
+                $query->orderByRaw($orderBy);
             }
             if ($apply !== null) {
                 $apply($query, $parents, $inverse, $childRepository, $parentRepository);
@@ -84,7 +84,7 @@ final class MappedByQuery
                 ->where($typeCol, $disc)
                 ->whereIn($fkCol, $fkValues);
             if ($orderBy !== null) {
-                $query->orderBy($orderBy);
+                $query->orderByRaw($orderBy);
             }
             if ($apply !== null) {
                 $apply($query, $parents, $inverse, $childRepository, $parentRepository);

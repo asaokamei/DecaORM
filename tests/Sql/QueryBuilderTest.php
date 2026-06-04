@@ -40,7 +40,7 @@ class QueryBuilderTest extends TestCase
         $builder->select('u.id', 'u.name')
             ->from('users u')
             ->where('u.id', $id)
-            ->orderBy('u.id DESC')
+            ->orderBy('u.id', 'DESC')
             ->limit(3)
             ->offset(0);
         $sql = $builder->getSql();
@@ -72,7 +72,7 @@ class QueryBuilderTest extends TestCase
             )
             ->limit(3)
             ->offset(2)
-            ->orderBy('u.id DESC')
+            ->orderBy('u.id', 'DESC')
         ->setParameters(['user_id' => $user_ids]);
 
         $sql = $builder->getSql();
@@ -294,6 +294,75 @@ END_SQL;
             ->getSql();
 
         $this->assertStringNotContainsString('FOR UPDATE', $sql);
+    }
+
+    public function testOrderByColumnValidatesDirectionAndEscapesIdentifier(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->setIdentifierQuoteByDriver('mysql')
+            ->from('users u')
+            ->orderBy('u.id', 'desc')
+            ->getSql();
+
+        $this->assertStringContainsString('ORDER BY `u`.`id` DESC', $sql);
+    }
+
+    public function testOrderByColumnRejectsUnsupportedDirection(): void
+    {
+        $builder = new QueryBuilder();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $builder
+            ->from('users')
+            ->orderBy('id', 'DESC NULLS LAST');
+    }
+
+    public function testOrderByAccumulatesMultipleCalls(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->orderBy('created_at', 'DESC')
+            ->orderBy('id', 'ASC')
+            ->getSql();
+
+        $this->assertStringContainsString('ORDER BY created_at DESC, id ASC', $sql);
+    }
+
+    public function testClearOrderByResetsPreviousOrderClauses(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->orderBy('created_at', 'DESC')
+            ->clearOrderBy()
+            ->orderByColumn('id', 'ASC')
+            ->getSql();
+
+        $this->assertStringContainsString('ORDER BY id ASC', $sql);
+        $this->assertStringNotContainsString('created_at DESC', $sql);
+    }
+
+    public function testOrderByRawAddsExpression(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->orderByRaw('FIELD(status, "active", "pending", "disabled")')
+            ->getSql();
+
+        $this->assertStringContainsString('ORDER BY FIELD(status, "active", "pending", "disabled")', $sql);
+    }
+
+    public function testOrderByRequiresDirectionForRawLikeExpression(): void
+    {
+        $builder = new QueryBuilder();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $builder
+            ->from('users')
+            ->orderBy('created_at DESC');
     }
 
     public function testSelectRawAppendsExpressionAndBindings(): void
