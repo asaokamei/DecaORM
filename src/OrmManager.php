@@ -11,6 +11,7 @@ use Psr\Log\NullLogger;
 use DateTimeImmutable;
 use RuntimeException;
 use Throwable;
+use WScore\DecaORM\Contracts\SqlParamMaskerInterface;
 use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class OrmManager
@@ -22,6 +23,7 @@ class OrmManager
     private LoggerInterface $logger;
     private ?SqlExecutor $sqlExecutor = null;
     private int $slowQueryThresholdMs = 100;
+    private ?SqlParamMaskerInterface $sqlParamMasker = null;
 
     private EntityCache $entityCache;
 
@@ -71,6 +73,13 @@ class OrmManager
             throw new RuntimeException('Slow query threshold must be 0 or greater.');
         }
         $this->slowQueryThresholdMs = $slowQueryThresholdMs;
+        $this->sqlExecutor = null;
+        return $this;
+    }
+
+    public function setSqlParamMasker(?SqlParamMaskerInterface $sqlParamMasker): static
+    {
+        $this->sqlParamMasker = $sqlParamMasker;
         $this->sqlExecutor = null;
         return $this;
     }
@@ -142,7 +151,7 @@ class OrmManager
     {
         if ($this->sqlExecutor === null) {
             $this->sqlExecutor = new SqlExecutor(
-                new SqlLogger($this->logger, $this->slowQueryThresholdMs)
+                new SqlLogger($this->logger, $this->slowQueryThresholdMs, $this->sqlParamMasker)
             );
         }
 

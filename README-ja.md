@@ -50,6 +50,16 @@ composer require wscore/decaorm
 
 **English:** [README.md](README.md) | [entity-en.md](docs/entity-en.md) | [sql-en.md](docs/sql-en.md) | [repository-hooks-en.md](docs/repository-hooks-en.md)
 
+### ⚠ Raw系APIの安全性について
+
+`whereRaw`, `havingRaw`, `joinRaw`, `withRaw`, `fromRaw`, `setRaw`, `selectRaw`, `orderByRaw` は SQL 断片をそのまま組み込む API です。
+これらは DecaORM 側で SQL インジェクション対策を行いません。
+
+- 外部入力（リクエスト値・ユーザー入力）を文字列連結して渡さないでください。
+- 値条件はプレースホルダ（バインド）を使ってください。
+- 並び替えは `orderBy($column, $direction)` を優先し、Raw が必要な場合のみ `orderByRaw()` を使ってください。
+- テーブル名・カラム名・ORDER BY 式を外部入力で直接組み立てないでください。
+
 ## 使い方
 
 ### 1. エンティティの定義

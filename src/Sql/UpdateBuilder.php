@@ -19,16 +19,19 @@ class UpdateBuilder
         return $this;
     }
 
+
     /**
      * SET col = :set_col_n
      */
     public function set(string $column, mixed $value): static
     {
         $placeholder = $this->createPlaceholder('set_' . $column);
-        $this->sets[] = "{$column} = :{$placeholder}";
+        $escapedColumn = $this->escapeColumnIdentifier($column);
+        $this->sets[] = "{$escapedColumn} = :{$placeholder}";
         $this->parameters[$placeholder] = $value;
         return $this;
     }
+
 
     /**
      * SET断片（必要なら）
@@ -37,14 +40,26 @@ class UpdateBuilder
     {
         $this->sets[] = $sqlSnippet;
         $this->parameters = array_merge($this->parameters, $bindings);
+        $this->resetExpandedCache();
+        return $this;
+    }
+
+    public function clearSet(): static
+    {
+        $this->sets = [];
+        $this->resetExpandedCache();
         return $this;
     }
 
     /**
-     * set() のまとめ指定
+     * Replace the SET column map (does not append).
+     *
+     * Same contract as {@see Insert::data()}: bulk-assign writable columns for this statement.
+     * Use {@see set()} / {@see setRaw()} to append after this call.
      */
     public function data(array $data): static
     {
+        $this->clearSet();
         foreach ($data as $column => $value) {
             $this->set((string) $column, $value);
         }
@@ -65,7 +80,7 @@ class UpdateBuilder
             $this->processExtends();
         }
 
-        $sql = "UPDATE {$this->table}" . "\n"
+        $sql = "UPDATE {$this->escapeTableReference($this->table)}" . "\n"
             . "SET " . implode(', ', $this->sets) . "\n";
 
         $where = $this->buildWhereClause();

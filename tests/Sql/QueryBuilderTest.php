@@ -40,7 +40,7 @@ class QueryBuilderTest extends TestCase
         $builder->select('u.id', 'u.name')
             ->from('users u')
             ->where('u.id', $id)
-            ->orderBy('u.id DESC')
+            ->orderBy('u.id', 'DESC')
             ->limit(3)
             ->offset(0);
         $sql = $builder->getSql();
@@ -61,7 +61,8 @@ class QueryBuilderTest extends TestCase
 
         $builder
             ->withRaw("recent_orders AS (SELECT user_id, amount FROM orders WHERE order_date > '2024-01-01')")
-            ->select('u.id', 'u.name', 'COUNT(ro.user_id) AS order_count')
+            ->select('u.id', 'u.name')
+            ->selectRaw('COUNT(ro.user_id) AS order_count')
             ->from('users u')
             ->joinRaw("LEFT JOIN recent_orders ro ON u.id = ro.user_id AND ro.user_id IN (:_EXPAND_user_id)")
             ->whereIn('u.id', $user_ids) // IN句
@@ -72,7 +73,7 @@ class QueryBuilderTest extends TestCase
             )
             ->limit(3)
             ->offset(2)
-            ->orderBy('u.id DESC')
+            ->orderBy('u.id', 'DESC')
         ->setParameters(['user_id' => $user_ids]);
 
         $sql = $builder->getSql();
@@ -124,6 +125,68 @@ END_SQL;
         $this->assertStringContainsString('FROM users u', $sql);
     }
 
+    public function testIdentifierQuoteForMysqlDriver(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->setIdentifierQuoteByDriver('mysql')
+            ->from('users u')
+            ->select('u.id', 'u.name')
+            ->where('u.id', 1)
+            ->getSql();
+
+        $this->assertStringContainsString('SELECT `u`.`id`, `u`.`name`', $sql);
+        $this->assertStringContainsString('FROM `users` `u`', $sql);
+        $this->assertStringContainsString('WHERE `u`.`id` = :', $sql);
+    }
+
+    public function testIdentifierQuoteForPostgresStyleDriver(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->setIdentifierQuoteByDriver('pgsql')
+            ->from('users u')
+            ->select('u.id', 'u.name')
+            ->where('u.id', 1)
+            ->getSql();
+
+        $this->assertStringContainsString('SELECT "u"."id", "u"."name"', $sql);
+        $this->assertStringContainsString('FROM "users" "u"', $sql);
+        $this->assertStringContainsString('WHERE "u"."id" = :', $sql);
+    }
+
+    public function testIdentifierQuoteForSqliteDriver(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->setIdentifierQuoteByDriver('sqlite')
+            ->from('users')
+            ->select('id')
+            ->where('id', 1)
+            ->getSql();
+
+        $this->assertStringContainsString('SELECT "id"', $sql);
+        $this->assertStringContainsString('FROM "users"', $sql);
+        $this->assertStringContainsString('WHERE "id" = :', $sql);
+    }
+
+    public function testUnknownDriverDoesNotQuoteIdentifiers(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->setIdentifierQuoteByDriver('sqlsrv')
+            ->from('users u')
+            ->select('u.id')
+            ->where('u.id', 1)
+            ->getSql();
+
+        $this->assertStringContainsString('SELECT u.id', $sql);
+        $this->assertStringContainsString('FROM users u', $sql);
+        $this->assertStringContainsString('WHERE u.id = :', $sql);
+        $this->assertStringNotContainsString('`', $sql);
+        $this->assertStringNotContainsString('"u"', $sql);
+    }
+
     public function testDistinctFalseRestoresPlainSelect(): void
     {
         $builder = new QueryBuilder();
@@ -153,7 +216,8 @@ END_SQL;
     {
         $builder = new QueryBuilder();
         $sql = $builder
-            ->select('status', 'COUNT(*) AS cnt')
+            ->select('status')
+            ->selectRaw('COUNT(*) AS cnt')
             ->from('users')
             ->where('active', 1)
             ->groupBy('status')
@@ -183,6 +247,18 @@ END_SQL;
             ->getSql();
 
         $this->assertStringContainsString('GROUP BY country, city, status', $sql);
+    }
+
+    public function testGroupByRawAddsExpression(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->groupBy('status')
+            ->groupByRaw('DATE(created_at)')
+            ->getSql();
+
+        $this->assertStringContainsString('GROUP BY status, DATE(created_at)', $sql);
     }
 
     public function testHavingRawMergesBindings(): void
@@ -221,6 +297,162 @@ END_SQL;
         $this->assertStringNotContainsString('FOR UPDATE', $sql);
     }
 
+    public function testForUpdateIsOmittedForSqliteDriver(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->setIdentifierQuoteByDriver('sqlite')
+            ->from('users')
+            ->where('id', 1)
+            ->forUpdate()
+            ->getSql();
+
+        $this->assertStringNotContainsString('FOR UPDATE', $sql);
+    }
+
+    public function testOrderByColumnValidatesDirectionAndEscapesIdentifier(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->setIdentifierQuoteByDriver('mysql')
+            ->from('users u')
+            ->orderBy('u.id', 'desc')
+            ->getSql();
+
+        $this->assertStringContainsString('ORDER BY `u`.`id` DESC', $sql);
+    }
+
+    public function testOrderByColumnRejectsUnsupportedDirection(): void
+    {
+        $builder = new QueryBuilder();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $builder
+            ->from('users')
+            ->orderBy('id', 'DESC NULLS LAST');
+    }
+
+    public function testOrderByAccumulatesMultipleCalls(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->orderBy('created_at', 'DESC')
+            ->orderBy('id', 'ASC')
+            ->getSql();
+
+        $this->assertStringContainsString('ORDER BY created_at DESC, id ASC', $sql);
+    }
+
+    public function testClearOrderByResetsPreviousOrderClauses(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->orderBy('created_at', 'DESC')
+            ->clearOrderBy()
+            ->orderByColumn('id', 'ASC')
+            ->getSql();
+
+        $this->assertStringContainsString('ORDER BY id ASC', $sql);
+        $this->assertStringNotContainsString('created_at DESC', $sql);
+    }
+
+    public function testClearWhereResetsPreviousWhereClauses(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->where('status', 'active')
+            ->where('id', 1)
+            ->clearWhere()
+            ->where('id', 2)
+            ->getSql();
+
+        $this->assertStringContainsString('WHERE id = :', $sql);
+        $this->assertStringNotContainsString('status', $sql);
+        $this->assertContains(2, $builder->getParameters());
+    }
+
+    public function testClearJoinResetsPreviousJoinClauses(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users u')
+            ->joinRaw('INNER JOIN orders o ON o.user_id = u.id')
+            ->clearJoin()
+            ->joinRaw('LEFT JOIN profiles p ON p.user_id = u.id')
+            ->getSql();
+
+        $this->assertStringContainsString('LEFT JOIN profiles p', $sql);
+        $this->assertStringNotContainsString('INNER JOIN orders', $sql);
+    }
+
+    public function testClearGroupByResetsPreviousGroupClauses(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->groupBy('country', 'city')
+            ->clearGroupBy()
+            ->groupBy('status')
+            ->getSql();
+
+        $this->assertStringContainsString('GROUP BY status', $sql);
+        $this->assertStringNotContainsString('country', $sql);
+        $this->assertStringNotContainsString('city', $sql);
+    }
+
+    public function testClearHavingResetsPreviousHavingClauses(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->groupBy('status')
+            ->having('cnt', 5, '>')
+            ->clearHaving()
+            ->havingRaw('COUNT(*) >= :min_count', ['min_count' => 10])
+            ->getSql();
+
+        $this->assertStringContainsString('HAVING COUNT(*) >= :min_count', $sql);
+        $this->assertStringNotContainsString('cnt >', $sql);
+        $this->assertSame(10, $builder->getParameters()['min_count']);
+    }
+
+    public function testClearParametersResetsParameterBag(): void
+    {
+        $builder = new QueryBuilder();
+        $builder
+            ->from('users')
+            ->where('id', 1)
+            ->getSql();
+        $builder->clearParameters()
+            ->where('id', 2);
+
+        $this->assertSame(['id_1' => 2], $builder->getParameters());
+    }
+
+    public function testOrderByRawAddsExpression(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->orderByRaw('FIELD(status, "active", "pending", "disabled")')
+            ->getSql();
+
+        $this->assertStringContainsString('ORDER BY FIELD(status, "active", "pending", "disabled")', $sql);
+    }
+
+    public function testOrderByRequiresDirectionForRawLikeExpression(): void
+    {
+        $builder = new QueryBuilder();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $builder
+            ->from('users')
+            ->orderBy('created_at DESC');
+    }
+
     public function testSelectRawAppendsExpressionAndBindings(): void
     {
         $builder = new QueryBuilder();
@@ -234,6 +466,33 @@ END_SQL;
         $this->assertStringContainsString('o.id, (SELECT COUNT(*)', $sql);
         $this->assertStringContainsString('o.total > :', $sql);
         $this->assertSame(100, $builder->getParameters()['min_total']);
+    }
+
+    public function testAddSelectAppendsColumnsWithoutReplacingSelection(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users u')
+            ->select('u.id')
+            ->addSelect('u.name', 'u.email')
+            ->getSql();
+
+        $this->assertStringContainsString('SELECT u.id, u.name, u.email', $sql);
+    }
+
+    public function testSelectReplacesPreviousAddSelectColumns(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users u')
+            ->select('u.id')
+            ->addSelect('u.name')
+            ->select('u.email')
+            ->getSql();
+
+        $this->assertStringContainsString('SELECT u.email', $sql);
+        $this->assertStringNotContainsString('u.id,', $sql);
+        $this->assertStringNotContainsString('u.name', $sql);
     }
 
     public function testFromRawWithExpandMarkerInSubquery(): void
@@ -250,5 +509,36 @@ END_SQL;
         $this->assertStringContainsString('_EXPAND_uid_1', $sql);
         $this->assertArrayHasKey('_EXPAND_uid_0', $builder->getParameters());
         $this->assertArrayHasKey('_EXPAND_uid_1', $builder->getParameters());
+    }
+
+    public function testWhereRejectsUnsupportedOperator(): void
+    {
+        $builder = new QueryBuilder();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $builder
+            ->from('users')
+            ->where('id', 1, '= 1 OR 1=1');
+    }
+
+    public function testFromRejectsInvalidTableReference(): void
+    {
+        $builder = new QueryBuilder();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $builder
+            ->from('users u, orders o')
+            ->getSql();
+    }
+
+    public function testHavingRejectsUnsupportedOperator(): void
+    {
+        $builder = new QueryBuilder();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $builder
+            ->from('users')
+            ->groupBy('status')
+            ->having('cnt', 1, 'OR 1=1');
     }
 }

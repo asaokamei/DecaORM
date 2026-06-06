@@ -2,8 +2,11 @@
 
 namespace WScore\DecaORM\Sql;
 
+use InvalidArgumentException;
+
 trait WhereTrait
 {
+    use IdentifierQuoteTrait;
     /** @var array<string> WHERE条件の配列 */
     protected array $wheres = [];
     
@@ -54,8 +57,10 @@ trait WhereTrait
      */
     public function where(string $column, $value, string $operator = '='): static
     {
+        $operator = $this->validateOperator($operator);
         $placeholder = $this->createPlaceholder($column);
-        $this->wheres[] = "{$column} {$operator} :{$placeholder}" . "\n";
+        $escapedColumn = $this->escapeColumnIdentifier($column);
+        $this->wheres[] = "{$escapedColumn} {$operator} :{$placeholder}" . "\n";
         $this->parameters[$placeholder] = $value;
         return $this;
     }
@@ -76,8 +81,16 @@ trait WhereTrait
 
         // 展開が必要なことを示すマーカープレースホルダーを使用
         $marker = $this->createPlaceholder('_EXPAND_' . $column);
-        $this->wheres[] = "{$column} IN (:{$marker})" . "\n";
+        $escapedColumn = $this->escapeColumnIdentifier($column);
+        $this->wheres[] = "{$escapedColumn} IN (:{$marker})" . "\n";
         $this->parameters[$marker] = $values;
+        return $this;
+    }
+
+    public function clearWhere(): static
+    {
+        $this->wheres = [];
+        $this->resetExpandedCache();
         return $this;
     }
 
@@ -123,6 +136,26 @@ trait WhereTrait
     {
         $name = preg_replace('/[^a-zA-Z0-9_]/', '_', $baseName);
         return $name . '_' . $this->placeholder_counter++;
+    }
+
+    /**
+     * WHERE/HAVING で利用する比較演算子を検証する。
+     */
+    protected function validateOperator(string $operator): string
+    {
+        $normalized = strtoupper(trim(preg_replace('/\s+/', ' ', $operator) ?? ''));
+        $allowed = [
+            '=', '!=', '<>',
+            '<', '<=', '>', '>=',
+            'LIKE', 'NOT LIKE',
+            'IS', 'IS NOT',
+        ];
+
+        if (!in_array($normalized, $allowed, true)) {
+            throw new InvalidArgumentException("Unsupported operator: {$operator}");
+        }
+
+        return $normalized;
     }
 
     /**
@@ -189,13 +222,28 @@ trait WhereTrait
     public function setParameters(array $array): static
     {
         $this->parameters = array_merge($this->parameters, $array);
+        $this->resetExpandedCache();
         return $this;
     }
 
     public function setParameter(string $key, mixed $value): static
     {
         $this->parameters[$key] = $value;
+        $this->resetExpandedCache();
         return $this;
+    }
+
+    public function clearParameters(): static
+    {
+        $this->parameters = [];
+        $this->resetExpandedCache();
+        return $this;
+    }
+
+    protected function resetExpandedCache(): void
+    {
+        $this->expanded_markers = null;
+        $this->expanded_params = null;
     }
 
     public function hasWhere(): bool

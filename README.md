@@ -51,6 +51,16 @@ composer require wscore/decaorm
 
 **Japanese:** [README.md](README-ja.md) | [Entity mapping](docs/entity-ja.md) | [SQL builders](docs/sql-ja.md) | [Repository hooks](docs/repository-hooks-ja.md)
 
+### ⚠ Raw API safety
+
+`whereRaw`, `havingRaw`, `joinRaw`, `withRaw`, `fromRaw`, `setRaw`, `selectRaw`, and `orderByRaw` append SQL fragments as-is.
+DecaORM does not apply SQL injection protections to these methods.
+
+- Do not concatenate untrusted input (request/user input) into Raw SQL strings.
+- Use placeholders (bound parameters) for value conditions.
+- Prefer `orderBy($column, $direction)` for sorting, and use `orderByRaw()` only when a raw expression is required.
+- Do not build table names, column names, or ORDER BY expressions directly from external input.
+
 ---
 
 ## Quick start

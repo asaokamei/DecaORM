@@ -91,7 +91,7 @@ class ProjectWithLoaderRepository extends \WScore\DecaORM\AbstractRepository
         $sevenDaysAgo = date('Y-m-d H:i:s', strtotime('-7 days'));
         $query
             ->where('created_at', $sevenDaysAgo, '>=')
-            ->orderBy('created_at DESC');
+            ->orderByRaw('created_at DESC');
     }
 }
 

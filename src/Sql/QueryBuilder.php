@@ -10,19 +10,42 @@ class QueryBuilder
     private array $selects = ['*'];
     private bool $distinct = false;
     private string $fromTable = '';
+    private bool $fromRaw = false;
     private array $joins = [];
     private string $withSql = '';
     private array $groupBys = [];
     /** @var array<string> HAVING fragments (same AND style as WHERE) */
     private array $havings = [];
-    private ?string $orderBy = null;
+    /** @var array<string> */
+    private array $orderBys = [];
     private ?int $offset = null;
     private ?int $limit = null;
     private bool $forUpdate = false;
 
+    /**
+     * Replace the SELECT column list (does not append).
+     *
+     * Each call discards columns accumulated by prior select(), addSelect(), and selectRaw().
+     * There is no clearSelect(); call select() again to reset the list.
+     * {@see Query} from sqlQuery() starts with "{$table}.*" — call select(...) when you need a different set.
+     */
     public function select(string ...$columns): static
     {
-        $this->selects = $columns;
+        $this->selects = array_map(
+            fn(string $column): string => $this->escapeColumnIdentifier($column),
+            $columns
+        );
+        return $this;
+    }
+
+    /**
+     * Append non-raw columns to SELECT.
+     */
+    public function addSelect(string ...$columns): static
+    {
+        foreach ($columns as $column) {
+            $this->selects[] = $this->escapeColumnIdentifier($column);
+        }
         return $this;
     }
 
@@ -38,8 +61,10 @@ class QueryBuilder
     public function from(string $table): static
     {
         $this->fromTable = $table;
+        $this->fromRaw = false;
         return $this;
     }
+
 
     // --- 複雑な句への対応（Raw） ---
 
@@ -52,6 +77,13 @@ class QueryBuilder
     public function joinRaw(string $raw_join_sql): static
     {
         $this->joins[] = '  ' . $raw_join_sql . "\n";
+        return $this;
+    }
+
+    public function clearJoin(): static
+    {
+        $this->joins = [];
+        $this->resetExpandedCache();
         return $this;
     }
 
@@ -74,6 +106,7 @@ class QueryBuilder
     public function fromRaw(string $fragment, array $bindings = []): static
     {
         $this->fromTable = $fragment;
+        $this->fromRaw = true;
         $this->parameters = array_merge($this->parameters, $bindings);
         return $this;
     }
@@ -92,9 +125,41 @@ class QueryBuilder
         return $this;
     }
 
-    public function orderBy(string $column): static
+    public function orderBy(string $column, string $direction = 'ASC'): static
     {
-        $this->orderBy = $column;
+        if (preg_match('/\s/', $column) === 1) {
+            throw new \InvalidArgumentException("ORDER BY column must not contain whitespace. Use orderByRaw() for raw expressions: {$column}");
+        }
+
+        $normalizedDirection = strtoupper(trim($direction));
+        if (!in_array($normalizedDirection, ['ASC', 'DESC'], true)) {
+            throw new \InvalidArgumentException("Unsupported ORDER BY direction: {$direction}");
+        }
+
+        $this->orderBys[] = $this->escapeColumnIdentifier($column) . ' ' . $normalizedDirection;
+        return $this;
+    }
+
+    /**
+     * 安全な ORDER BY 指定（識別子 + 方向の検証）。
+     */
+    public function orderByColumn(string $column, string $direction = 'ASC'): static
+    {
+        return $this->orderBy($column, $direction);
+    }
+
+    /**
+     * 生の ORDER BY 断片を追加する。
+     */
+    public function orderByRaw(string $sqlSnippet): static
+    {
+        $this->orderBys[] = $sqlSnippet;
+        return $this;
+    }
+
+    public function clearOrderBy(): static
+    {
+        $this->orderBys = [];
         return $this;
     }
 
@@ -104,8 +169,28 @@ class QueryBuilder
     public function groupBy(string ...$columns): static
     {
         foreach ($columns as $column) {
-            $this->groupBys[] = $column;
+            if (preg_match('/\s/', $column) === 1) {
+                throw new \InvalidArgumentException(
+                    "GROUP BY column must not contain whitespace. Use groupByRaw() for raw expressions: {$column}"
+                );
+            }
+            $this->groupBys[] = $this->escapeColumnIdentifier($column);
         }
+        return $this;
+    }
+
+    /**
+     * Add a raw GROUP BY expression.
+     */
+    public function groupByRaw(string $sqlSnippet): static
+    {
+        $this->groupBys[] = $sqlSnippet;
+        return $this;
+    }
+
+    public function clearGroupBy(): static
+    {
+        $this->groupBys = [];
         return $this;
     }
 
@@ -114,8 +199,9 @@ class QueryBuilder
      */
     public function having(string $column, mixed $value, string $operator = '='): static
     {
+        $operator = $this->validateOperator($operator);
         $placeholder = $this->createPlaceholder('having_' . $column);
-        $this->havings[] = "{$column} {$operator} :{$placeholder}\n";
+        $this->havings[] = "{$this->escapeColumnIdentifier($column)} {$operator} :{$placeholder}\n";
         $this->parameters[$placeholder] = $value;
         return $this;
     }
@@ -127,6 +213,14 @@ class QueryBuilder
     {
         $this->havings[] = $sql_snippet . "\n";
         $this->parameters = array_merge($this->parameters, $bindings);
+        $this->resetExpandedCache();
+        return $this;
+    }
+
+    public function clearHaving(): static
+    {
+        $this->havings = [];
+        $this->resetExpandedCache();
         return $this;
     }
 
@@ -169,7 +263,10 @@ class QueryBuilder
         // SELECT句
         $select = empty($this->selects) ? '*' : implode(', ', $this->selects);
         $selectKeyword = $this->distinct ? 'SELECT DISTINCT' : $this->queryType;
-        $sql .= "{$selectKeyword} {$select} " . "\n" . "FROM {$this->fromTable}" . "\n";
+
+        // FROM句
+        $fromClause = $this->fromRaw ? $this->fromTable : $this->escapeTableReference($this->fromTable);
+        $sql .= "{$selectKeyword} {$select} " . "\n" . "FROM {$fromClause}" . "\n";
 
         // JOIN句
         if (!empty($this->joins)) {
@@ -192,8 +289,8 @@ class QueryBuilder
         }
 
         // ORDER BY
-        if ($this->orderBy) {
-            $sql .= "ORDER BY {$this->orderBy}" . "\n";
+        if ($this->orderBys !== []) {
+            $sql .= 'ORDER BY ' . implode(', ', $this->orderBys) . "\n";
         }
         // LIMIT, OFFSET句
         if (isset($this->limit) && $this->limit > 0) {
@@ -203,7 +300,7 @@ class QueryBuilder
             $sql .= "OFFSET {$this->offset}" . "\n";
         }
 
-        if ($this->forUpdate) {
+        if ($this->forUpdate && !$this->isSqliteDriver()) {
             $sql .= "FOR UPDATE\n";
         }
 

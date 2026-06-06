@@ -9,6 +9,7 @@ DecaORM’s SQL builder lets you build type-safe, flexible SQL for queries and u
 - [Query (SELECT)](#query-select)
 - [Raw SELECT and FROM](#raw-select-and-from)
 - [DISTINCT, GROUP BY, HAVING, FOR UPDATE](#distinct-group-by-having-for-update)
+- [Resetting appended clauses (`clear*`)](#resetting-appended-clauses-clear)
 - [Insert (INSERT)](#insert-insert)
 - [Update (UPDATE)](#update-update)
 - [Delete (DELETE)](#delete-delete)
@@ -26,7 +27,7 @@ Get a Query instance from the repository with `sqlQuery()`.
 ```php
 $users = $repository->sqlQuery()
     ->where('status', 'active')
-    ->orderBy('created_at DESC')
+    ->orderBy('created_at', 'DESC')
     ->limit(10)
     ->getResult();
 ```
@@ -35,7 +36,8 @@ $users = $repository->sqlQuery()
 
 | Method | Description |
 |--------|-------------|
-| `select(string ...$columns)` | SELECT columns |
+| `select(string ...$columns)` | **Replace** the SELECT column list (not append; no `clearSelect()` — call `select()` again) |
+| `addSelect(string ...$columns)` | Append escaped columns to the SELECT list |
 | `selectRaw(string $expression, array $bindings = [])` | Append a raw SELECT expression (after existing columns) |
 | `from(string $table)` | FROM clause (usually set automatically) |
 | `fromRaw(string $fragment, array $bindings = [])` | FROM clause from a raw fragment (e.g. derived table) |
@@ -48,12 +50,53 @@ $users = $repository->sqlQuery()
 | `groupBy(string ...$columns)` | GROUP BY (repeatable; columns are appended) |
 | `having(string $column, mixed $value, string $operator = '=')` | HAVING condition (AND-combined) |
 | `havingRaw(string $sql_snippet, array $bindings = [])` | Raw HAVING fragment |
-| `orderBy(string $column)` | ORDER BY |
+| `orderBy(string $column, string $direction = 'ASC')` | Safe ORDER BY |
+| `orderByRaw(string $sqlSnippet)` | Raw ORDER BY fragment |
+| `clearWhere()` | Clear all WHERE conditions (see [Resetting appended clauses](#resetting-appended-clauses-clear)) |
+| `clearJoin()` | Clear all JOIN clauses |
+| `clearGroupBy()` | Clear all GROUP BY columns |
+| `clearHaving()` | Clear all HAVING conditions |
+| `clearOrderBy()` | Clear all ORDER BY expressions |
+| `clearParameters()` | Clear the bind-parameter bag |
 | `limit(?int $limit)` | LIMIT |
 | `offset(?int $offset)` | OFFSET |
 | `forUpdate(bool $on = true)` | Append `FOR UPDATE` (after LIMIT/OFFSET) |
 | `getResult()` | Run query and get `EntityCollection` |
 | `executeCountQuery()` | Run COUNT(*) and return count (int); clears `FOR UPDATE` on the internal clone |
+
+### SELECT column list (`select` / `addSelect` / `selectRaw`)
+
+The SELECT list follows a **replace vs append** split (unlike `where` / `orderBy`, which only append):
+
+| Method | Behavior |
+|--------|----------|
+| **`select(...)`** | **Replaces** the entire column list on every call. Previous columns from `select()`, `addSelect()`, or `selectRaw()` are discarded. |
+| **`addSelect(...)`** | Appends escaped column names. |
+| **`selectRaw(...)`** | Appends a raw expression (same append semantics as `addSelect`). |
+
+There is **no `clearSelect()`**. To drop all columns and start over, call **`select(...)`** with the new list (or `select()` with no arguments to clear to an empty list before `selectRaw`, as in `executeCountQuery()`).
+
+`sqlQuery()` constructs `Query` with **`select("{$table}.*")`** already applied. To change columns, call **`select(...)`** first; using only `addSelect()` / `selectRaw()` keeps the default `table.*` and can produce `SELECT table.*, expr ...`.
+
+```php
+// Replace default table.* from sqlQuery()
+$users = $repository->sqlQuery()
+    ->select('u.id', 'u.name')   // replaces users.* (or users u.*)
+    ->getResult();
+
+// Append after an explicit select()
+$users = $repository->sqlQuery()
+    ->select('u.id')
+    ->addSelect('u.name', 'u.email')
+    ->selectRaw('COUNT(*) AS cnt', [])
+    ->getResult();
+
+// select() again replaces everything built so far
+$builder = $repository->sqlQuery()
+    ->select('u.id')
+    ->addSelect('u.name')
+    ->select('u.email');          // only u.email remains in the list
+```
 
 ### Examples
 
@@ -98,7 +141,7 @@ $users = $repository->sqlQuery()
 // Pagination
 $users = $repository->sqlQuery()
     ->where('status', 'active')
-    ->orderBy('created_at DESC')
+    ->orderBy('created_at', 'DESC')
     ->limit(20)
     ->offset(40)
     ->getResult();
@@ -172,6 +215,51 @@ $users = $repository->sqlQuery()
     ->getResult();
 ```
 
+### Resetting appended clauses (`clear*`)
+
+Several builder methods **append** fragments on each call (`where`, `joinRaw`, `groupBy`, `having`, `orderBy`, and their `*Raw` variants). To drop accumulated clauses and start over on the same builder instance, use the matching **`clear*`** method.
+
+| Method | Clears | Available on |
+|--------|--------|--------------|
+| `clearWhere()` | WHERE conditions | `Query`, `Update`, `Delete` |
+| `clearSet()` | SET clauses | `Update` only |
+| `clearJoin()` | JOIN clauses | `Query` only |
+| `clearGroupBy()` | GROUP BY columns | `Query` only |
+| `clearHaving()` | HAVING conditions | `Query` only |
+| `clearOrderBy()` | ORDER BY expressions | `Query` only |
+| `clearParameters()` | Bind-parameter bag | `Query`, `Update`, `Delete` |
+
+**Notes:**
+
+- **`clearWhere()` / `clearHaving()` / `clearSet()`** remove SQL fragments only. Bind values from earlier calls may remain until **`clearParameters()`** (or a new builder).
+- Clauses that **replace** rather than append do not need a `clear*` helper: e.g. **`select()` replaces the column list** (there is no `clearSelect()`), `from()` / `fromRaw()` replace FROM, `limit(null)` / `offset(null)` remove LIMIT/OFFSET, `forUpdate(false)` turns off `FOR UPDATE`.
+- Typical use: repository hooks or shared query setup add defaults; application code clears one clause and re-applies it, or clones a query and adjusts one part (see `executeCountQuery()`, which calls `select()` to replace columns, then `selectRaw('COUNT(*) …')`).
+
+```php
+// Replace ORDER BY on a query that already had sorting
+$users = $repository->sqlQuery()
+    ->where('status', 'active')
+    ->orderBy('created_at', 'DESC')
+    ->clearOrderBy()
+    ->orderBy('id', 'ASC')
+    ->getResult();
+
+// Drop a JOIN added earlier, then attach a different one
+$rows = $repository->sqlQuery()
+    ->joinRaw('INNER JOIN orders o ON o.user_id = users.id')
+    ->clearJoin()
+    ->joinRaw('LEFT JOIN profiles p ON p.user_id = users.id')
+    ->getResult();
+
+// Reset WHERE on Update (Update/Delete also use WhereTrait)
+$repository->sqlUpdate()
+    ->set('status', 'inactive')
+    ->where('last_login', '2020-01-01', '<')
+    ->clearWhere()
+    ->setId(1)
+    ->execute();
+```
+
 ---
 
 ## Insert (INSERT)
@@ -193,7 +281,7 @@ $insert->execute();
 
 | Method | Description |
 |--------|-------------|
-| `data(array $data)` | Set insert data |
+| `data(array $data)` | **Replace** the INSERT column map (same contract as Update `data()`) |
 | `getSql()` | Get generated SQL |
 | `getParameters()` | Get bind parameters |
 | `execute()` | Execute the SQL |
@@ -207,7 +295,7 @@ $repository->sqlInsert([
     'email' => 'alice@example.com',
 ])->execute();
 
-// Set data later
+// Set data later (replaces the column map; safe for reusing one Insert instance)
 $insert = $repository->sqlInsert([]);
 $insert->data([
     'name' => 'Bob',
@@ -215,6 +303,8 @@ $insert->data([
 ]);
 $insert->execute();
 ```
+
+`data()` on **Insert** and **Update** shares one rule: **bulk-assign the writable columns for this statement** (replace, not append). On Update, use `set()` / `setRaw()` to append SET fragments after `data()`.
 
 ---
 
@@ -237,16 +327,27 @@ $update->set('name', 'Jane Doe')
 
 | Method | Description |
 |--------|-------------|
-| `set(string $column, mixed $value)` | Add SET |
-| `setRaw(string $sqlSnippet, array $bindings = [])` | Raw SET (e.g. SQL functions) |
-| `data(array $data)` | Set multiple columns (primary key is excluded) |
+| `set(string $column, mixed $value)` | Append SET |
+| `setRaw(string $sqlSnippet, array $bindings = [])` | Append raw SET (e.g. SQL functions) |
+| `data(array $data)` | **Replace** the SET column map (primary key excluded on `Update`) |
+| `clearSet()` | Clear all SET clauses |
 | `setId(int\|string $id)` | WHERE by primary key |
 | `where(string $column, mixed $value, string $operator = '=')` | Add WHERE |
 | `whereIn(string $column, array $values)` | WHERE IN |
 | `whereRaw(string $sql_snippet, array $bindings = [])` | Raw WHERE |
+| `clearWhere()` | Clear all WHERE conditions |
+| `clearParameters()` | Clear the bind-parameter bag |
 | `getSql()` | Get generated SQL |
 | `getParameters()` | Get bind parameters |
 | `execute()` | Execute (WHERE required) |
+
+### SET clause (`set` / `data` / `clearSet`)
+
+| Method | Behavior |
+|--------|----------|
+| **`set()` / `setRaw()`** | Append SET fragments |
+| **`data()`** | **Replace** the SET column map (same contract as Insert `data()`; `Update::data()` omits the primary key) |
+| **`clearSet()`** | Clear all SET fragments |
 
 ### Examples
 
@@ -315,6 +416,8 @@ $delete->setId(1)
 | `where(string $column, mixed $value, string $operator = '=')` | Add WHERE |
 | `whereIn(string $column, array $values)` | WHERE IN |
 | `whereRaw(string $sql_snippet, array $bindings = [])` | Raw WHERE |
+| `clearWhere()` | Clear all WHERE conditions |
+| `clearParameters()` | Clear the bind-parameter bag |
 | `getSql()` | Get generated SQL |
 | `getParameters()` | Get bind parameters |
 | `execute()` | Execute (WHERE required) |
@@ -500,6 +603,26 @@ $sql2 = $query->getSql();       // Cached
 
 $params1 = $query->getParameters();  // Uses cache if already expanded
 ```
+
+### 6. SQL log parameter masking
+
+If you configure `OrmManager` with `setSqlParamMasker()`, only `params` in SQL logs are masked.
+The SQL text itself (`sql`) is kept as-is, so query analysis remains possible while reducing sensitive data leakage.
+
+```php
+use WScore\DecaORM\OrmManager;
+use WScore\DecaORM\Sql\KeyBasedSqlParamMasker;
+
+$manager = OrmManager::initialize($container)
+    ->setLogger($logger)
+    ->setSqlParamMasker(new KeyBasedSqlParamMasker([
+        'password', 'token', 'secret', 'authorization', 'api_key', 'email',
+    ]));
+```
+
+- Mask targets are determined by parameter key name (case-insensitive).
+- Applied recursively to nested arrays.
+- If `setSqlParamMasker()` is not set, behavior remains unchanged (no masking).
 
 ---
 
