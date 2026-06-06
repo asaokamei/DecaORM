@@ -156,7 +156,7 @@ class EntityHandler
             $replicated->setRaw($newAt, null);
         }
         $modAt = $repository->getHydrator()->getUpdatedAt();
-        if ($newAt) {
+        if ($modAt) {
             $replicated->setRaw($modAt, null);
         }
         return $replicated;
