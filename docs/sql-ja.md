@@ -7,6 +7,7 @@ DecaORMのSQLビルダーを使用して、型安全で柔軟なSQLクエリを�
 - [Query（SELECT文）](#queryselect文)
 - [Raw SELECT / FROM](#raw-select-and-from)
 - [DISTINCT, GROUP BY, HAVING, FOR UPDATE](#distinct-group-by-having-for-update)
+- [追記句のリセット（`clear*`）](#追記句のリセットclear)
 - [Insert（INSERT文）](#insertinsert文)
 - [Update（UPDATE文）](#updateupdate文)
 - [Delete（DELETE文）](#deletedelete文)
@@ -31,8 +32,9 @@ $users = $repository->sqlQuery()
 
 ### メソッド一覧
 
-- `select(string ...$columns)` - SELECT句を指定
-- `selectRaw(string $expression, array $bindings = [])` - 生の SELECT 式を既存列の後に追加
+- `select(string ...$columns)` - SELECT 列リストを**置き換え**（追記ではない。`clearSelect()` はなく、再指定は `select()`）
+- `addSelect(string ...$columns)` - SELECT 列を**追記**（識別子をエスケープ）
+- `selectRaw(string $expression, array $bindings = [])` - 生の SELECT 式を既存列の**後ろに追記**
 - `from(string $table)` - FROM句を指定（通常は自動設定）
 - `fromRaw(string $fragment, array $bindings = [])` - FROM を生断片で指定（派生テーブルなど）
 - `where(string $column, mixed $value, string $operator = '=')` - WHERE条件を追加
@@ -46,11 +48,51 @@ $users = $repository->sqlQuery()
 - `havingRaw(string $sql_snippet, array $bindings = [])` - 生の HAVING 断片
 - `orderBy(string $column, string $direction = 'ASC')` - ORDER BY句を安全に指定
 - `orderByRaw(string $sqlSnippet)` - 生の ORDER BY 断片を追加
+- `clearWhere()` - WHERE 条件をすべてクリア（[追記句のリセット](#追記句のリセットclear) 参照）
+- `clearJoin()` - JOIN 句をすべてクリア
+- `clearGroupBy()` - GROUP BY 列をすべてクリア
+- `clearHaving()` - HAVING 条件をすべてクリア
+- `clearOrderBy()` - ORDER BY 式をすべてクリア
+- `clearParameters()` - バインドパラメータ袋を空にする
 - `limit(?int $limit)` - LIMIT句を指定
 - `offset(?int $offset)` - OFFSET句を指定
 - `forUpdate(bool $on = true)` - 末尾に `FOR UPDATE`（LIMIT/OFFSET の後）
 - `getResult()` - クエリを実行してEntityCollectionを取得
 - `executeCountQuery()` - COUNT(*) を実行し件数（int）を返す（内部クローンで `FOR UPDATE` は外す）
+
+### SELECT 列リスト（`select` / `addSelect` / `selectRaw`）
+
+SELECT 列だけ **`select` = 置き換え**、**`add*` = 追記** という分かれ方をします（`where` / `orderBy` のように追記のみ、とは異なります）。
+
+| メソッド | 挙動 |
+|---------|------|
+| **`select(...)`** | 列リストを**丸ごと置き換え**。これまでの `select()` / `addSelect()` / `selectRaw()` で積んだ列は捨てられます。 |
+| **`addSelect(...)`** | エスケープ済みの列名を**追記**。 |
+| **`selectRaw(...)`** | 生 SQL 式を**追記**（`addSelect` と同じ追記型）。 |
+
+**`clearSelect()` はありません。** 列をいったん空にして作り直すときも **`select(...)`** で新しいリストを指定します（引数なしの `select()` で空にしてから `selectRaw` する、といった使い方も可能。`executeCountQuery()` がその例です）。
+
+`sqlQuery()` の `Query` はコンストラクタで **`select("{$table}.*")`** 済みです。列を変えたいときは先に **`select(...)`** で置き換えてください。`addSelect()` / `selectRaw()` だけだと既定の `table.*` が残り、`SELECT table.*, expr ...` になり得ます。
+
+```php
+// sqlQuery() の既定 table.* を捨てて列を指定
+$users = $repository->sqlQuery()
+    ->select('u.id', 'u.name')
+    ->getResult();
+
+// select() のあとに追記
+$users = $repository->sqlQuery()
+    ->select('u.id')
+    ->addSelect('u.name', 'u.email')
+    ->selectRaw('COUNT(*) AS cnt', [])
+    ->getResult();
+
+// 再度 select() すると、それまでの列はすべて置き換わる
+$builder = $repository->sqlQuery()
+    ->select('u.id')
+    ->addSelect('u.name')
+    ->select('u.email');          // 残るのは u.email のみ
+```
 
 ### 使用例
 
@@ -169,6 +211,50 @@ $users = $repository->sqlQuery()
     ->getResult();
 ```
 
+### 追記句のリセット（`clear*`）
+
+`where` / `joinRaw` / `groupBy` / `having` / `orderBy` および各 `*Raw` は、呼ぶたびに**追記**されます。同じビルダーインスタンス上で一度積んだ句を捨てて作り直すには、対応する **`clear*`** メソッドを使います。
+
+| メソッド | クリア対象 | 利用できるビルダー |
+|---------|-----------|-------------------|
+| `clearWhere()` | WHERE 条件 | `Query`, `Update`, `Delete` |
+| `clearJoin()` | JOIN 句 | `Query` のみ |
+| `clearGroupBy()` | GROUP BY 列 | `Query` のみ |
+| `clearHaving()` | HAVING 条件 | `Query` のみ |
+| `clearOrderBy()` | ORDER BY 式 | `Query` のみ |
+| `clearParameters()` | バインドパラメータ袋 | `Query`, `Update`, `Delete` |
+
+**補足:**
+
+- **`clearWhere()` / `clearHaving()`** は SQL 断片だけを消します。以前の `where()` / `having()` で追加したバインド値はパラメータ袋に残ります。パラメータも捨てる場合は **`clearParameters()`** を併用するか、ビルダーを作り直してください。
+- **置き換え型**の句には `clear*` はありません。例: **`select()` は列リストを置き換え**（`clearSelect()` はない）、`from()` / `fromRaw()` は FROM を置き換え、`limit(null)` / `offset(null)` で LIMIT/OFFSET を外せ、`forUpdate(false)` で `FOR UPDATE` をオフにできます。
+- 典型的な用途: リポジトリフック等で既定の句が付いたあと、アプリ側で一部だけ差し替える。件数取得の `executeCountQuery()` は内部クローンで `select()` により列を置き換えてから `selectRaw('COUNT(*) …')` する、といったパターンです。
+
+```php
+// 既に ORDER BY があるクエリの並び順を差し替える
+$users = $repository->sqlQuery()
+    ->where('status', 'active')
+    ->orderBy('created_at', 'DESC')
+    ->clearOrderBy()
+    ->orderBy('id', 'ASC')
+    ->getResult();
+
+// 先に付けた JOIN を外し、別の JOIN に付け替える
+$rows = $repository->sqlQuery()
+    ->joinRaw('INNER JOIN orders o ON o.user_id = users.id')
+    ->clearJoin()
+    ->joinRaw('LEFT JOIN profiles p ON p.user_id = users.id')
+    ->getResult();
+
+// Update でも WHERE をリセットできる（Update/Delete は WhereTrait 共通）
+$repository->sqlUpdate()
+    ->set('status', 'inactive')
+    ->where('last_login', '2020-01-01', '<')
+    ->clearWhere()
+    ->setId(1)
+    ->execute();
+```
+
 ---
 
 ## Insert（INSERT文）
@@ -237,6 +323,8 @@ $update->set('name', 'Jane Doe')
 - `where(string $column, mixed $value, string $operator = '=')` - WHERE条件を追加
 - `whereIn(string $column, array $values)` - WHERE IN条件を追加
 - `whereRaw(string $sql_snippet, array $bindings = [])` - 生のWHERE句を追加
+- `clearWhere()` - WHERE 条件をすべてクリア
+- `clearParameters()` - バインドパラメータ袋を空にする
 - `getSql()` - 生成されたSQLを取得
 - `getParameters()` - バインディングパラメータを取得
 - `execute()` - SQLを実行（WHERE条件が必須）
@@ -306,6 +394,8 @@ $delete->setId(1)  // 主キーでWHERE条件を設定
 - `where(string $column, mixed $value, string $operator = '=')` - WHERE条件を追加
 - `whereIn(string $column, array $values)` - WHERE IN条件を追加
 - `whereRaw(string $sql_snippet, array $bindings = [])` - 生のWHERE句を追加
+- `clearWhere()` - WHERE 条件をすべてクリア
+- `clearParameters()` - バインドパラメータ袋を空にする
 - `getSql()` - 生成されたSQLを取得
 - `getParameters()` - バインディングパラメータを取得
 - `execute()` - SQLを実行（WHERE条件が必須）

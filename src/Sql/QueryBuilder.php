@@ -22,6 +22,13 @@ class QueryBuilder
     private ?int $limit = null;
     private bool $forUpdate = false;
 
+    /**
+     * Replace the SELECT column list (does not append).
+     *
+     * Each call discards columns accumulated by prior select(), addSelect(), and selectRaw().
+     * There is no clearSelect(); call select() again to reset the list.
+     * {@see Query} from sqlQuery() starts with "{$table}.*" — call select(...) when you need a different set.
+     */
     public function select(string ...$columns): static
     {
         $this->selects = array_map(
