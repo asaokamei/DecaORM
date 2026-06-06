@@ -5,14 +5,20 @@ namespace WScore\DecaORM;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Throwable;
+use WScore\DecaORM\Contracts\SqlParamMaskerInterface;
+use WScore\DecaORM\Sql\NoOpSqlParamMasker;
 
 class SqlLogger
 {
     public function __construct(
         private LoggerInterface $logger,
         private int $slowQueryThresholdMs = 100,
+        ?SqlParamMaskerInterface $paramMasker = null,
     ) {
+        $this->paramMasker = $paramMasker ?? new NoOpSqlParamMasker();
     }
+
+    private SqlParamMaskerInterface $paramMasker;
 
     public function logSuccess(string $sql, array $params, float $durationMs): void
     {
@@ -21,7 +27,7 @@ class SqlLogger
             'SQL executed.',
             [
                 'sql' => $sql,
-                'params' => $params,
+                'params' => $this->paramMasker->mask($params),
                 'duration_ms' => $durationMs,
             ]
         );
@@ -33,7 +39,7 @@ class SqlLogger
             'SQL execution failed.',
             [
                 'sql' => $sql,
-                'params' => $params,
+                'params' => $this->paramMasker->mask($params),
                 'duration_ms' => $durationMs,
                 'exception' => $e,
             ]

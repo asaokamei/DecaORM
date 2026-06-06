@@ -500,6 +500,26 @@ $sql2 = $query->getSql();        // キャッシュされた結果が返され�
 $params1 = $query->getParameters();  // 展開処理が実行される（既に実行済みの場合はキャッシュを使用）
 ```
 
+### 6. SQLログのパラメーターマスク
+
+`OrmManager` に `setSqlParamMasker()` を設定すると、SQLログの `params` だけをマスクできます。
+`sql` 本文はそのまま保持されるため、クエリ解析性を維持しながら機密値漏えいを抑制できます。
+
+```php
+use WScore\DecaORM\OrmManager;
+use WScore\DecaORM\Sql\KeyBasedSqlParamMasker;
+
+$manager = OrmManager::initialize($container)
+    ->setLogger($logger)
+    ->setSqlParamMasker(new KeyBasedSqlParamMasker([
+        'password', 'token', 'secret', 'authorization', 'api_key', 'email',
+    ]));
+```
+
+- マスク対象はキー名で判定されます（大文字小文字は区別しません）
+- ネストした配列にも再帰的に適用されます
+- `setSqlParamMasker()` を設定しない場合は、従来どおりマスクなしです
+
 ---
 
 ## まとめ

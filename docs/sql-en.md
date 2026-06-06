@@ -502,6 +502,26 @@ $sql2 = $query->getSql();       // Cached
 $params1 = $query->getParameters();  // Uses cache if already expanded
 ```
 
+### 6. SQL log parameter masking
+
+If you configure `OrmManager` with `setSqlParamMasker()`, only `params` in SQL logs are masked.
+The SQL text itself (`sql`) is kept as-is, so query analysis remains possible while reducing sensitive data leakage.
+
+```php
+use WScore\DecaORM\OrmManager;
+use WScore\DecaORM\Sql\KeyBasedSqlParamMasker;
+
+$manager = OrmManager::initialize($container)
+    ->setLogger($logger)
+    ->setSqlParamMasker(new KeyBasedSqlParamMasker([
+        'password', 'token', 'secret', 'authorization', 'api_key', 'email',
+    ]));
+```
+
+- Mask targets are determined by parameter key name (case-insensitive).
+- Applied recursively to nested arrays.
+- If `setSqlParamMasker()` is not set, behavior remains unchanged (no masking).
+
 ---
 
 ## Summary

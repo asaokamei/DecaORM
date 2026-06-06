@@ -4,6 +4,7 @@ namespace WScore\DecaORM\Tests;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use WScore\DecaORM\Sql\KeyBasedSqlParamMasker;
 use WScore\DecaORM\SqlLogger;
 use WScore\DecaORM\Tests\Fixtures\ArrayLogger;
 
@@ -42,5 +43,30 @@ class SqlLoggerTest extends TestCase
         $this->assertCount(1, $logger->records);
         $this->assertSame('error', $logger->records[0]['level']);
         $this->assertSame($exception, $logger->records[0]['context']['exception']);
+    }
+
+    public function testMasksSensitiveParamsForSuccessLog(): void
+    {
+        $logger = new ArrayLogger();
+        $masker = new KeyBasedSqlParamMasker(['password', 'token']);
+        $sqlLogger = new SqlLogger($logger, 100, $masker);
+
+        $sqlLogger->logSuccess('SELECT 1', ['password' => 'secret', 'token' => 'abc', 'id' => 1], 10);
+
+        $this->assertSame('***', $logger->records[0]['context']['params']['password']);
+        $this->assertSame('***', $logger->records[0]['context']['params']['token']);
+        $this->assertSame(1, $logger->records[0]['context']['params']['id']);
+    }
+
+    public function testMasksSensitiveParamsForFailureLogWithNestedArray(): void
+    {
+        $logger = new ArrayLogger();
+        $masker = new KeyBasedSqlParamMasker(['password']);
+        $sqlLogger = new SqlLogger($logger, 100, $masker);
+        $exception = new RuntimeException('boom');
+
+        $sqlLogger->logFailure('SELECT broken', ['meta' => ['Password' => 'secret']], 12, $exception);
+
+        $this->assertSame('***', $logger->records[0]['context']['params']['meta']['Password']);
     }
 }

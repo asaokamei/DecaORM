@@ -6,6 +6,7 @@ use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\OrmManager;
+use WScore\DecaORM\Sql\KeyBasedSqlParamMasker;
 use WScore\DecaORM\Tests\Fixtures\ArrayLogger;
 use WScore\DecaORM\Tests\Fixtures\Relations\RelationsFixture;
 use WScore\DecaORM\Tests\Fixtures\Relations\User;
@@ -219,6 +220,30 @@ class DecaOrmTest extends TestCase
 
         $this->assertSame(1, $stmt->rowCount());
         $this->assertSame('1', $pdo->lastInsertId());
+    }
+
+    public function testExecuteMasksSqlParamsWhenMaskerConfigured(): void
+    {
+        $pdo = DbConnection::get();
+        $pdo->exec(SchemaLoader::loadTable('users'));
+
+        $container = new TestContainer();
+        $container->set(PDO::class, $pdo);
+        $logger = new ArrayLogger();
+        $manager = OrmManager::initialize($container)
+            ->setLogger($logger)
+            ->setSqlParamMasker(new KeyBasedSqlParamMasker(['email']))
+            ->setSlowQueryThresholdMs(0);
+        $repo = new UserRepository($manager);
+
+        $repo->execute(
+            'INSERT INTO users (user_name, email) VALUES (:name, :email)',
+            ['name' => 'Logger Test', 'email' => 'logger@example.com']
+        );
+
+        $this->assertCount(1, $logger->records);
+        $this->assertSame('Logger Test', $logger->records[0]['context']['params']['name']);
+        $this->assertSame('***', $logger->records[0]['context']['params']['email']);
     }
 
     // --- Relation tests (associate, associateBelongsTo, associateHasOne, associateHasMany, associateManyToMany, addHasMany, removeHasMany) ---
