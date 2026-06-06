@@ -29,6 +29,11 @@ class Insert
         return $this->repository->execute($sql, $data);
     }
 
+    /**
+     * Replace the INSERT column map (does not append).
+     *
+     * Same contract as {@see UpdateBuilder::data()}: bulk-assign writable columns for this statement.
+     */
     public function data(array $data): static
     {
         $this->data = $data;

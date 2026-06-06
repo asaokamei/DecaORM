@@ -218,6 +218,7 @@ $users = $repository->sqlQuery()
 | メソッド | クリア対象 | 利用できるビルダー |
 |---------|-----------|-------------------|
 | `clearWhere()` | WHERE 条件 | `Query`, `Update`, `Delete` |
+| `clearSet()` | SET 句 | `Update` のみ |
 | `clearJoin()` | JOIN 句 | `Query` のみ |
 | `clearGroupBy()` | GROUP BY 列 | `Query` のみ |
 | `clearHaving()` | HAVING 条件 | `Query` のみ |
@@ -226,7 +227,7 @@ $users = $repository->sqlQuery()
 
 **補足:**
 
-- **`clearWhere()` / `clearHaving()`** は SQL 断片だけを消します。以前の `where()` / `having()` で追加したバインド値はパラメータ袋に残ります。パラメータも捨てる場合は **`clearParameters()`** を併用するか、ビルダーを作り直してください。
+- **`clearWhere()` / `clearHaving()` / `clearSet()`** は SQL 断片だけを消します。以前の呼び出しで追加したバインド値は **`clearParameters()`** まで残ることがあります。
 - **置き換え型**の句には `clear*` はありません。例: **`select()` は列リストを置き換え**（`clearSelect()` はない）、`from()` / `fromRaw()` は FROM を置き換え、`limit(null)` / `offset(null)` で LIMIT/OFFSET を外せ、`forUpdate(false)` で `FOR UPDATE` をオフにできます。
 - 典型的な用途: リポジトリフック等で既定の句が付いたあと、アプリ側で一部だけ差し替える。件数取得の `executeCountQuery()` は内部クローンで `select()` により列を置き換えてから `selectRaw('COUNT(*) …')` する、といったパターンです。
 
@@ -274,7 +275,7 @@ $insert->execute();
 
 ### メソッド一覧
 
-- `data(array $data)` - 挿入するデータを指定
+- `data(array $data)` - INSERT 列マップを**置き換え**（Update の `data()` と同じ契約）
 - `getSql()` - 生成されたSQLを取得
 - `getParameters()` - バインディングパラメータを取得
 - `execute()` - SQLを実行
@@ -288,7 +289,7 @@ $repository->sqlInsert([
     'email' => 'alice@example.com'
 ])->execute();
 
-// データを後から追加（空配列で取得し data() で設定）
+// 後から列マップを指定（置き換え。Insert インスタンスの使い回しにも使える）
 $insert = $repository->sqlInsert([]);
 $insert->data([
     'name' => 'Bob',
@@ -296,6 +297,8 @@ $insert->data([
 ]);
 $insert->execute();
 ```
+
+**Insert** と **Update** の `data()` は共通ルールです。**この文で書き込む列マップを丸ごと指定（置き換え）**します。Update で SET を追記したいときは `data()` のあと `set()` / `setRaw()` を使います。
 
 ---
 
@@ -316,9 +319,10 @@ $update->set('name', 'Jane Doe')
 
 ### メソッド一覧
 
-- `set(string $column, mixed $value)` - SET句を追加
-- `setRaw(string $sqlSnippet, array $bindings = [])` - 生のSET句を追加（SQL関数など）
-- `data(array $data)` - 複数のSET句を一括指定（主キーは自動除外）
+- `set(string $column, mixed $value)` - SET 句を**追記**
+- `setRaw(string $sqlSnippet, array $bindings = [])` - 生の SET 句を**追記**（SQL 関数など）
+- `data(array $data)` - SET 列マップを**置き換え**（`Update` では主キーは自動除外）
+- `clearSet()` - SET 句をすべてクリア
 - `setId(int|string $id)` - 主キーでWHERE条件を設定
 - `where(string $column, mixed $value, string $operator = '=')` - WHERE条件を追加
 - `whereIn(string $column, array $values)` - WHERE IN条件を追加
@@ -328,6 +332,14 @@ $update->set('name', 'Jane Doe')
 - `getSql()` - 生成されたSQLを取得
 - `getParameters()` - バインディングパラメータを取得
 - `execute()` - SQLを実行（WHERE条件が必須）
+
+### SET 句（`set` / `data` / `clearSet`）
+
+| メソッド | 挙動 |
+|---------|------|
+| **`set()` / `setRaw()`** | SET 断片を**追記** |
+| **`data()`** | SET 列マップを**置き換え**（Insert の `data()` と同契約。`Update::data()` は主キーを除外） |
+| **`clearSet()`** | SET 句をすべてクリア |
 
 ### 使用例
 

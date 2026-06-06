@@ -94,6 +94,40 @@ class UpdateTest extends TestCase
         $this->assertNotContains(999, array_values($captured['data']));
     }
 
+    public function testDataReplacesPreviousSetClauses(): void
+    {
+        $captured = [];
+        $repo = $this->repoStub($captured);
+
+        $update = new Update($repo);
+        $update
+            ->set('name', 'Alice')
+            ->data(['email' => 'alice@example.com'])
+            ->setId(1)
+            ->execute();
+
+        $this->assertStringNotContainsString('SET `name` =', $captured['sql']);
+        $this->assertStringContainsString('SET `email` =', $captured['sql']);
+        $this->assertContains('alice@example.com', array_values($captured['data']));
+    }
+
+    public function testClearSetResetsPreviousSetClauses(): void
+    {
+        $captured = [];
+        $repo = $this->repoStub($captured);
+
+        $update = new Update($repo);
+        $update
+            ->set('name', 'Alice')
+            ->clearSet()
+            ->set('email', 'alice@example.com')
+            ->setId(1)
+            ->execute();
+
+        $this->assertStringNotContainsString('SET `name` =', $captured['sql']);
+        $this->assertStringContainsString('SET `email` =', $captured['sql']);
+    }
+
     public function testSetRawAllowsSqlFunctionsAndBindings(): void
     {
         $captured = [];

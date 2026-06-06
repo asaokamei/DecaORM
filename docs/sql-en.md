@@ -222,6 +222,7 @@ Several builder methods **append** fragments on each call (`where`, `joinRaw`, `
 | Method | Clears | Available on |
 |--------|--------|--------------|
 | `clearWhere()` | WHERE conditions | `Query`, `Update`, `Delete` |
+| `clearSet()` | SET clauses | `Update` only |
 | `clearJoin()` | JOIN clauses | `Query` only |
 | `clearGroupBy()` | GROUP BY columns | `Query` only |
 | `clearHaving()` | HAVING conditions | `Query` only |
@@ -230,7 +231,7 @@ Several builder methods **append** fragments on each call (`where`, `joinRaw`, `
 
 **Notes:**
 
-- **`clearWhere()` / `clearHaving()`** remove SQL fragments only. Bind values added by earlier `where()` / `having()` calls remain in the parameter bag until you call **`clearParameters()`** (or replace the builder).
+- **`clearWhere()` / `clearHaving()` / `clearSet()`** remove SQL fragments only. Bind values from earlier calls may remain until **`clearParameters()`** (or a new builder).
 - Clauses that **replace** rather than append do not need a `clear*` helper: e.g. **`select()` replaces the column list** (there is no `clearSelect()`), `from()` / `fromRaw()` replace FROM, `limit(null)` / `offset(null)` remove LIMIT/OFFSET, `forUpdate(false)` turns off `FOR UPDATE`.
 - Typical use: repository hooks or shared query setup add defaults; application code clears one clause and re-applies it, or clones a query and adjusts one part (see `executeCountQuery()`, which calls `select()` to replace columns, then `selectRaw('COUNT(*) …')`).
 
@@ -280,7 +281,7 @@ $insert->execute();
 
 | Method | Description |
 |--------|-------------|
-| `data(array $data)` | Set insert data |
+| `data(array $data)` | **Replace** the INSERT column map (same contract as Update `data()`) |
 | `getSql()` | Get generated SQL |
 | `getParameters()` | Get bind parameters |
 | `execute()` | Execute the SQL |
@@ -294,7 +295,7 @@ $repository->sqlInsert([
     'email' => 'alice@example.com',
 ])->execute();
 
-// Set data later
+// Set data later (replaces the column map; safe for reusing one Insert instance)
 $insert = $repository->sqlInsert([]);
 $insert->data([
     'name' => 'Bob',
@@ -302,6 +303,8 @@ $insert->data([
 ]);
 $insert->execute();
 ```
+
+`data()` on **Insert** and **Update** shares one rule: **bulk-assign the writable columns for this statement** (replace, not append). On Update, use `set()` / `setRaw()` to append SET fragments after `data()`.
 
 ---
 
@@ -324,9 +327,10 @@ $update->set('name', 'Jane Doe')
 
 | Method | Description |
 |--------|-------------|
-| `set(string $column, mixed $value)` | Add SET |
-| `setRaw(string $sqlSnippet, array $bindings = [])` | Raw SET (e.g. SQL functions) |
-| `data(array $data)` | Set multiple columns (primary key is excluded) |
+| `set(string $column, mixed $value)` | Append SET |
+| `setRaw(string $sqlSnippet, array $bindings = [])` | Append raw SET (e.g. SQL functions) |
+| `data(array $data)` | **Replace** the SET column map (primary key excluded on `Update`) |
+| `clearSet()` | Clear all SET clauses |
 | `setId(int\|string $id)` | WHERE by primary key |
 | `where(string $column, mixed $value, string $operator = '=')` | Add WHERE |
 | `whereIn(string $column, array $values)` | WHERE IN |
@@ -336,6 +340,14 @@ $update->set('name', 'Jane Doe')
 | `getSql()` | Get generated SQL |
 | `getParameters()` | Get bind parameters |
 | `execute()` | Execute (WHERE required) |
+
+### SET clause (`set` / `data` / `clearSet`)
+
+| Method | Behavior |
+|--------|----------|
+| **`set()` / `setRaw()`** | Append SET fragments |
+| **`data()`** | **Replace** the SET column map (same contract as Insert `data()`; `Update::data()` omits the primary key) |
+| **`clearSet()`** | Clear all SET fragments |
 
 ### Examples
 
