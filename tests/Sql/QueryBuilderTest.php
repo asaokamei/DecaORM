@@ -358,6 +358,80 @@ END_SQL;
         $this->assertStringNotContainsString('created_at DESC', $sql);
     }
 
+    public function testClearWhereResetsPreviousWhereClauses(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->where('status', 'active')
+            ->where('id', 1)
+            ->clearWhere()
+            ->where('id', 2)
+            ->getSql();
+
+        $this->assertStringContainsString('WHERE id = :', $sql);
+        $this->assertStringNotContainsString('status', $sql);
+        $this->assertContains(2, $builder->getParameters());
+    }
+
+    public function testClearJoinResetsPreviousJoinClauses(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users u')
+            ->joinRaw('INNER JOIN orders o ON o.user_id = u.id')
+            ->clearJoin()
+            ->joinRaw('LEFT JOIN profiles p ON p.user_id = u.id')
+            ->getSql();
+
+        $this->assertStringContainsString('LEFT JOIN profiles p', $sql);
+        $this->assertStringNotContainsString('INNER JOIN orders', $sql);
+    }
+
+    public function testClearGroupByResetsPreviousGroupClauses(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->groupBy('country', 'city')
+            ->clearGroupBy()
+            ->groupBy('status')
+            ->getSql();
+
+        $this->assertStringContainsString('GROUP BY status', $sql);
+        $this->assertStringNotContainsString('country', $sql);
+        $this->assertStringNotContainsString('city', $sql);
+    }
+
+    public function testClearHavingResetsPreviousHavingClauses(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->groupBy('status')
+            ->having('cnt', 5, '>')
+            ->clearHaving()
+            ->havingRaw('COUNT(*) >= :min_count', ['min_count' => 10])
+            ->getSql();
+
+        $this->assertStringContainsString('HAVING COUNT(*) >= :min_count', $sql);
+        $this->assertStringNotContainsString('cnt >', $sql);
+        $this->assertSame(10, $builder->getParameters()['min_count']);
+    }
+
+    public function testClearParametersResetsParameterBag(): void
+    {
+        $builder = new QueryBuilder();
+        $builder
+            ->from('users')
+            ->where('id', 1)
+            ->getSql();
+        $builder->clearParameters()
+            ->where('id', 2);
+
+        $this->assertSame(['id_1' => 2], $builder->getParameters());
+    }
+
     public function testOrderByRawAddsExpression(): void
     {
         $builder = new QueryBuilder();

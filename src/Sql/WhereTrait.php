@@ -87,6 +87,13 @@ trait WhereTrait
         return $this;
     }
 
+    public function clearWhere(): static
+    {
+        $this->wheres = [];
+        $this->resetExpandedCache();
+        return $this;
+    }
+
     /**
      * WHERE句を構築して返す（マーカーは展開されていない状態）
      * 
@@ -215,13 +222,28 @@ trait WhereTrait
     public function setParameters(array $array): static
     {
         $this->parameters = array_merge($this->parameters, $array);
+        $this->resetExpandedCache();
         return $this;
     }
 
     public function setParameter(string $key, mixed $value): static
     {
         $this->parameters[$key] = $value;
+        $this->resetExpandedCache();
         return $this;
+    }
+
+    public function clearParameters(): static
+    {
+        $this->parameters = [];
+        $this->resetExpandedCache();
+        return $this;
+    }
+
+    protected function resetExpandedCache(): void
+    {
+        $this->expanded_markers = null;
+        $this->expanded_params = null;
     }
 
     public function hasWhere(): bool

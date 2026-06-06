@@ -73,6 +73,13 @@ class QueryBuilder
         return $this;
     }
 
+    public function clearJoin(): static
+    {
+        $this->joins = [];
+        $this->resetExpandedCache();
+        return $this;
+    }
+
     /**
      * Append a raw SELECT expression (comma-separated after existing columns).
      * Bindings merge into the query bag (same as whereRaw); :_EXPAND_ markers work in the expression.
@@ -174,6 +181,12 @@ class QueryBuilder
         return $this;
     }
 
+    public function clearGroupBy(): static
+    {
+        $this->groupBys = [];
+        return $this;
+    }
+
     /**
      * HAVING condition with bound value (placeholder generated like WHERE).
      */
@@ -193,6 +206,14 @@ class QueryBuilder
     {
         $this->havings[] = $sql_snippet . "\n";
         $this->parameters = array_merge($this->parameters, $bindings);
+        $this->resetExpandedCache();
+        return $this;
+    }
+
+    public function clearHaving(): static
+    {
+        $this->havings = [];
+        $this->resetExpandedCache();
         return $this;
     }
 
