@@ -8,8 +8,6 @@ class QueryBuilder
 
     private string $queryType = 'SELECT';
     private array $selects = ['*'];
-    /** @var array<int, bool> */
-    private array $selectRaws = [false];
     private bool $distinct = false;
     private string $fromTable = '';
     private bool $fromRaw = false;
@@ -26,8 +24,10 @@ class QueryBuilder
 
     public function select(string ...$columns): static
     {
-        $this->selects = $columns;
-        $this->selectRaws = array_fill(0, count($columns), false);
+        $this->selects = array_map(
+            fn(string $column): string => $this->escapeColumnIdentifier($column),
+            $columns
+        );
         return $this;
     }
 
@@ -37,8 +37,7 @@ class QueryBuilder
     public function addSelect(string ...$columns): static
     {
         foreach ($columns as $column) {
-            $this->selects[] = $column;
-            $this->selectRaws[] = false;
+            $this->selects[] = $this->escapeColumnIdentifier($column);
         }
         return $this;
     }
@@ -82,7 +81,6 @@ class QueryBuilder
     public function selectRaw(string $expression, array $bindings = []): static
     {
         $this->selects[] = $expression;
-        $this->selectRaws[] = true;
         $this->parameters = array_merge($this->parameters, $bindings);
         return $this;
     }
@@ -235,14 +233,7 @@ class QueryBuilder
         }
 
         // SELECT句
-        $escapedSelects = array_map(
-            fn(string $column, int $index): string => ($this->selectRaws[$index] ?? false)
-                ? $column
-                : $this->escapeColumnIdentifier($column),
-            $this->selects,
-            array_keys($this->selects)
-        );
-        $select = empty($escapedSelects) ? '*' : implode(', ', $escapedSelects);
+        $select = empty($this->selects) ? '*' : implode(', ', $this->selects);
         $selectKeyword = $this->distinct ? 'SELECT DISTINCT' : $this->queryType;
 
         // FROM句
