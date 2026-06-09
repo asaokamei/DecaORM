@@ -200,8 +200,37 @@ class QueryBuilder
     public function having(string $column, mixed $value, string $operator = '='): static
     {
         $operator = $this->validateOperator($operator);
+
+        if (is_array($value)) {
+            if ($operator !== '=') {
+                throw new \InvalidArgumentException("Unsupported operator for array value: {$operator}");
+            }
+            if ($value === []) {
+                $this->havings[] = '(1 = 0)';
+                return $this;
+            }
+
+            $marker = $this->createPlaceholder('_EXPAND_having_' . $column);
+            $this->havings[] = "{$this->escapeColumnIdentifier($column)} IN (:{$marker})\n";
+            $this->parameters[$marker] = $value;
+            return $this;
+        }
+
+        $escapedColumn = $this->escapeColumnIdentifier($column);
+        if ($value === null) {
+            if ($operator === '=' || $operator === 'IS') {
+                $this->havings[] = "{$escapedColumn} IS NULL\n";
+                return $this;
+            }
+            if ($operator === '!=' || $operator === '<>' || $operator === 'IS NOT') {
+                $this->havings[] = "{$escapedColumn} IS NOT NULL\n";
+                return $this;
+            }
+            throw new \InvalidArgumentException("Unsupported operator for NULL value: {$operator}");
+        }
+
         $placeholder = $this->createPlaceholder('having_' . $column);
-        $this->havings[] = "{$this->escapeColumnIdentifier($column)} {$operator} :{$placeholder}\n";
+        $this->havings[] = "{$escapedColumn} {$operator} :{$placeholder}\n";
         $this->parameters[$placeholder] = $value;
         return $this;
     }

@@ -374,6 +374,54 @@ END_SQL;
         $this->assertContains(2, $builder->getParameters());
     }
 
+    public function testWhereNullConvertsToIsNullWithoutBinding(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->where('opened_at', null)
+            ->getSql();
+
+        $this->assertStringContainsString('opened_at IS NULL', $sql);
+        $this->assertStringNotContainsString('opened_at = :', $sql);
+        $this->assertSame([], $builder->getParameters());
+    }
+
+    public function testWhereNullWithNotEqualConvertsToIsNotNullWithoutBinding(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->where('opened_at', null, '!=')
+            ->getSql();
+
+        $this->assertStringContainsString('opened_at IS NOT NULL', $sql);
+        $this->assertStringNotContainsString('opened_at != :', $sql);
+        $this->assertSame([], $builder->getParameters());
+    }
+
+    public function testWhereArrayDelegatesToInExpansion(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->where('id', [1, 2, 3])
+            ->getSql();
+
+        $this->assertMatchesRegularExpression('/id IN \(:_EXPAND_id_\d+_0, :_EXPAND_id_\d+_1, :_EXPAND_id_\d+_2\)/', $sql);
+        $this->assertSame([1, 2, 3], array_values($builder->getParameters()));
+    }
+
+    public function testWhereArrayWithUnsupportedOperatorThrows(): void
+    {
+        $builder = new QueryBuilder();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $builder
+            ->from('users')
+            ->where('id', [1, 2], '!=');
+    }
+
     public function testClearJoinResetsPreviousJoinClauses(): void
     {
         $builder = new QueryBuilder();
@@ -417,6 +465,58 @@ END_SQL;
         $this->assertStringContainsString('HAVING COUNT(*) >= :min_count', $sql);
         $this->assertStringNotContainsString('cnt >', $sql);
         $this->assertSame(10, $builder->getParameters()['min_count']);
+    }
+
+    public function testHavingNullConvertsToIsNullWithoutBinding(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->groupBy('status')
+            ->having('closed_at', null)
+            ->getSql();
+
+        $this->assertStringContainsString('closed_at IS NULL', $sql);
+        $this->assertStringNotContainsString('closed_at = :', $sql);
+        $this->assertSame([], $builder->getParameters());
+    }
+
+    public function testHavingNullWithNotEqualConvertsToIsNotNullWithoutBinding(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->groupBy('status')
+            ->having('closed_at', null, '<>')
+            ->getSql();
+
+        $this->assertStringContainsString('closed_at IS NOT NULL', $sql);
+        $this->assertStringNotContainsString('closed_at <> :', $sql);
+        $this->assertSame([], $builder->getParameters());
+    }
+
+    public function testHavingArrayConvertsToInExpansion(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->groupBy('status')
+            ->having('status', ['active', 'pending'])
+            ->getSql();
+
+        $this->assertMatchesRegularExpression('/status IN \(:_EXPAND_having_status_\d+_0, :_EXPAND_having_status_\d+_1\)/', $sql);
+        $this->assertSame(['active', 'pending'], array_values($builder->getParameters()));
+    }
+
+    public function testHavingArrayWithUnsupportedOperatorThrows(): void
+    {
+        $builder = new QueryBuilder();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $builder
+            ->from('users')
+            ->groupBy('status')
+            ->having('status', ['active'], '<>');
     }
 
     public function testClearParametersResetsParameterBag(): void

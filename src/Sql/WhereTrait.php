@@ -58,8 +58,28 @@ trait WhereTrait
     public function where(string $column, $value, string $operator = '='): static
     {
         $operator = $this->validateOperator($operator);
-        $placeholder = $this->createPlaceholder($column);
+
+        if (is_array($value)) {
+            if ($operator !== '=') {
+                throw new InvalidArgumentException("Unsupported operator for array value: {$operator}");
+            }
+            return $this->whereIn($column, $value);
+        }
+
         $escapedColumn = $this->escapeColumnIdentifier($column);
+        if ($value === null) {
+            if ($operator === '=' || $operator === 'IS') {
+                $this->wheres[] = "{$escapedColumn} IS NULL\n";
+                return $this;
+            }
+            if ($operator === '!=' || $operator === '<>' || $operator === 'IS NOT') {
+                $this->wheres[] = "{$escapedColumn} IS NOT NULL\n";
+                return $this;
+            }
+            throw new InvalidArgumentException("Unsupported operator for NULL value: {$operator}");
+        }
+
+        $placeholder = $this->createPlaceholder($column);
         $this->wheres[] = "{$escapedColumn} {$operator} :{$placeholder}" . "\n";
         $this->parameters[$placeholder] = $value;
         return $this;
