@@ -2,7 +2,9 @@
 
 namespace WScore\DecaORM\Sql;
 
+use PDO;
 use PDOStatement;
+use RuntimeException;
 use WScore\DecaORM\Contracts\RepositoryInterface;
 
 class Insert
@@ -14,19 +16,56 @@ class Insert
     private int $placeholderCounter = 0;
     /** @var array<string, string> */
     private array $placeholderMap = [];
+    private ?string $returningColumn = null;
+    private ?PDOStatement $lastStatement = null;
 
     public function __construct(private RepositoryInterface $repository)
     {
-        $driverName = $this->repository->getDb()->getAttribute(\PDO::ATTR_DRIVER_NAME);
+        $driverName = $this->repository->getDb()->getAttribute(PDO::ATTR_DRIVER_NAME);
         $this->setIdentifierQuoteByDriver(is_string($driverName) ? $driverName : null);
         $this->table = $this->repository->getHydrator()->getTableName();
+    }
+
+    /**
+     * Request primary-key (or other) value via RETURNING on PostgreSQL.
+     * On other drivers the clause is omitted and {@see lastInsertId()} falls back to PDO.
+     */
+    public function returning(string $column): static
+    {
+        $this->returningColumn = $column;
+        return $this;
     }
 
     public function execute(): bool|PDOStatement
     {
         $sql = $this->getSql();
         $data = $this->getParameters();
-        return $this->repository->execute($sql, $data);
+        $result = $this->repository->execute($sql, $data);
+        $this->lastStatement = $result instanceof PDOStatement ? $result : null;
+
+        return $result;
+    }
+
+    /**
+     * Resolves the inserted row id after {@see execute()}.
+     * Uses the RETURNING result set on PostgreSQL when {@see returning()} was set.
+     */
+    public function lastInsertId(): string|int|false
+    {
+        if ($this->lastStatement === null) {
+            throw new RuntimeException('Insert::execute() must be called before lastInsertId().');
+        }
+
+        if ($this->returningColumn !== null && $this->isPgsql()) {
+            $row = $this->lastStatement->fetch(PDO::FETCH_ASSOC);
+            if ($row === false || !array_key_exists($this->returningColumn, $row)) {
+                return false;
+            }
+
+            return $row[$this->returningColumn];
+        }
+
+        return $this->repository->getDb()->lastInsertId();
     }
 
     /**
@@ -64,7 +103,17 @@ class Insert
         $columns = implode(', ', $columns);
         $values = implode(', ', $values);
         $table = $this->escapeTableReference($this->table);
-        return "INSERT INTO {$table} ({$columns}) VALUES ({$values});";
+        $sql = "INSERT INTO {$table} ({$columns}) VALUES ({$values})";
+        if ($this->returningColumn !== null && $this->isPgsql()) {
+            $sql .= ' RETURNING ' . $this->escapeColumnIdentifier($this->returningColumn);
+        }
+
+        return $sql . ';';
+    }
+
+    private function isPgsql(): bool
+    {
+        return $this->repository->getDb()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql';
     }
 
     public function getParameters(): array

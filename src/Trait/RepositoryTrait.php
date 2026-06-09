@@ -255,14 +255,18 @@ trait RepositoryTrait
             }
         }
         $this->getHooks()->beforeInsert($entity, $data);
-        $stmt = $this->sqlInsert($data)->execute();
+        $insert = $this->sqlInsert($data);
+        if ($this->hydrator->isPkAutoNumber()) {
+            $insert->returning($this->hydrator->getPrimaryKeyColumn());
+        }
+        $stmt = $insert->execute();
 
         if (!$stmt) {
             throw new RuntimeException('Failed to insert an entity:' . $this->hydrator->getEntityClass());
         }
         if ($this->hydrator->isPkAutoNumber()) {
             $pKey = $this->hydrator->getPrimaryKey();
-            $entity->setRaw($pKey, $this->db->lastInsertId());
+            $entity->setRaw($pKey, $insert->lastInsertId());
         }
         $this->getManager()->getEntityCache()->cache($entity);
 
