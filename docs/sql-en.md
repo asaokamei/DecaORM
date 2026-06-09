@@ -43,6 +43,7 @@ $users = $repository->sqlQuery()
 | `fromRaw(string $fragment, array $bindings = [])` | FROM clause from a raw fragment (e.g. derived table) |
 | `where(string $column, mixed $value, string $operator = '=')` | Add WHERE condition |
 | `whereIn(string $column, array $values)` | WHERE IN |
+| `whereNotIn(string $column, array $values)` | WHERE NOT IN |
 | `whereRaw(string $sql_snippet, array $bindings = [])` | Raw WHERE fragment |
 | `joinRaw(string $raw_join_sql)` | Add JOIN |
 | `withRaw(string $cte_sql)` | WITH (CTE) |
@@ -334,6 +335,7 @@ $update->set('name', 'Jane Doe')
 | `setId(int\|string $id)` | WHERE by primary key |
 | `where(string $column, mixed $value, string $operator = '=')` | Add WHERE |
 | `whereIn(string $column, array $values)` | WHERE IN |
+| `whereNotIn(string $column, array $values)` | WHERE NOT IN |
 | `whereRaw(string $sql_snippet, array $bindings = [])` | Raw WHERE |
 | `clearWhere()` | Clear all WHERE conditions |
 | `clearParameters()` | Clear the bind-parameter bag |
@@ -415,6 +417,7 @@ $delete->setId(1)
 | `setId(int\|string $id)` | WHERE by primary key |
 | `where(string $column, mixed $value, string $operator = '=')` | Add WHERE |
 | `whereIn(string $column, array $values)` | WHERE IN |
+| `whereNotIn(string $column, array $values)` | WHERE NOT IN |
 | `whereRaw(string $sql_snippet, array $bindings = [])` | Raw WHERE |
 | `clearWhere()` | Clear all WHERE conditions |
 | `clearParameters()` | Clear the bind-parameter bag |
@@ -454,6 +457,15 @@ When you pass an array to an IN clause, DecaORM expands it into placeholders so 
 $userIds = [1, 2, 3, 4, 5];
 $users = $repository->sqlQuery()
     ->whereIn('id', $userIds)
+    ->getResult();
+```
+
+`whereNotIn()` uses the same array-expansion mechanism.
+
+```php
+$excludedUserIds = [10, 20, 30];
+$users = $repository->sqlQuery()
+    ->whereNotIn('id', $excludedUserIds)
     ->getResult();
 ```
 
@@ -519,6 +531,15 @@ $users = $repository->sqlQuery()
     ->whereIn('id', [])
     ->getResult();
 // Generated: WHERE (1 = 0)
+```
+
+If you pass an empty array to `whereNotIn()`, it adds an always-true condition because there is nothing to exclude:
+
+```php
+$users = $repository->sqlQuery()
+    ->whereNotIn('id', [])
+    ->getResult();
+// Generated: WHERE (1 = 1)
 ```
 
 ### Multiple IN clauses

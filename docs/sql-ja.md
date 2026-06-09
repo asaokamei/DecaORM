@@ -39,6 +39,7 @@ $users = $repository->sqlQuery()
 - `fromRaw(string $fragment, array $bindings = [])` - FROM を生断片で指定（派生テーブルなど）
 - `where(string $column, mixed $value, string $operator = '=')` - WHERE条件を追加
 - `whereIn(string $column, array $values)` - WHERE IN条件を追加
+- `whereNotIn(string $column, array $values)` - WHERE NOT IN条件を追加
 - `whereRaw(string $sql_snippet, array $bindings = [])` - 生のWHERE句を追加
 - `joinRaw(string $raw_join_sql)` - JOIN句を追加
 - `withRaw(string $cte_sql)` - WITH句（CTE）を追加
@@ -326,6 +327,7 @@ $update->set('name', 'Jane Doe')
 - `setId(int|string $id)` - 主キーでWHERE条件を設定
 - `where(string $column, mixed $value, string $operator = '=')` - WHERE条件を追加
 - `whereIn(string $column, array $values)` - WHERE IN条件を追加
+- `whereNotIn(string $column, array $values)` - WHERE NOT IN条件を追加
 - `whereRaw(string $sql_snippet, array $bindings = [])` - 生のWHERE句を追加
 - `clearWhere()` - WHERE 条件をすべてクリア
 - `clearParameters()` - バインドパラメータ袋を空にする
@@ -405,6 +407,7 @@ $delete->setId(1)  // 主キーでWHERE条件を設定
 - `setId(int|string $id)` - 主キーでWHERE条件を設定
 - `where(string $column, mixed $value, string $operator = '=')` - WHERE条件を追加
 - `whereIn(string $column, array $values)` - WHERE IN条件を追加
+- `whereNotIn(string $column, array $values)` - WHERE NOT IN条件を追加
 - `whereRaw(string $sql_snippet, array $bindings = [])` - 生のWHERE句を追加
 - `clearWhere()` - WHERE 条件をすべてクリア
 - `clearParameters()` - バインドパラメータ袋を空にする
@@ -444,6 +447,15 @@ IN句で配列を使用する場合、DecaORMは自動的にプレースホル�
 $userIds = [1, 2, 3, 4, 5];
 $users = $repository->sqlQuery()
     ->whereIn('id', $userIds)
+    ->getResult();
+```
+
+`whereNotIn()`も同様に配列展開されます。
+
+```php
+$excludedUserIds = [10, 20, 30];
+$users = $repository->sqlQuery()
+    ->whereNotIn('id', $excludedUserIds)
     ->getResult();
 ```
 
@@ -513,6 +525,15 @@ $users = $repository->sqlQuery()
     ->whereIn('id', [])  // 空の配列
     ->getResult();
 // 生成されるSQL: WHERE (1 = 0)
+```
+
+`whereNotIn()`に空の配列を渡した場合は、除外対象がないため常に真となる条件が追加されます：
+
+```php
+$users = $repository->sqlQuery()
+    ->whereNotIn('id', [])
+    ->getResult();
+// 生成されるSQL: WHERE (1 = 1)
 ```
 
 ### 複数のIN句を使用する場合
