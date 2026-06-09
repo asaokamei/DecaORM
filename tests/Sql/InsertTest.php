@@ -29,6 +29,7 @@ class InsertTest extends TestCase
         $repo = $this->createMock(RepositoryInterface::class);
         $repo->method('getHydrator')->willReturn($hydrator);
         $repo->method('getDb')->willReturn($pdo);
+        $repo->method('getTableName')->willReturn('users');
         if ($executeCallback !== null) {
             $repo->method('execute')->willReturnCallback($executeCallback);
         }

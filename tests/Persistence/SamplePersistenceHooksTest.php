@@ -2,6 +2,7 @@
 
 namespace WScore\DecaORM\Tests\Persistence;
 
+use PDO;
 use PHPUnit\Framework\TestCase;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Contracts\HydratorInterface;
@@ -21,8 +22,13 @@ class SamplePersistenceHooksTest extends TestCase
         $hydrator = $this->createMock(HydratorInterface::class);
         $hydrator->method('getTableName')->willReturn('items');
 
+        $pdo = $this->createMock(PDO::class);
+        $pdo->method('getAttribute')->with(PDO::ATTR_DRIVER_NAME)->willReturn('mysql');
+
         $repo = $this->createMock(RepositoryInterface::class);
         $repo->method('getHydrator')->willReturn($hydrator);
+        $repo->method('getDb')->willReturn($pdo);
+        $repo->method('getTableName')->willReturn('items');
 
         return $repo;
     }
@@ -33,8 +39,13 @@ class SamplePersistenceHooksTest extends TestCase
         $hydrator->method('getTableName')->willReturn('items');
         $hydrator->method('getPrimaryKeyColumn')->willReturn('id');
 
+        $pdo = $this->createMock(PDO::class);
+        $pdo->method('getAttribute')->with(PDO::ATTR_DRIVER_NAME)->willReturn('mysql');
+
         $repo = $this->createMock(RepositoryInterface::class);
         $repo->method('getHydrator')->willReturn($hydrator);
+        $repo->method('getDb')->willReturn($pdo);
+        $repo->method('getTableName')->willReturn('items');
         $repo->method('execute')->willReturn(true);
 
         return $repo;

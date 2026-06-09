@@ -28,6 +28,7 @@ class UpdateTest extends TestCase
         $repo = $this->createMock(RepositoryInterface::class);
         $repo->method('getHydrator')->willReturn($hydrator);
         $repo->method('getDb')->willReturn($pdo);
+        $repo->method('getTableName')->willReturn('users');
         $repo->method('execute')->willReturnCallback(function (string $sql, array $data) use (&$captured) {
             $captured['sql'] = $sql;
             $captured['data'] = $data;
@@ -251,6 +252,7 @@ class UpdateTest extends TestCase
         $repo = $this->createMock(RepositoryInterface::class);
         $repo->method('getHydrator')->willReturn($hydrator);
         $repo->method('getDb')->willReturn($pdo);
+        $repo->method('getTableName')->willReturn('users');
 
         $insert = new Insert($repo);
         $sql = $insert

@@ -17,7 +17,7 @@ class Query extends QueryBuilder
 
     public function __construct(private RepositoryInterface $repository)
     {
-        $table = $this->repository->getHydrator()->getTableName();
+        $table = $this->repository->getTableName();
         $driverName = $this->repository->getDb()->getAttribute(\PDO::ATTR_DRIVER_NAME);
         $this->setIdentifierQuoteByDriver(is_string($driverName) ? $driverName : null);
         $this->from($table);

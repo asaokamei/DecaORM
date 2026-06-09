@@ -41,6 +41,11 @@ interface RepositoryInterface
     public function getHydrator(): HydratorInterface;
 
     /**
+     * Returns table name for this repository.
+     */
+    public function getTableName(): string;
+
+    /**
      * Gets the repository for the given entity (or entity class).
      *
      * Typical use: relation loader resolves target repository from entity metadata.

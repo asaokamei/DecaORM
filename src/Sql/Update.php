@@ -15,7 +15,7 @@ class Update extends UpdateBuilder
         $hydrator = $this->repository->getHydrator();
         $driverName = $this->repository->getDb()->getAttribute(\PDO::ATTR_DRIVER_NAME);
         $this->setIdentifierQuoteByDriver(is_string($driverName) ? $driverName : null);
-        $this->table($hydrator->getTableName());
+        $this->table($this->repository->getTableName());
         $this->pkColumn = $hydrator->getPrimaryKeyColumn();
     }
 

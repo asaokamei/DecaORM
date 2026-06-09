@@ -23,7 +23,7 @@ class Insert
     {
         $driverName = $this->repository->getDb()->getAttribute(PDO::ATTR_DRIVER_NAME);
         $this->setIdentifierQuoteByDriver(is_string($driverName) ? $driverName : null);
-        $this->table = $this->repository->getHydrator()->getTableName();
+        $this->table = $this->repository->getTableName();
     }
 
     /**
