@@ -107,6 +107,27 @@ trait WhereTrait
         return $this;
     }
 
+    /**
+     * WHERE NOT IN条件を追加
+     *
+     * @param string $column カラム名
+     * @param array $values 値の配列
+     */
+    public function whereNotIn(string $column, array $values): static
+    {
+        if (empty($values)) {
+            // 空配列は除外条件がないため常に真
+            $this->wheres[] = '(1 = 1)';
+            return $this;
+        }
+
+        $marker = $this->createPlaceholder('_EXPAND_' . $column);
+        $escapedColumn = $this->escapeColumnIdentifier($column);
+        $this->wheres[] = "{$escapedColumn} NOT IN (:{$marker})" . "\n";
+        $this->parameters[$marker] = $values;
+        return $this;
+    }
+
     public function clearWhere(): static
     {
         $this->wheres = [];

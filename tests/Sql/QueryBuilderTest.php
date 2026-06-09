@@ -422,6 +422,30 @@ END_SQL;
             ->where('id', [1, 2], '!=');
     }
 
+    public function testWhereNotInDelegatesToNotInExpansion(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->whereNotIn('id', [1, 2, 3])
+            ->getSql();
+
+        $this->assertMatchesRegularExpression('/id NOT IN \(:_EXPAND_id_\d+_0, :_EXPAND_id_\d+_1, :_EXPAND_id_\d+_2\)/', $sql);
+        $this->assertSame([1, 2, 3], array_values($builder->getParameters()));
+    }
+
+    public function testWhereNotInWithEmptyArrayAddsAlwaysTrueCondition(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->whereNotIn('id', [])
+            ->getSql();
+
+        $this->assertStringContainsString('WHERE (1 = 1)', $sql);
+        $this->assertSame([], $builder->getParameters());
+    }
+
     public function testClearJoinResetsPreviousJoinClauses(): void
     {
         $builder = new QueryBuilder();
