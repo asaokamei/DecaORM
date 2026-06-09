@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Standardized SQL builders (`Query`, `Insert`, `Update`, `Delete`) to resolve table names via `Repository::getTableName()` instead of direct hydrator access.
+
+### Breaking
+- Added `getTableName(): string` to `RepositoryInterface`; custom repository implementations must provide this method.
+
 ## [0.5.2] - 2026-06-09
 
 ### Added
