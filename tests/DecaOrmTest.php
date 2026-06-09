@@ -117,6 +117,49 @@ class DecaOrmTest extends TestCase
         $this->assertSame('StreamRow', $rows[0]['user_name']);
     }
 
+    public function testExecuteCountQueryWithDistinctAndJoinRaw(): void
+    {
+        $this->pdo->exec(SchemaLoader::loadTable('posts'));
+        $this->pdo->exec("INSERT INTO users (user_name, email) VALUES ('A', 'a@example.com')");
+        $this->pdo->exec("INSERT INTO users (user_name, email) VALUES ('B', 'b@example.com')");
+        $this->pdo->exec("INSERT INTO users (user_name, email) VALUES ('C', 'c@example.com')");
+        $this->pdo->exec("INSERT INTO posts (user_id, title, content) VALUES (1, 'P1', '...')");
+        $this->pdo->exec("INSERT INTO posts (user_id, title, content) VALUES (1, 'P2', '...')");
+        $this->pdo->exec("INSERT INTO posts (user_id, title, content) VALUES (2, 'P3', '...')");
+
+        $count = $this->repo->sqlQuery()
+            ->select('users.user_id')
+            ->distinct()
+            ->joinRaw('INNER JOIN posts ON posts.user_id = users.user_id')
+            ->limit(1)
+            ->offset(1)
+            ->forUpdate(true)
+            ->executeCountQuery();
+
+        $this->assertSame(2, $count);
+    }
+
+    public function testExecuteCountQueryWithGroupByHavingAndJoinRaw(): void
+    {
+        $this->pdo->exec(SchemaLoader::loadTable('posts'));
+        $this->pdo->exec("INSERT INTO users (user_name, email) VALUES ('A', 'a@example.com')");
+        $this->pdo->exec("INSERT INTO users (user_name, email) VALUES ('B', 'b@example.com')");
+        $this->pdo->exec("INSERT INTO users (user_name, email) VALUES ('C', 'c@example.com')");
+        $this->pdo->exec("INSERT INTO posts (user_id, title, content) VALUES (1, 'P1', '...')");
+        $this->pdo->exec("INSERT INTO posts (user_id, title, content) VALUES (1, 'P2', '...')");
+        $this->pdo->exec("INSERT INTO posts (user_id, title, content) VALUES (2, 'P3', '...')");
+
+        $count = $this->repo->sqlQuery()
+            ->select('users.user_id')
+            ->selectRaw('COUNT(posts.post_id) AS post_count')
+            ->joinRaw('INNER JOIN posts ON posts.user_id = users.user_id')
+            ->groupBy('users.user_id')
+            ->havingRaw('COUNT(posts.post_id) >= 2')
+            ->executeCountQuery();
+
+        $this->assertSame(1, $count);
+    }
+
     public function testUpdateUser()
     {
         $user = new User();

@@ -72,12 +72,12 @@ class Query extends QueryBuilder
     public function executeCountQuery(): int
     {
         $query = clone $this;
-        $query->select();
-        $query->selectRaw('COUNT(*) AS aggregate_count');
         $query->limit(null);
         $query->offset(null);
         $query->forUpdate(false);
-        $stmt = $this->repository->execute($query->getSql(), $query->getParameters());
+
+        $countSql = "SELECT COUNT(*) AS aggregate_count FROM (\n{$query->getSql()}\n) AS aggregate_count_query";
+        $stmt = $this->repository->execute($countSql, $query->getParameters());
         if (!$stmt) {
             return 0;
         }
