@@ -60,7 +60,7 @@ $users = $repository->sqlQuery()
 | `clearParameters()` | Clear the bind-parameter bag |
 | `limit(?int $limit)` | LIMIT |
 | `offset(?int $offset)` | OFFSET |
-| `forUpdate(bool $on = true)` | Append `FOR UPDATE` (after LIMIT/OFFSET) |
+| `forUpdate(bool $on = true, bool $noWait = false, bool $skipLocked = false)` | Append `FOR UPDATE` (after LIMIT/OFFSET). Add `NOWAIT` with `$noWait` and `SKIP LOCKED` with `$skipLocked` |
 | `getResult()` | Run query and get `EntityCollection` |
 | `executeCountQuery()` | Run COUNT(*) and return count (int); clears `FOR UPDATE` on the internal clone |
 

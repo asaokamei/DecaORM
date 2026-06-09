@@ -56,7 +56,7 @@ $users = $repository->sqlQuery()
 - `clearParameters()` - バインドパラメータ袋を空にする
 - `limit(?int $limit)` - LIMIT句を指定
 - `offset(?int $offset)` - OFFSET句を指定
-- `forUpdate(bool $on = true)` - 末尾に `FOR UPDATE`（LIMIT/OFFSET の後）
+- `forUpdate(bool $on = true, bool $noWait = false, bool $skipLocked = false)` - 末尾に `FOR UPDATE`（LIMIT/OFFSET の後）。`$noWait` で `NOWAIT`、`$skipLocked` で `SKIP LOCKED`
 - `getResult()` - クエリを実行してEntityCollectionを取得
 - `executeCountQuery()` - COUNT(*) を実行し件数（int）を返す（内部クローンで `FOR UPDATE` は外す）
 

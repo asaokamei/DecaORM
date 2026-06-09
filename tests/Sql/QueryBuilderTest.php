@@ -297,6 +297,54 @@ END_SQL;
         $this->assertStringNotContainsString('FOR UPDATE', $sql);
     }
 
+    public function testForUpdateWithNoWaitAppendsOption(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->forUpdate(noWait: true)
+            ->getSql();
+
+        $this->assertStringEndsWith("FOR UPDATE NOWAIT\n", $sql);
+    }
+
+    public function testForUpdateWithSkipLockedAppendsOption(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->forUpdate(skipLocked: true)
+            ->getSql();
+
+        $this->assertStringEndsWith("FOR UPDATE SKIP LOCKED\n", $sql);
+    }
+
+    public function testForUpdateWithNoWaitAndSkipLockedAppendsBothOptions(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->forUpdate(noWait: true, skipLocked: true)
+            ->getSql();
+
+        $this->assertStringEndsWith("FOR UPDATE NOWAIT SKIP LOCKED\n", $sql);
+    }
+
+    public function testForUpdateFalseClearsNoWaitAndSkipLockedFlags(): void
+    {
+        $builder = new QueryBuilder();
+        $sql = $builder
+            ->from('users')
+            ->forUpdate(noWait: true, skipLocked: true)
+            ->forUpdate(false)
+            ->forUpdate()
+            ->getSql();
+
+        $this->assertStringEndsWith("FOR UPDATE\n", $sql);
+        $this->assertStringNotContainsString('NOWAIT', $sql);
+        $this->assertStringNotContainsString('SKIP LOCKED', $sql);
+    }
+
     public function testForUpdateIsOmittedForSqliteDriver(): void
     {
         $builder = new QueryBuilder();
@@ -304,7 +352,7 @@ END_SQL;
             ->setIdentifierQuoteByDriver('sqlite')
             ->from('users')
             ->where('id', 1)
-            ->forUpdate()
+            ->forUpdate(noWait: true, skipLocked: true)
             ->getSql();
 
         $this->assertStringNotContainsString('FOR UPDATE', $sql);

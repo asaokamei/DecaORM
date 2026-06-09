@@ -21,6 +21,8 @@ class QueryBuilder
     private ?int $offset = null;
     private ?int $limit = null;
     private bool $forUpdate = false;
+    private bool $forUpdateNoWait = false;
+    private bool $forUpdateSkipLocked = false;
 
     /**
      * Replace the SELECT column list (does not append).
@@ -256,9 +258,17 @@ class QueryBuilder
     /**
      * Append FOR UPDATE (row lock). Supported by PostgreSQL, MySQL, etc. Not supported by SQLite.
      */
-    public function forUpdate(bool $on = true): static
+    public function forUpdate(bool $on = true, bool $noWait = false, bool $skipLocked = false): static
     {
         $this->forUpdate = $on;
+        if (!$on) {
+            $this->forUpdateNoWait = false;
+            $this->forUpdateSkipLocked = false;
+            return $this;
+        }
+
+        $this->forUpdateNoWait = $noWait;
+        $this->forUpdateSkipLocked = $skipLocked;
         return $this;
     }
 
@@ -330,7 +340,14 @@ class QueryBuilder
         }
 
         if ($this->forUpdate && !$this->isSqliteDriver()) {
-            $sql .= "FOR UPDATE\n";
+            $sql .= 'FOR UPDATE';
+            if ($this->forUpdateNoWait) {
+                $sql .= ' NOWAIT';
+            }
+            if ($this->forUpdateSkipLocked) {
+                $sql .= ' SKIP LOCKED';
+            }
+            $sql .= "\n";
         }
 
         // 最終的な SQL 文字列に対してIN句の展開マーカーを置換
