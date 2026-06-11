@@ -11,6 +11,7 @@ use WScore\DecaORM\Sql\Query;
 
 class LoadManyToMany
 {
+    use RelationTrait;
     /**
      * Load ManyToMany relation for single entity or multiple entities.
      * 
@@ -71,10 +72,12 @@ class LoadManyToMany
             return [];
         }
 
-        $targetEntities = $targetRepository->find(
+        $targetEntities = self::fetchTargetEntities(
             $relatedIds,
-            $targetRepository->getHydrator()->getPrimaryKeyColumn(),
-            $relation->orderBy
+            $relation,
+            $entity,
+            $sourceRepository,
+            $targetRepository
         );
 
         // Note: We do NOT set bidirectional links for ManyToMany relations.
@@ -136,10 +139,12 @@ class LoadManyToMany
         }
 
         $uniqueRelatedIds = array_unique($allRelatedIds);
-        $targetEntities = $targetRepository->find(
+        $targetEntities = self::fetchTargetEntities(
             $uniqueRelatedIds,
-            $targetRepository->getHydrator()->getPrimaryKeyColumn(),
-            $relation->orderBy
+            $relation,
+            $sourceColl,
+            $sourceRepository,
+            $targetRepository
         );
 
         $targetEntityMap = $targetEntities->getIdMap();
@@ -293,6 +298,30 @@ class LoadManyToMany
         }
 
         return $query;
+    }
+
+    /**
+     * @param array<int|string> $relatedIds
+     */
+    private static function fetchTargetEntities(
+        array $relatedIds,
+        ManyToMany $relation,
+        EntityInterface|EntityCollection $sourceEntities,
+        RepositoryInterface $sourceRepository,
+        RepositoryInterface $targetRepository
+    ): EntityCollection {
+        $pkCol = $targetRepository->getHydrator()->getPrimaryKeyColumn();
+        $query = $targetRepository->sqlQuery()->whereIn($pkCol, $relatedIds);
+        if ($relation->orderBy !== null) {
+            $query->orderBy($relation->orderBy);
+        }
+
+        $apply = self::getApply($relation, $sourceRepository);
+        if ($apply !== null) {
+            $apply($query, $sourceEntities, $relation, $targetRepository, $sourceRepository);
+        }
+
+        return $query->getResult();
     }
 }
 

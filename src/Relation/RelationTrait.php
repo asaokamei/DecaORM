@@ -5,6 +5,7 @@ namespace WScore\DecaORM\Relation;
 use RuntimeException;
 use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\HasOne;
+use WScore\DecaORM\Attribute\ManyToMany;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Contracts\RepositoryInterface;
 use WScore\DecaORM\EntityCollection;
@@ -17,11 +18,11 @@ use WScore\DecaORM\OrmManager;
 trait RelationTrait
 {
     /**
-     * @param HasMany|HasOne $parentRelation
+     * @param HasMany|HasOne|ManyToMany $parentRelation
      * @param RepositoryInterface|null $sourceRepository
      * @return array|null
      */
-    public static function getApply(HasMany|HasOne $parentRelation, ?RepositoryInterface $sourceRepository): ?array
+    public static function getApply(HasMany|HasOne|ManyToMany $parentRelation, ?RepositoryInterface $sourceRepository): ?array
     {
         $apply = null;
         if ($parentRelation->apply !== null) {

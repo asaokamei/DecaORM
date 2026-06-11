@@ -36,13 +36,15 @@ class ManyToMany
      * @param string $foreignKey The foreign key *column name* in the join table for this entity (e.g., 'student_id')
      * @param string $inverseForeignKey The foreign key *column name* in the join table for the target entity (e.g., 'course_id')
      * @param string|null $orderBy Optional ORDER BY clause (e.g., 'created_at DESC')
+     * @param string|null $apply Optional repository method name to customize target query.
      */
     public function __construct(
         public string $targetEntity,
         public string $joinTable,
         public string $foreignKey,
         public string $inverseForeignKey,
-        public ?string $orderBy = null
+        public ?string $orderBy = null,
+        public ?string $apply = null
     ) {
     }
 

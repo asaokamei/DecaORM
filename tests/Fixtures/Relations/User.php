@@ -52,7 +52,8 @@ class User implements EntityInterface
         targetEntity: Role::class,
         joinTable: 'user_role',
         foreignKey: 'user_id',
-        inverseForeignKey: 'role_id'
+        inverseForeignKey: 'role_id',
+        apply: 'applyRoleFilter'
     )]
     private ?EntityCollection $roles = null;
 

@@ -105,6 +105,31 @@ class ManyToManyTest extends TestCase
         $this->assertCount(2, $user2->getRaw('roles'));
     }
 
+    public function testManyToManyApplyFiltersTargetQuery(): void
+    {
+        $user = $this->userRepo->create(['name' => 'John Doe', 'email' => 'john@example.com']);
+        $this->userRepo->save($user);
+
+        $admin = $this->roleRepo->create(['name' => 'admin']);
+        $this->roleRepo->save($admin);
+        $editor = $this->roleRepo->create(['name' => 'editor']);
+        $this->roleRepo->save($editor);
+
+        $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user->getId()}, {$admin->getId()})");
+        $this->pdo->exec("INSERT INTO user_role (user_id, role_id) VALUES ({$user->getId()}, {$editor->getId()})");
+
+        $this->manager->getEntityCache()->clear();
+        $this->userRepo->setRoleNamePrefixFilter('adm');
+
+        $reloadedUser = $this->userRepo->findById($user->getId());
+        $roles = $this->userRepo->load($reloadedUser, 'roles');
+
+        $this->assertCount(1, $roles);
+        $this->assertSame([$admin->getId()], $roles->getIds());
+
+        $this->userRepo->setRoleNamePrefixFilter(null);
+    }
+
     public function testSyncAddRoles(): void
     {
         $user = $this->userRepo->create(['name' => 'John', 'email' => 'john@example.com']);
