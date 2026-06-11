@@ -108,6 +108,25 @@ public function onlyActive(Query $query, EntityInterface|EntityCollection $child
 }
 ```
 
+### ManyToMany
+
+Many-to-many relations are managed through a join table.
+
+- `joinTable`: join table name (e.g. `user_role`)
+- `foreignKey`: FK column name on the **join table** that points to “this entity” (e.g. `user_id`)
+- `inverseForeignKey`: FK column name on the **join table** that points to the related entity (e.g. `role_id`)
+
+With `ManyToMany`, you do not create a dedicated entity/repository for the join table. Specify DB table/column names directly in the attribute.
+Create the join table in the DB beforehand.
+
+```sql
+CREATE TABLE user_role (
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+    PRIMARY KEY (user_id, role_id)
+);
+```
+
 ### Lazy loading
 
 Relations are not loaded automatically. Call `load($relationName)` in a getter so the relation is loaded on first access and cached afterward.

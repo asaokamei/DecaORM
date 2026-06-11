@@ -106,6 +106,25 @@ public function onlyActive(Query $query, EntityInterface|EntityCollection $child
 }
 ```
 
+### ManyToMany（多対多）
+
+多対多では、中間テーブルを使って関連を管理します。
+
+- `joinTable`: 中間テーブル名（例: `user_role`）
+- `foreignKey`: **中間テーブル側**で「このエンティティ」を指す外部キーカラム名（例: `user_id`）
+- `inverseForeignKey`: **中間テーブル側**で「関連先エンティティ」を指す外部キーカラム名（例: `role_id`）
+
+`ManyToMany` では JoinTable 用のエンティティ/リポジトリは作成せず、上記の DB テーブル名・カラム名を直接指定します。
+中間テーブルは事前に DB に作成してください。
+
+```sql
+CREATE TABLE user_role (
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+    PRIMARY KEY (user_id, role_id)
+);
+```
+
 ### Lazy Loading（遅延読み込み）
 
 リレーションは自動では読み込まれません。ゲッター内で `load($relationName)` を呼ぶと、そのプロパティへ初回アクセスしたときだけ DB から取得し、以降はキャッシュされた値が返ります。

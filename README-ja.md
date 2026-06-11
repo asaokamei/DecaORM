@@ -300,9 +300,7 @@ $comments->save();
 
 ### ManyToManyリレーションの利用
 
-多対多のリレーションでは、中間テーブルを使用して関連付けを管理します。
-
-ManyToManyアトリビュートにおいては、DBでのテーブル名とコラム名を指定してください。JoinTable用のレポジトリやエンティティを作成しないためです。
+多対多は `#[ManyToMany(...)]` で定義できます。引数（`joinTable` / `foreignKey` / `inverseForeignKey`）の意味や中間テーブル作成方法は、`docs/entity-ja.md` の「ManyToMany（多対多）」を参照してください。
 
 ```php
 class User implements EntityInterface

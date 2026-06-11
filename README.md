@@ -287,7 +287,7 @@ $comments->save();
 
 ### Many-to-many
 
-Many-to-many uses a join table. Specify the **table and column names** in the `#[ManyToMany]` attribute (no separate entity/repository for the join table).
+You can define many-to-many with `#[ManyToMany(...)]`. For argument details (`joinTable` / `foreignKey` / `inverseForeignKey`) and how to create the join table, see `docs/entity-en.md` → "ManyToMany".
 
 ```php
 class User implements EntityInterface
