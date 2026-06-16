@@ -69,4 +69,15 @@ class SqlLoggerTest extends TestCase
 
         $this->assertSame('***', $logger->records[0]['context']['params']['meta']['Password']);
     }
+
+    public function testMasksSensitiveParamsWithRealWorldPlaceholders(): void
+    {
+        $logger = new ArrayLogger();
+        $masker = new KeyBasedSqlParamMasker(['password']);
+        $sqlLogger = new SqlLogger($logger, 100, $masker);
+
+        $sqlLogger->logSuccess('UPDATE users SET password = :set_password_0', ['set_password_0' => 'secret'], 10);
+
+        $this->assertSame('***', $logger->records[0]['context']['params']['set_password_0']);
+    }
 }

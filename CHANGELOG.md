@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added pagination support with `Query::paginate()` and `PaginatedResult`.
 
 ### Fixed
+- Improved `KeyBasedSqlParamMasker` to mask sensitive values even when using ORM-generated placeholders like `password_0` or `set_password_1`.
 - Fixed a bug where `NULL` values from the database were ignored during hydration.
 - Prevented unsaved changes (dirty entities) from being overwritten during re-fetching via identity map.
 
