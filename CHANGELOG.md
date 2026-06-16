@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Added pagination support with `Query::paginate()` and `PaginatedResult`.
+
+### Fixed
+- Fixed a bug where `NULL` values from the database were ignored during hydration.
+- Prevented unsaved changes (dirty entities) from being overwritten during re-fetching via identity map.
+
+### Documentation
+- Added documentation for pagination in both English and Japanese SQL guides.
+
 ## [0.5.3] - 2026-06-09
 
 ### Changed
