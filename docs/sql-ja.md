@@ -59,6 +59,7 @@ $users = $repository->sqlQuery()
 - `offset(?int $offset)` - OFFSET句を指定
 - `forUpdate(bool $on = true, bool $noWait = false, bool $skipLocked = false)` - 末尾に `FOR UPDATE`（LIMIT/OFFSET の後）。`$noWait` で `NOWAIT`、`$skipLocked` で `SKIP LOCKED`
 - `getResult()` - クエリを実行してEntityCollectionを取得
+- `paginate(int $page, int $perPage = 15)` - ページネーションを実行して `PaginatedResult` を取得
 - `executeCountQuery()` - COUNT(*) を実行し件数（int）を返す（内部クローンで `FOR UPDATE` は外す）
 
 ### SELECT 列リスト（`select` / `addSelect` / `selectRaw`）
@@ -110,7 +111,31 @@ $users = $repository->sqlQuery()
     ->whereIn('id', $userIds)
     ->getResult();
 
-// 複雑なWHERE条件（OR条件など）
+// ページネーション
+$result = $repository->sqlQuery()
+    ->where('status', 'active')
+    ->paginate($page = 1, $perPage = 15);
+
+$items = $result->getItems();      // 現在のページのエンティティ（EntityCollection）
+$total = $result->getTotalCount(); // 全件数
+$lastPage = $result->getLastPage(); // 最終ページ番号
+```
+
+### PaginatedResult
+
+`paginate()` メソッドが返すオブジェクトです。以下のメソッドを提供します。
+
+- `getItems(): EntityCollection` - 取得したエンティティのコレクションを返します。
+- `getTotalCount(): int` - 条件に一致する全件数を返します。
+- `getPerPage(): int` - 1ページあたりの件数を返します。
+- `getCurrentPage(): int` - 現在のページ番号を返します。
+- `getLastPage(): int` - 最終ページ番号を返します。
+- `hasPages(): bool` - 全件数が1ページあたりの件数より多い場合に `true` を返します。
+- `hasMorePages(): bool` - 次のページがある場合に `true` を返します。
+- `getFrom(): int` - 現在のページに表示されている最初のアイテムの番号（1始まり）を返します。
+- `getTo(): int` - 現在のページに表示されている最後のアイテムの番号（1始まり）を返します。
+
+### 複雑なWHERE条件（OR条件など）
 $users = $repository->sqlQuery()
     ->where('status', 'active')
     ->whereRaw('(age > :min_age OR score > :max_score)', [

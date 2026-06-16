@@ -43,6 +43,25 @@ class Query extends QueryBuilder
     }
 
     /**
+     * Paginates the query result.
+     *
+     * @param int $page The current page number (starting from 1).
+     * @param int $perPage The number of items per page.
+     * @return PaginatedResult
+     */
+    public function paginate(int $page, int $perPage = 15): PaginatedResult
+    {
+        $totalCount = $this->executeCountQuery();
+        
+        $this->limit($perPage);
+        $this->offset(($page - 1) * $perPage);
+        
+        $items = $this->getResult();
+        
+        return new PaginatedResult($items, $totalCount, $perPage, $page);
+    }
+
+    /**
      * Yields one entity per row like {@see RepositoryInterface::fetchStream()}.
      *
      * @return \Generator<int, EntityInterface>

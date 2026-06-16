@@ -63,6 +63,7 @@ $users = $repository->sqlQuery()
 | `offset(?int $offset)` | OFFSET |
 | `forUpdate(bool $on = true, bool $noWait = false, bool $skipLocked = false)` | Append `FOR UPDATE` (after LIMIT/OFFSET). Add `NOWAIT` with `$noWait` and `SKIP LOCKED` with `$skipLocked` |
 | `getResult()` | Run query and get `EntityCollection` |
+| `paginate(int $page, int $perPage = 15)` | Paginates the query result and returns `PaginatedResult` |
 | `executeCountQuery()` | Run COUNT(*) and return count (int); clears `FOR UPDATE` on the internal clone |
 
 ### SELECT column list (`select` / `addSelect` / `selectRaw`)
@@ -114,7 +115,30 @@ $users = $repository->sqlQuery()
     ->whereIn('id', $userIds)
     ->getResult();
 
-// Complex WHERE (e.g. OR)
+// Pagination
+$result = $repository->sqlQuery()
+    ->where('status', 'active')
+    ->paginate($page = 1, $perPage = 15);
+
+$items = $result->getItems();      // EntityCollection for current page
+$total = $result->getTotalCount(); // Total records count
+$lastPage = $result->getLastPage(); // Last page number
+
+### PaginatedResult
+
+The object returned by the `paginate()` method. It provides the following methods:
+
+- `getItems(): EntityCollection` - Returns the collection of entities obtained.
+- `getTotalCount(): int` - Returns the total number of items matching the criteria.
+- `getPerPage(): int` - Returns the number of items per page.
+- `getCurrentPage(): int` - Returns the current page number.
+- `getLastPage(): int` - Returns the last page number.
+- `hasPages(): bool` - Returns `true` if there are enough items to split into multiple pages.
+- `hasMorePages(): bool` - Returns `true` if there are more pages.
+- `getFrom(): int` - Returns the result number of the first item in the results (1-based).
+- `getTo(): int` - Returns the result number of the last item in the results (1-based).
+
+### Complex WHERE (e.g. OR)
 $users = $repository->sqlQuery()
     ->where('status', 'active')
     ->whereRaw('(age > :min_age OR score > :max_score)', [
