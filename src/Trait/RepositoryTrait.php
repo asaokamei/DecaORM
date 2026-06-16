@@ -158,13 +158,18 @@ trait RepositoryTrait
         $class = $hydrator->getEntityClass();
         $pKey = $row[$pkCol];
         $cache = $this->getManager()->getEntityCache();
+        $dirtyTracker = $this->getManager()->getDirtyTracker();
         if ($cache->has($class, $pKey)) {
             $entity = $cache->get($class, $pKey);
+            if ($dirtyTracker->has($entity)) {
+                return $entity;
+            }
         } else {
             $entity = new $class();
             $cache->set($class, $pKey, $entity);
         }
         $hydrator->applyRowData($entity, $row);
+        $dirtyTracker->take($entity, $row);
         $this->attachOrmContext($entity);
         return $entity;
     }

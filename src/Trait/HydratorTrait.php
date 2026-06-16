@@ -41,8 +41,9 @@ trait HydratorTrait
     {
         foreach ($this->listProperties() as $propertyName) {
             $columnName = $this->getColumnNameForProperty($propertyName);
-            if (isset($data[$columnName])) {
-                $entity->setRaw($propertyName, (string) $data[$columnName]);
+            if (array_key_exists($columnName, $data)) {
+                $value = $data[$columnName];
+                $entity->setRaw($propertyName, $value !== null ? (string) $value : null);
             }
         }
     }

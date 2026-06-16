@@ -29,10 +29,10 @@ class User implements EntityInterface
     private ?string $id = null;
 
     #[Column(name: 'user_name')]
-    private string $name = '';
+    private ?string $name = '';
 
     #[Column(name: 'email')]
-    private string $email = '';
+    private ?string $email = '';
 
     #[CreatedAt(name: 'created_at')]
     private ?string $registered_at = null;
@@ -71,22 +71,22 @@ class User implements EntityInterface
         return $this->updated_at !== null ? new DateTimeImmutable($this->updated_at) : null;
     }
 
-    public function getName(): string
+    public function getName(): ?string
     {
         return $this->name;
     }
 
-    public function setName(string $name): void
+    public function setName(?string $name): void
     {
         $this->name = $name;
     }
 
-    public function getEmail(): string
+    public function getEmail(): ?string
     {
         return $this->email;
     }
 
-    public function setEmail(string $email): void
+    public function setEmail(?string $email): void
     {
         $this->email = $email;
     }
