@@ -13,12 +13,12 @@ class TestContainer implements ContainerInterface
         $this->services[$id] = $service;
     }
 
-    public function get(string $id): mixed
+    public function get($id)
     {
         return $this->services[$id] ?? null;
     }
 
-    public function has(string $id): bool
+    public function has($id): bool
     {
         return isset($this->services[$id]);
     }

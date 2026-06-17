@@ -8,16 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-<<<<<<< HEAD
 - Added pagination support with `Query::paginate()` and `PaginatedResult`.
+- Added `apply` option to `ManyToMany` attribute, enabling source-repository apply methods to customize target query loading in the same style as `HasMany`/`HasOne`.
 
 ### Fixed
 - Improved `KeyBasedSqlParamMasker` to mask sensitive values even when using ORM-generated placeholders like `password_0` or `set_password_1`.
 - Fixed a bug where `NULL` values from the database were ignored during hydration.
 - Prevented unsaved changes (dirty entities) from being overwritten during re-fetching via identity map.
-=======
-- Added `apply` option to `ManyToMany` attribute, enabling source-repository apply methods to customize target query loading in the same style as `HasMany`/`HasOne`.
->>>>>>> ed1ab88 (feat: Add `apply` option to `ManyToMany` for custom target query filtering via repository methods)
+
+### Changed
+- Expanded `psr/container` requirement to `^1.0 || ^2.0` and adjusted test fixture container signatures for PSR-11 1.x/2.x compatibility.
 
 ### Documentation
 - Added documentation for pagination in both English and Japanese SQL guides.
