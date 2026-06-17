@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-06-17
+
 ### Added
 - Added pagination support with `Query::paginate()` and `PaginatedResult`.
 - Added `apply` option to `ManyToMany` attribute, enabling source-repository apply methods to customize target query loading in the same style as `HasMany`/`HasOne`.
