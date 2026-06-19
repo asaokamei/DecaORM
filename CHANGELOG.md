@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-06-19
+
+### Fixed
+- Fixed `HasMany`/`HasOne` `mappedBy` resolution for inverse `BelongsTo`/`BelongsToOne` with `ownerKey`, so reverse loading now matches by `ownerKey` instead of always using parent primary key.
+
+### Tests
+- Added regression tests for `ownerKey != PK` reverse-loading cases: `HasMany(mappedBy: BelongsTo)` and `HasOne(mappedBy: BelongsToOne)` batch loading behavior, including duplicate `ownerKey` first-parent resolution.
+
 ## [0.5.4] - 2026-06-17
 
 ### Added
