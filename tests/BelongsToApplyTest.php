@@ -8,7 +8,9 @@ use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\Attribute\Column;
 use WScore\DecaORM\Attribute\Entity;
 use WScore\DecaORM\Attribute\GeneratedValue;
+use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\HasMany;
+use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
@@ -42,6 +44,9 @@ class BtParent implements EntityInterface
     #[HasMany(targetEntity: BtChild::class, mappedBy: 'parent')]
     public ?EntityCollection $children = null;
 
+    #[HasOne(targetEntity: BtChild::class, mappedBy: 'singleParent')]
+    public ?BtChild $singleChild = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -65,6 +70,9 @@ class BtChild implements EntityInterface
 
     #[BelongsTo(targetEntity: BtParent::class, foreignKey: 'data_id', ownerKey: 'data_id', apply: 'onlyActive')]
     public ?BtParent $parent = null;
+
+    #[BelongsToOne(targetEntity: BtParent::class, foreignKey: 'data_id', ownerKey: 'data_id', inversedBy: 'singleChild')]
+    public ?BtParent $singleParent = null;
 
     public function getId(): ?int
     {
@@ -198,6 +206,58 @@ final class BelongsToApplyTest extends TestCase
             $this->assertSame('D100', $child->getRaw('data_id'));
             $this->assertSame($parent, $child->getRaw('parent'));
         }
+    }
+
+    public function testHasOneMappedByBelongsToOneOwnerKeyBatch(): void
+    {
+        $p1 = $this->parentRepo->createEntity(['data_id' => 'D201', 'status' => 'ACTIVE']);
+        $this->parentRepo->save($p1);
+        $p2 = $this->parentRepo->createEntity(['data_id' => 'D202', 'status' => 'ACTIVE']);
+        $this->parentRepo->save($p2);
+
+        $c1 = $this->childRepo->createEntity(['data_id' => 'D201']);
+        $this->childRepo->save($c1);
+        $c2 = $this->childRepo->createEntity(['data_id' => 'D202']);
+        $this->childRepo->save($c2);
+
+        $this->manager->getEntityCache()->clear();
+        $parents = [
+            $this->parentRepo->findById($p1->getId()),
+            $this->parentRepo->findById($p2->getId()),
+        ];
+
+        $loaded = $this->parentRepo->load($parents, 'singleChild');
+
+        $this->assertCount(2, $loaded);
+        $this->assertSame('D201', $parents[0]->getRaw('singleChild')?->getRaw('data_id'));
+        $this->assertSame('D202', $parents[1]->getRaw('singleChild')?->getRaw('data_id'));
+        $this->assertSame($parents[0], $parents[0]->getRaw('singleChild')?->getRaw('singleParent'));
+        $this->assertSame($parents[1], $parents[1]->getRaw('singleChild')?->getRaw('singleParent'));
+    }
+
+    public function testHasOneMappedByBelongsToOneOwnerKeyDuplicateUsesFirstParent(): void
+    {
+        $first = $this->parentRepo->createEntity(['data_id' => 'D300', 'status' => 'ACTIVE']);
+        $this->parentRepo->save($first);
+        $second = $this->parentRepo->createEntity(['data_id' => 'D300', 'status' => 'ACTIVE']);
+        $this->parentRepo->save($second);
+
+        $child = $this->childRepo->createEntity(['data_id' => 'D300']);
+        $this->childRepo->save($child);
+
+        $this->manager->getEntityCache()->clear();
+        $parents = [
+            $this->parentRepo->findById($first->getId()),
+            $this->parentRepo->findById($second->getId()),
+        ];
+
+        $loaded = $this->parentRepo->load($parents, 'singleChild');
+
+        $this->assertCount(1, $loaded);
+        $this->assertInstanceOf(BtChild::class, $parents[0]->getRaw('singleChild'));
+        $this->assertSame('D300', $parents[0]->getRaw('singleChild')->getRaw('data_id'));
+        $this->assertSame($parents[0], $parents[0]->getRaw('singleChild')->getRaw('singleParent'));
+        $this->assertNull($parents[1]->getRaw('singleChild'));
     }
 }
 
