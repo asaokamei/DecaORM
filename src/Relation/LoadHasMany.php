@@ -3,6 +3,8 @@
 namespace WScore\DecaORM\Relation;
 
 use WScore\DecaORM\Attribute\HasMany;
+use WScore\DecaORM\Attribute\BelongsTo;
+use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Contracts\RepositoryInterface;
@@ -110,7 +112,7 @@ class LoadHasMany
         );
 
         // Use applyLoaderResult to map children to parents
-        return self::applyLoaderResult($parentEntities, $children, $parentRelation, $targetRepository);
+        return self::applyLoaderResult($parentEntities, $children, $parentRelation, $targetRepository, $parentRepo);
     }
 
     /**
@@ -127,23 +129,26 @@ class LoadHasMany
         EntityCollection $parentEntities,
         EntityCollection|array $loadedChildren,
         HasMany $relation,
-        RepositoryInterface $targetRepository
+        RepositoryInterface $targetRepository,
+        RepositoryInterface $parentRepository
     ): array {
         $parentProperty = $relation->propertyName;
         $childProperty = $relation->mappedBy;
         $childRelation = $targetRepository->getRelation($relation->mappedBy);
         $loadedChildren = $loadedChildren instanceof EntityCollection ? $loadedChildren : new EntityCollection($loadedChildren, $targetRepository);
-        
-        $parentMap = $parentEntities->getIdMap();
-        $parentIds = array_keys($parentMap);
 
-        if (empty($parentIds)) {
+        if (!($childRelation instanceof BelongsTo || $childRelation instanceof BelongsToOne)) {
+            return [];
+        }
+
+        $parentMap = MappedByQuery::buildParentMapByInverse($parentEntities, $childRelation, $parentRepository);
+        if (empty($parentMap)) {
             foreach ($parentEntities as $parentEntity) {
                 $parentEntity->setRaw($parentProperty, new EntityCollection([], $targetRepository));
             }
             return [];
         }
-        
+
         $childrenByParentId = $loadedChildren->groupByNonNullProperty($childRelation->foreignKey);
 
         $allChildren = [];

@@ -8,6 +8,7 @@ use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\Attribute\Column;
 use WScore\DecaORM\Attribute\Entity;
 use WScore\DecaORM\Attribute\GeneratedValue;
+use WScore\DecaORM\Attribute\HasMany;
 use WScore\DecaORM\Attribute\Id;
 use WScore\DecaORM\Attribute\Repository;
 use WScore\DecaORM\Attribute\Table;
@@ -37,6 +38,9 @@ class BtParent implements EntityInterface
 
     #[Column(name: 'status')]
     public string $status = '';
+
+    #[HasMany(targetEntity: BtChild::class, mappedBy: 'parent')]
+    public ?EntityCollection $children = null;
 
     public function getId(): ?int
     {
@@ -169,6 +173,31 @@ final class BelongsToApplyTest extends TestCase
         $this->assertEquals('ACTIVE', $p1->getRaw('status'));
         $this->assertEquals('D2', $p2->getRaw('data_id'));
         $this->assertEquals('ACTIVE', $p2->getRaw('status'));
+    }
+
+    public function testHasManyMappedByBelongsToOwnerKeyBatch(): void
+    {
+        $parent = $this->parentRepo->createEntity(['data_id' => 'D100', 'status' => 'ACTIVE']);
+        $this->parentRepo->save($parent);
+
+        $c1 = $this->childRepo->createEntity(['data_id' => 'D100']);
+        $this->childRepo->save($c1);
+        $c2 = $this->childRepo->createEntity(['data_id' => 'D100']);
+        $this->childRepo->save($c2);
+
+        $this->manager->getEntityCache()->clear();
+        $parent = $this->parentRepo->findById($parent->getId());
+
+        $loaded = $this->parentRepo->load($parent, 'children');
+
+        $this->assertCount(2, $loaded);
+        $children = $parent->getRaw('children');
+        $this->assertInstanceOf(EntityCollection::class, $children);
+        $this->assertCount(2, $children);
+        foreach ($children as $child) {
+            $this->assertSame('D100', $child->getRaw('data_id'));
+            $this->assertSame($parent, $child->getRaw('parent'));
+        }
     }
 }
 

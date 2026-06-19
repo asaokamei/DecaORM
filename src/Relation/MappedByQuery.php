@@ -19,6 +19,69 @@ use WScore\DecaORM\EntityCollection;
  */
 final class MappedByQuery
 {
+    /**
+     * Resolve parent-side property name used for matching child foreign key.
+     */
+    public static function resolveParentMatchProperty(BelongsTo|BelongsToOne $inverse, RepositoryInterface $parentRepository): string
+    {
+        if ($inverse->ownerKey === null || $inverse->ownerKey === '') {
+            return $parentRepository->getHydrator()->getPrimaryKey();
+        }
+        return $inverse->ownerKey;
+    }
+
+    /**
+     * @return array<int|string>
+     */
+    public static function getParentMatchValues(
+        EntityInterface|EntityCollection $parents,
+        BelongsTo|BelongsToOne $inverse,
+        RepositoryInterface $parentRepository
+    ): array {
+        $parentKeyProp = self::resolveParentMatchProperty($inverse, $parentRepository);
+
+        if ($parents instanceof EntityInterface) {
+            $parentValue = $parents->getRaw($parentKeyProp);
+            if ($parentValue === null) {
+                return [];
+            }
+            return [$parentValue];
+        }
+
+        $values = [];
+        foreach ($parents as $parent) {
+            $value = $parent->getRaw($parentKeyProp);
+            if ($value === null) {
+                continue;
+            }
+            $values[] = $value;
+        }
+        return array_values(array_unique($values, SORT_REGULAR));
+    }
+
+    /**
+     * @param EntityCollection<EntityInterface> $parents
+     * @return array<int|string, EntityInterface>
+     */
+    public static function buildParentMapByInverse(
+        EntityCollection $parents,
+        BelongsTo|BelongsToOne $inverse,
+        RepositoryInterface $parentRepository
+    ): array {
+        $parentKeyProp = self::resolveParentMatchProperty($inverse, $parentRepository);
+        $parentMap = [];
+        foreach ($parents as $parent) {
+            $key = $parent->getRaw($parentKeyProp);
+            if ($key === null) {
+                continue;
+            }
+            if (!array_key_exists((string) $key, $parentMap)) {
+                $parentMap[(string) $key] = $parent;
+            }
+        }
+        return $parentMap;
+    }
+
     public static function fetch(
         RepositoryInterface $childRepository,
         string $mappedByPropertyName,
@@ -35,17 +98,9 @@ final class MappedByQuery
         if ($inverse instanceof BelongsTo || $inverse instanceof BelongsToOne) {
             $fkCol = $childRepository->getHydrator()->getColumnNameForProperty($inverse->foreignKey)
                 ?? $inverse->foreignKey;
-            if ($parents instanceof EntityInterface) {
-                $parentId = $parents->getId();
-                if ($parentId === null) {
-                    return new EntityCollection([], $childRepository);
-                }
-                $ids = [$parentId];
-            } else {
-                $ids = $parents->getIds();
-                if ($ids === []) {
-                    return new EntityCollection([], $childRepository);
-                }
+            $ids = self::getParentMatchValues($parents, $inverse, $parentRepository);
+            if ($ids === []) {
+                return new EntityCollection([], $childRepository);
             }
 
             $query = $childRepository->sqlQuery()

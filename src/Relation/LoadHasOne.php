@@ -3,6 +3,8 @@
 namespace WScore\DecaORM\Relation;
 
 use RuntimeException;
+use WScore\DecaORM\Attribute\BelongsTo;
+use WScore\DecaORM\Attribute\BelongsToOne;
 use WScore\DecaORM\Attribute\HasOne;
 use WScore\DecaORM\EntityCollection;
 use WScore\DecaORM\Contracts\EntityInterface;
@@ -112,7 +114,7 @@ class LoadHasOne
         );
 
         // Use applyLoaderResult to map children to parents
-        return self::applyLoaderResult($parentEntities, $children, $parentRelation, $targetRepository);
+        return self::applyLoaderResult($parentEntities, $children, $parentRelation, $targetRepository, $parentRepo);
     }
 
     /**
@@ -129,16 +131,20 @@ class LoadHasOne
         EntityCollection $parentEntities,
         EntityCollection|array $loadedChildren,
         HasOne $relation,
-        RepositoryInterface $targetRepository
+        RepositoryInterface $targetRepository,
+        RepositoryInterface $parentRepository
     ): array {
         $parentProperty = $relation->propertyName;
         $childProperty = $relation->mappedBy;
         $childRelation = $targetRepository->getRelation($relation->mappedBy);
-        
-        $parentMap = $parentEntities->getIdMap();
-        $parentIds = array_keys($parentMap);
 
-        if (empty($parentIds)) {
+        if (!($childRelation instanceof BelongsTo || $childRelation instanceof BelongsToOne)) {
+            return [];
+        }
+
+        $parentMap = MappedByQuery::buildParentMapByInverse($parentEntities, $childRelation, $parentRepository);
+
+        if (empty($parentMap)) {
             foreach ($parentEntities as $parentEntity) {
                 $parentEntity->setRaw($parentProperty, null);
             }
@@ -168,13 +174,6 @@ class LoadHasOne
             
             if ($child !== null) {
                 $allChildren[] = $child;
-            }
-        }
-        
-        // Set null for entities that had no children
-        foreach ($parentEntities as $parentEntity) {
-            if ($parentEntity->getRaw($parentProperty) === null && !isset($parentMap[$parentEntity->getId()])) {
-                $parentEntity->setRaw($parentProperty, null);
             }
         }
         
