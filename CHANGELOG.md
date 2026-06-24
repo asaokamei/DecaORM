@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.6] - 2026-06-24
+
+### Added
+- Added `QueryPdo`, a SELECT query builder that executes via PDO only (no `RepositoryInterface`). Supports `fetchAll()`, `fetchStream()`, `getPdoStatement()`, `executeCountQuery()`, and `paginate()` with associative rows.
+- Optional `SqlExecutor` injection on `QueryPdo` for SQL logging.
+
+### Changed
+- Extended `PaginatedResult::getItems()` to return `EntityCollection|array`, so `Query::paginate()` and `QueryPdo::paginate()` share the same result type.
+- Extracted `QueryBuilder::toCountSubquery()` for shared COUNT wrapper logic used by `Query` and `QueryPdo`.
+- `PaginatedResult::getLastPage()` now returns `0` when `perPage` is `0`.
+
+### Tests
+- Added `QueryPdoTest` covering fetch, stream, pagination, count queries, and optional `SqlExecutor` usage.
+
 ## [0.5.5] - 2026-06-19
 
 ### Fixed
