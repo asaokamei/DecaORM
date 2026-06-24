@@ -4,17 +4,26 @@ namespace WScore\DecaORM\Sql;
 
 use WScore\DecaORM\EntityCollection;
 
+/**
+ * @template T of EntityCollection|array<int, array<string, mixed>>
+ */
 class PaginatedResult
 {
+    /**
+     * @param T $items
+     */
     public function __construct(
-        private readonly EntityCollection $items,
+        private readonly EntityCollection|array $items,
         private readonly int $totalCount,
         private readonly int $perPage,
         private readonly int $currentPage
     ) {
     }
 
-    public function getItems(): EntityCollection
+    /**
+     * @return T
+     */
+    public function getItems(): EntityCollection|array
     {
         return $this->items;
     }
@@ -36,6 +45,10 @@ class PaginatedResult
 
     public function getLastPage(): int
     {
+        if ($this->perPage === 0) {
+            return 0;
+        }
+
         return (int) ceil($this->totalCount / $this->perPage);
     }
 
@@ -54,6 +67,7 @@ class PaginatedResult
         if ($this->totalCount === 0) {
             return 0;
         }
+
         return ($this->currentPage - 1) * $this->perPage + 1;
     }
 
@@ -62,6 +76,7 @@ class PaginatedResult
         if ($this->totalCount === 0) {
             return 0;
         }
+
         return min($this->currentPage * $this->perPage, $this->totalCount);
     }
 }

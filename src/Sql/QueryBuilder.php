@@ -357,4 +357,21 @@ class QueryBuilder
         return $sql;
     }
 
+    /**
+     * Builds a COUNT(*) wrapper around a clone of this query (no limit/offset/for update).
+     *
+     * @return array{0: string, 1: array<string, mixed>}
+     */
+    public function toCountSubquery(): array
+    {
+        $query = clone $this;
+        $query->limit(null);
+        $query->offset(null);
+        $query->forUpdate(false);
+
+        $countSql = "SELECT COUNT(*) AS aggregate_count FROM (\n{$query->getSql()}\n) AS aggregate_count_query";
+
+        return [$countSql, $query->getParameters()];
+    }
+
 }
