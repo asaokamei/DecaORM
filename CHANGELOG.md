@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.7] - 2026-07-07
+
+### Added
+- `QueryBuilder::select` および `orderBy` において、`column AS alias` 形式（`AS` なしの空白区切りも含む）のエイリアス指定をサポートしました。識別子のクォート処理も適切に行われます。
+
 ## [0.5.6] - 2026-06-24
 
 ### Added

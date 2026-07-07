@@ -129,7 +129,7 @@ class QueryBuilder
 
     public function orderBy(string $column, string $direction = 'ASC'): static
     {
-        if (preg_match('/\s/', $column) === 1) {
+        if (preg_match('/\s/', $column) === 1 && stripos($column, ' AS ') === false) {
             throw new \InvalidArgumentException("ORDER BY column must not contain whitespace. Use orderByRaw() for raw expressions: {$column}");
         }
 

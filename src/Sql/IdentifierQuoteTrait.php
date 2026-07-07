@@ -53,6 +53,20 @@ trait IdentifierQuoteTrait
 
     protected function escapeColumnIdentifier(string $identifier): string
     {
+        if (preg_match('/^(.*)\s+AS\s+([A-Za-z_][A-Za-z0-9_]*)$/i', $identifier, $matches) === 1) {
+            $column = trim($matches[1]);
+            $alias = $matches[2];
+            return $this->escapeColumnIdentifier($column) . ' AS ' . $this->quoteIdentifierPart($alias);
+        }
+        if (preg_match('/^(.*)\s+([A-Za-z_][A-Za-z0-9_]*)$/i', $identifier, $matches) === 1) {
+            $column = trim($matches[1]);
+            $alias = $matches[2];
+            // Check if column is not empty to avoid matching a single word with leading space
+            if ($column !== '') {
+                return $this->escapeColumnIdentifier($column) . ' AS ' . $this->quoteIdentifierPart($alias);
+            }
+        }
+
         if ($identifier === '*' || str_ends_with($identifier, '.*')) {
             if ($identifier === '*') {
                 return $identifier;

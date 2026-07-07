@@ -392,6 +392,19 @@ END_SQL;
         $this->assertStringContainsString('ORDER BY created_at DESC, id ASC', $sql);
     }
 
+    public function testOrderByWithAlias(): void
+    {
+        $qb = new QueryBuilder();
+        $qb->setIdentifierQuoteByDriver('mysql');
+        $qb->from('users');
+
+        $qb->orderBy('user_id', 'desc');
+        $this->assertStringContainsString('ORDER BY `user_id` DESC', $qb->getSql());
+
+        $qb->orderBy('my_table.my_column AS col_alias', 'asc');
+        $this->assertStringContainsString('`my_table`.`my_column` AS `col_alias` ASC', $qb->getSql());
+    }
+
     public function testClearOrderByResetsPreviousOrderClauses(): void
     {
         $builder = new QueryBuilder();
@@ -650,6 +663,41 @@ END_SQL;
             ->getSql();
 
         $this->assertStringContainsString('SELECT u.id, u.name, u.email', $sql);
+    }
+
+    public function testSelectWithAlias(): void
+    {
+        $qb = new QueryBuilder();
+        $qb->setIdentifierQuoteByDriver('mysql');
+        $qb->from('users');
+
+        $qb->select('users.id as user_id', 'name AS user_name');
+
+        $sql = $qb->getSql();
+        $this->assertStringContainsString('`users`.`id` AS `user_id`', $sql);
+        $this->assertStringContainsString('`name` AS `user_name`', $sql);
+    }
+
+    public function testSelectWithTableDotStar(): void
+    {
+        $qb = new QueryBuilder();
+        $qb->setIdentifierQuoteByDriver('mysql');
+        $qb->from('users');
+
+        $qb->select('users.*');
+        $this->assertStringContainsString('SELECT `users`.*', $qb->getSql());
+        $this->assertStringContainsString('FROM `users`', $qb->getSql());
+    }
+
+    public function testSelectNoAsAlias(): void
+    {
+        $qb = new QueryBuilder();
+        $qb->setIdentifierQuoteByDriver('mysql');
+        $qb->from('users');
+
+        $qb->select('users.id user_id');
+        $sql = $qb->getSql();
+        $this->assertStringContainsString('`users`.`id` AS `user_id`', $sql);
     }
 
     public function testSelectReplacesPreviousAddSelectColumns(): void
