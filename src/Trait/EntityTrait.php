@@ -124,4 +124,21 @@ trait EntityTrait
         }
         return $data;
     }
+
+    /**
+     * Returns true if the entity's mapped columns have changed since hydration or save.
+     *
+     * @return bool
+     */
+    public function isDirty(): bool
+    {
+        $orm = $this->getOrm() ?? OrmManager::getInstance();
+        $repo = $orm->get(self::getRepositoryClass());
+        $hydrator = $repo->getHydrator();
+        if (!$this instanceof EntityInterface) {
+            throw new \RuntimeException('Entity must implement EntityInterface to use isDirty().');
+        }
+
+        return $orm->getDirtyTracker()->isDirty($hydrator, $this);
+    }
 }

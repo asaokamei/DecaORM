@@ -41,6 +41,18 @@ final class DirtyTracker
         unset($this->snapshots[\spl_object_id($entity)]);
     }
 
+    public function isDirty(HydratorInterface $hydrator, EntityInterface $entity): bool
+    {
+        $original = $this->get($entity);
+        if ($original === null) {
+            return true;
+        }
+        $current = $this->snapshotFromEntity($hydrator, $entity);
+        $diff = $this->diffColumns($current, $original);
+
+        return !empty($diff);
+    }
+
     /**
      * @return array<string, mixed> column => value
      */

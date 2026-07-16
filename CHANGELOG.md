@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.8] - 2026-07-16
+
+### Added
+- `EntityTrait` に `isDirty()` メソッドを追加しました。エンティティのプロパティが最後にロードまたは保存されたときから変更されているかどうかを確認できます。
+- `DirtyTracker::isDirty()` を追加し、スナップショットとの比較による変更検知ロジックを実装しました。
+
 ## [0.5.7] - 2026-07-07
 
 ### Added
