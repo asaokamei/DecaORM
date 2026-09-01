@@ -92,11 +92,14 @@ class ScopeTask implements EntityInterface
     #[BelongsTo(targetEntity: ScopeProject::class, foreignKey: 'project_id', targetScope: 'activeProjects')]
     public ?ScopeProject $activeProject = null;
 
-    #[BelongsTo(targetEntity: ScopeProject::class, foreignKey: 'project_id', sourceFilter: 'onlyIfSpecialTask')]
+    #[BelongsTo(targetEntity: ScopeProject::class, foreignKey: 'project_id', sourceFilter: 'onlySpecialProjects')]
     public ?ScopeProject $specialProject = null;
 
-    #[BelongsTo(targetEntity: ScopeProject::class, foreignKey: 'project_id', apply: 'onlyIfSpecialTask')]
+    #[BelongsTo(targetEntity: ScopeProject::class, foreignKey: 'project_id', apply: 'onlySpecialProjects')]
     public ?ScopeProject $legacySpecialProject = null;
+
+    #[BelongsTo(targetEntity: ScopeProject::class, foreignKey: 'project_id', sourceFilter: 'onlySpecialProjects', targetScope: 'activeProjects')]
+    public ?ScopeProject $activeSpecialProject = null;
 
     #[BelongsTo(targetEntity: ScopeProject::class, foreignKey: 'project_id', targetScope: 'nonExistentScope')]
     public ?ScopeProject $invalidScopeProject = null;
@@ -154,7 +157,7 @@ class ScopeUser implements EntityInterface
         joinTable: 'user_role',
         foreignKey: 'user_id',
         inverseForeignKey: 'role_id',
-        sourceFilter: 'filterRolesByUserName'
+        sourceFilter: 'filterSpecialRoles'
     )]
     public ?EntityCollection $filteredRoles = null;
 
@@ -186,6 +189,15 @@ class ScopeProfile implements EntityInterface
 
     #[BelongsToOne(targetEntity: ScopeUser::class, foreignKey: 'id', targetScope: 'activeUsersOnly')]
     public ?ScopeUser $user = null;
+
+    #[BelongsToOne(targetEntity: ScopeUser::class, foreignKey: 'id', sourceFilter: 'onlyAdminUsers')]
+    public ?ScopeUser $adminUser = null;
+
+    #[BelongsToOne(targetEntity: ScopeUser::class, foreignKey: 'id', targetScope: 'nonExistentScope')]
+    public ?ScopeUser $invalidScopeUser = null;
+
+    #[BelongsToOne(targetEntity: ScopeUser::class, foreignKey: 'id', sourceFilter: 'nonExistentFilter')]
+    public ?ScopeUser $invalidFilterUser = null;
 
     public function getId(): ?int
     {
@@ -224,7 +236,7 @@ class ScopeProjectRepository extends AbstractRepository
 
     public function filterUrgentTasks(Query $query, EntityInterface|EntityCollection $projects): void
     {
-        $query->where('title', 'URGENT:%', 'LIKE');
+        $query->where('title', '%URGENT%', 'LIKE');
     }
 
     public function activeProjects(Query $query): void
@@ -246,7 +258,7 @@ class ScopeTaskRepository extends AbstractRepository
         $query->where('title', 'DELETED:%', 'NOT LIKE');
     }
 
-    public function onlyIfSpecialTask(Query $query, EntityInterface|EntityCollection $tasks): void
+    public function onlySpecialProjects(Query $query, EntityInterface|EntityCollection $tasks): void
     {
         $query->where('name', '%Special%', 'LIKE');
     }
@@ -270,7 +282,7 @@ class ScopeUserRepository extends AbstractRepository
         $query->where('user_name', 'banned_%', 'NOT LIKE');
     }
 
-    public function filterRolesByUserName(Query $query, EntityInterface|EntityCollection $users): void
+    public function filterSpecialRoles(Query $query, EntityInterface|EntityCollection $users): void
     {
         $query->where('role_name', 'SPECIAL_%', 'LIKE');
     }
@@ -287,6 +299,11 @@ class ScopeProfileRepository extends AbstractRepository
     public function verifiedOnly(Query $query): void
     {
         $query->where('nickname', 'unverified_%', 'NOT LIKE');
+    }
+
+    public function onlyAdminUsers(Query $query, EntityInterface|EntityCollection $profiles): void
+    {
+        $query->where('user_name', 'admin_%', 'LIKE');
     }
 }
 
@@ -449,9 +466,17 @@ final class RelationScopeAndFilterTest extends TestCase
         $this->manager->getEntityCache()->clear();
         $project = $this->projectRepo->findById($project->getId());
 
-        $loaded = $this->projectRepo->load($project, 'activeUrgentTasks');
-        $this->assertCount(1, $loaded);
-        $this->assertSame('URGENT: Fix server', $loaded[0]->getRaw('title'));
+        $urgent = $this->projectRepo->load($project, 'urgentTasks');
+        $active = $this->projectRepo->load($project, 'activeTasks');
+        $both = $this->projectRepo->load($project, 'activeUrgentTasks');
+
+        // sourceFilter only: Task1 + Task2 (title contains URGENT)
+        $this->assertCount(2, $urgent);
+        // targetScope only: Task1 + Task3 (title does not start with DELETED:)
+        $this->assertCount(2, $active);
+        // both: only Task1
+        $this->assertCount(1, $both);
+        $this->assertSame('URGENT: Fix server', $both[0]->getRaw('title'));
     }
 
     public function testHasManyBatchLoad(): void
@@ -568,6 +593,39 @@ final class RelationScopeAndFilterTest extends TestCase
         $this->assertSame('Special Project', $task->getRaw('legacySpecialProject')->getRaw('name'));
     }
 
+    public function testBelongsToBothTargetScopeAndSourceFilter(): void
+    {
+        $special = $this->projectRepo->createEntity(['name' => 'Special Project']);
+        $inactiveSpecial = $this->projectRepo->createEntity(['name' => 'INACTIVE: Special Archive']);
+        $regular = $this->projectRepo->createEntity(['name' => 'Regular Project']);
+        $this->projectRepo->save($special);
+        $this->projectRepo->save($inactiveSpecial);
+        $this->projectRepo->save($regular);
+
+        $taskSpecial = $this->taskRepo->createEntity(['project_id' => $special->getId(), 'title' => 'T1']);
+        $taskInactiveSpecial = $this->taskRepo->createEntity(['project_id' => $inactiveSpecial->getId(), 'title' => 'T2']);
+        $taskRegular = $this->taskRepo->createEntity(['project_id' => $regular->getId(), 'title' => 'T3']);
+        $this->taskRepo->save($taskSpecial);
+        $this->taskRepo->save($taskInactiveSpecial);
+        $this->taskRepo->save($taskRegular);
+
+        $this->manager->getEntityCache()->clear();
+        $taskSpecial = $this->taskRepo->findById($taskSpecial->getId());
+        $taskInactiveSpecial = $this->taskRepo->findById($taskInactiveSpecial->getId());
+        $taskRegular = $this->taskRepo->findById($taskRegular->getId());
+
+        $loadedSpecial = $this->taskRepo->load($taskSpecial, 'activeSpecialProject');
+        $loadedInactive = $this->taskRepo->load($taskInactiveSpecial, 'activeSpecialProject');
+        $loadedRegular = $this->taskRepo->load($taskRegular, 'activeSpecialProject');
+
+        $this->assertCount(1, $loadedSpecial);
+        $this->assertSame('Special Project', $taskSpecial->getRaw('activeSpecialProject')->getRaw('name'));
+        $this->assertCount(0, $loadedInactive);
+        $this->assertNull($taskInactiveSpecial->getRaw('activeSpecialProject'));
+        $this->assertCount(0, $loadedRegular);
+        $this->assertNull($taskRegular->getRaw('activeSpecialProject'));
+    }
+
     public function testBelongsToBatchLoad(): void
     {
         $activeProject = $this->projectRepo->createEntity(['name' => 'Active Project']);
@@ -675,17 +733,102 @@ final class RelationScopeAndFilterTest extends TestCase
     public function testBelongsToOneTargetScope(): void
     {
         $userBanned = $this->userRepo->createEntity(['name' => 'banned_user', 'email' => 'banned@example.com']);
+        $userActive = $this->userRepo->createEntity(['name' => 'alice', 'email' => 'alice@example.com']);
         $this->userRepo->save($userBanned);
+        $this->userRepo->save($userActive);
 
-        $profile = $this->profileRepo->createEntity(['id' => $userBanned->getId(), 'nickname' => 'banned_profile']);
-        $this->profileRepo->save($profile);
+        $profileBanned = $this->profileRepo->createEntity(['id' => $userBanned->getId(), 'nickname' => 'banned_profile']);
+        $profileActive = $this->profileRepo->createEntity(['id' => $userActive->getId(), 'nickname' => 'alice_profile']);
+        $this->profileRepo->save($profileBanned);
+        $this->profileRepo->save($profileActive);
 
         $this->manager->getEntityCache()->clear();
-        $profile = $this->profileRepo->findById($profile->getId());
+        $profileBanned = $this->profileRepo->findById($profileBanned->getId());
+        $profileActive = $this->profileRepo->findById($profileActive->getId());
 
-        $loaded = $this->profileRepo->load($profile, 'user');
-        $this->assertCount(0, $loaded);
-        $this->assertNull($profile->getRaw('user'));
+        $loadedBanned = $this->profileRepo->load($profileBanned, 'user');
+        $this->assertCount(0, $loadedBanned);
+        $this->assertNull($profileBanned->getRaw('user'));
+
+        $loadedActive = $this->profileRepo->load($profileActive, 'user');
+        $this->assertCount(1, $loadedActive);
+        $this->assertSame('alice', $profileActive->getRaw('user')->getRaw('name'));
+    }
+
+    public function testBelongsToOneSourceFilter(): void
+    {
+        $admin = $this->userRepo->createEntity(['name' => 'admin_bob', 'email' => 'admin@example.com']);
+        $regular = $this->userRepo->createEntity(['name' => 'bob', 'email' => 'bob@example.com']);
+        $this->userRepo->save($admin);
+        $this->userRepo->save($regular);
+
+        $adminProfile = $this->profileRepo->createEntity(['id' => $admin->getId(), 'nickname' => 'admin_profile']);
+        $regularProfile = $this->profileRepo->createEntity(['id' => $regular->getId(), 'nickname' => 'regular_profile']);
+        $this->profileRepo->save($adminProfile);
+        $this->profileRepo->save($regularProfile);
+
+        $this->manager->getEntityCache()->clear();
+        $adminProfile = $this->profileRepo->findById($adminProfile->getId());
+        $regularProfile = $this->profileRepo->findById($regularProfile->getId());
+
+        $loadedAdmin = $this->profileRepo->load($adminProfile, 'adminUser');
+        $this->assertCount(1, $loadedAdmin);
+        $this->assertSame('admin_bob', $adminProfile->getRaw('adminUser')->getRaw('name'));
+
+        $loadedRegular = $this->profileRepo->load($regularProfile, 'adminUser');
+        $this->assertCount(0, $loadedRegular);
+        $this->assertNull($regularProfile->getRaw('adminUser'));
+    }
+
+    public function testBelongsToOneBatchLoad(): void
+    {
+        $userBanned = $this->userRepo->createEntity(['name' => 'banned_user', 'email' => 'banned@example.com']);
+        $userActive = $this->userRepo->createEntity(['name' => 'alice', 'email' => 'alice@example.com']);
+        $this->userRepo->save($userBanned);
+        $this->userRepo->save($userActive);
+
+        $profileBanned = $this->profileRepo->createEntity(['id' => $userBanned->getId(), 'nickname' => 'banned_profile']);
+        $profileActive = $this->profileRepo->createEntity(['id' => $userActive->getId(), 'nickname' => 'alice_profile']);
+        $this->profileRepo->save($profileBanned);
+        $this->profileRepo->save($profileActive);
+
+        $this->manager->getEntityCache()->clear();
+        $profiles = [
+            $this->profileRepo->findById($profileBanned->getId()),
+            $this->profileRepo->findById($profileActive->getId()),
+        ];
+
+        $loaded = $this->profileRepo->load($profiles, 'user');
+        $this->assertCount(1, $loaded);
+        $this->assertNull($profiles[0]->getRaw('user'));
+        $this->assertNotNull($profiles[1]->getRaw('user'));
+        $this->assertSame('alice', $profiles[1]->getRaw('user')->getRaw('name'));
+    }
+
+    public function testBelongsToOneTargetScopeNotFoundThrowsException(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Target scope method "nonExistentScope" not found');
+
+        $user = $this->userRepo->createEntity(['name' => 'alice', 'email' => 'alice@example.com']);
+        $this->userRepo->save($user);
+        $profile = $this->profileRepo->createEntity(['id' => $user->getId(), 'nickname' => 'alice_profile']);
+        $this->profileRepo->save($profile);
+
+        $this->profileRepo->load($profile, 'invalidScopeUser');
+    }
+
+    public function testBelongsToOneSourceFilterNotFoundThrowsException(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Source filter method "nonExistentFilter" not found');
+
+        $user = $this->userRepo->createEntity(['name' => 'alice', 'email' => 'alice@example.com']);
+        $this->userRepo->save($user);
+        $profile = $this->profileRepo->createEntity(['id' => $user->getId(), 'nickname' => 'alice_profile']);
+        $this->profileRepo->save($profile);
+
+        $this->profileRepo->load($profile, 'invalidFilterUser');
     }
 
     public function testManyToManyTargetScope(): void
