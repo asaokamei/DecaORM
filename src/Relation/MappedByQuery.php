@@ -110,10 +110,10 @@ final class MappedByQuery
                 $query->orderByRaw($orderBy);
             }
             if ($targetScope !== null) {
-                $targetScope($query, $parents, $inverse, $childRepository, $parentRepository);
+                $targetScope($query, $parents);
             }
             if ($sourceFilter !== null) {
-                $sourceFilter($query, $parents, $inverse, $childRepository, $parentRepository);
+                $sourceFilter($query, $parents);
             }
             return $query->getResult();
         }
@@ -146,10 +146,10 @@ final class MappedByQuery
                 $query->orderByRaw($orderBy);
             }
             if ($targetScope !== null) {
-                $targetScope($query, $parents, $inverse, $childRepository, $parentRepository);
+                $targetScope($query, $parents);
             }
             if ($sourceFilter !== null) {
-                $sourceFilter($query, $parents, $inverse, $childRepository, $parentRepository);
+                $sourceFilter($query, $parents);
             }
             return $query->getResult();
         }

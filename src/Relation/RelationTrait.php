@@ -2,7 +2,6 @@
 
 namespace WScore\DecaORM\Relation;
 
-use ReflectionMethod;
 use RuntimeException;
 use WScore\DecaORM\Attribute\BelongsTo;
 use WScore\DecaORM\Attribute\BelongsToOne;
@@ -12,7 +11,6 @@ use WScore\DecaORM\Attribute\ManyToMany;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\Contracts\RepositoryInterface;
 use WScore\DecaORM\EntityCollection;
-use WScore\DecaORM\Sql\Query;
 use WScore\DecaORM\OrmManager;
 
 /**
@@ -27,7 +25,7 @@ trait RelationTrait
         HasMany|HasOne|ManyToMany|BelongsTo|BelongsToOne $relation,
         ?RepositoryInterface $sourceRepository
     ): ?callable {
-        return self::wrapSourceFilter(self::getSourceFilter($relation, $sourceRepository));
+        return self::getSourceFilter($relation, $sourceRepository);
     }
 
     /**
@@ -37,17 +35,17 @@ trait RelationTrait
         HasMany|HasOne|ManyToMany|BelongsTo|BelongsToOne $relation,
         RepositoryInterface $targetRepository
     ): ?callable {
-        return self::wrapTargetScope(self::getTargetScope($relation, $targetRepository));
+        return self::getTargetScope($relation, $targetRepository);
     }
 
     /**
      * @param HasMany|HasOne|ManyToMany|BelongsTo|BelongsToOne $relation
-     * @return array{0: RepositoryInterface, 1: string}|null
+     * @return callable|null callable(Query, EntityInterface|EntityCollection): void
      */
     public static function getSourceFilter(
         HasMany|HasOne|ManyToMany|BelongsTo|BelongsToOne $relation,
         ?RepositoryInterface $sourceRepository
-    ): ?array {
+    ): ?callable {
         $filter = $relation->sourceFilter ?? $relation->apply ?? null;
         return self::resolveRepoMethod(
             $filter,
@@ -60,55 +58,28 @@ trait RelationTrait
 
     /**
      * @param HasMany|HasOne|ManyToMany|BelongsTo|BelongsToOne $relation
-     * @return array{0: RepositoryInterface, 1: string}|null
      */
     public static function getApply(
         HasMany|HasOne|ManyToMany|BelongsTo|BelongsToOne $relation,
         ?RepositoryInterface $sourceRepository
-    ): ?array {
+    ): ?callable {
         return self::getSourceFilter($relation, $sourceRepository);
     }
 
     /**
      * @param HasMany|HasOne|ManyToMany|BelongsTo|BelongsToOne $relation
-     * @return array{0: RepositoryInterface, 1: string}|null
+     * @return callable|null callable(Query, EntityInterface|EntityCollection): void
      */
     public static function getTargetScope(
         HasMany|HasOne|ManyToMany|BelongsTo|BelongsToOne $relation,
         RepositoryInterface $targetRepository
-    ): ?array {
+    ): ?callable {
         return self::resolveRepoMethod(
             $relation->targetScope ?? null,
             $targetRepository,
             'Target scope method',
             null
         );
-    }
-
-    /**
-     * Normalizes sourceFilter/apply method to a callable that accepts:
-     *   (Query $query, EntityInterface|EntityCollection $owners, object $relation, RepositoryInterface $targetRepo, ?RepositoryInterface $ownerRepo): void
-     */
-    public static function wrapSourceFilter(?array $filter): ?callable
-    {
-        return self::wrapQueryHook($filter, queryOnly: false);
-    }
-
-    /**
-     * Normalizes apply method to a callable (alias for wrapSourceFilter).
-     */
-    public static function wrapApply(?array $apply): ?callable
-    {
-        return self::wrapSourceFilter($apply);
-    }
-
-    /**
-     * Normalizes targetScope method to a callable that accepts:
-     *   (Query $query, EntityInterface|EntityCollection $owners, object $relation, RepositoryInterface $targetRepo, ?RepositoryInterface $ownerRepo): void
-     */
-    public static function wrapTargetScope(?array $scope): ?callable
-    {
-        return self::wrapQueryHook($scope, queryOnly: true);
     }
 
     /**
@@ -132,14 +103,14 @@ trait RelationTrait
     }
 
     /**
-     * @return array{0: RepositoryInterface, 1: string}|null
+     * @return callable|null
      */
     private static function resolveRepoMethod(
         ?string $name,
         ?RepositoryInterface $repository,
         string $missingMethodLabel,
         ?string $missingRepoMessage
-    ): ?array {
+    ): ?callable {
         if ($name === null || $name === '') {
             return null;
         }
@@ -154,38 +125,5 @@ trait RelationTrait
             );
         }
         return [$repository, $name];
-    }
-
-    /**
-     * @param array{0: object, 1: string}|null $method
-     */
-    private static function wrapQueryHook(?array $method, bool $queryOnly): ?callable
-    {
-        if ($method === null) {
-            return null;
-        }
-
-        return function (
-            Query $query,
-            EntityInterface|EntityCollection $owners,
-            object $relation,
-            RepositoryInterface $targetRepo,
-            ?RepositoryInterface $ownerRepo = null
-        ) use ($method, $queryOnly): void {
-            $name = $method[1] ?? null;
-            $argc = is_string($name) && method_exists($method[0], $name)
-                ? (new ReflectionMethod($method[0], $name))->getNumberOfParameters()
-                : ($queryOnly ? 1 : 2);
-
-            if ($queryOnly && $argc <= 1) {
-                ($method)($query);
-                return;
-            }
-            if ($argc <= 2) {
-                ($method)($query, $owners);
-                return;
-            }
-            ($method)($query, $owners, $relation, $targetRepo, $ownerRepo);
-        };
     }
 }

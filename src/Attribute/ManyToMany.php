@@ -40,8 +40,10 @@ class ManyToMany
      * @param string $foreignKey The foreign key *column name* in the join table for this entity (e.g., 'student_id')
      * @param string $inverseForeignKey The foreign key *column name* in the join table for the target entity (e.g., 'course_id')
      * @param string|null $orderBy Optional ORDER BY clause (e.g., 'created_at DESC')
-     * @param string|null $sourceFilter Optional repository method name in source repository to customize target query.
-     * @param string|null $targetScope Optional repository method name in target repository to customize target query.
+     * @param string|null $sourceFilter Optional method name in the source repository.
+     *        Signature: `(Query $query, EntityInterface|EntityCollection $source): void`
+     * @param string|null $targetScope Optional method name in the target repository.
+     *        Signature: `(Query $query, EntityInterface|EntityCollection $source): void`
      * @param string|null $apply Deprecated alias for sourceFilter.
      */
     public function __construct(

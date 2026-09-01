@@ -318,12 +318,12 @@ class LoadManyToMany
 
         $targetScope = self::resolveTargetScope($relation, $targetRepository);
         if ($targetScope !== null) {
-            $targetScope($query, $sourceEntities, $relation, $targetRepository, $sourceRepository);
+            $targetScope($query, $sourceEntities);
         }
 
         $sourceFilter = self::resolveSourceFilter($relation, $sourceRepository);
         if ($sourceFilter !== null) {
-            $sourceFilter($query, $sourceEntities, $relation, $targetRepository, $sourceRepository);
+            $sourceFilter($query, $sourceEntities);
         }
 
         return $query->getResult();

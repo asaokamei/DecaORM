@@ -44,6 +44,9 @@ class ScopeProject implements EntityInterface
     #[HasMany(targetEntity: ScopeTask::class, mappedBy: 'project', targetScope: 'activeOnly')]
     public ?EntityCollection $activeTasks = null;
 
+    #[HasMany(targetEntity: ScopeTask::class, mappedBy: 'project', targetScope: 'titlePrefixedByProjectName')]
+    public ?EntityCollection $prefixedTasks = null;
+
     #[HasMany(targetEntity: ScopeTask::class, mappedBy: 'project', sourceFilter: 'filterUrgentTasks')]
     public ?EntityCollection $urgentTasks = null;
 
@@ -239,7 +242,7 @@ class ScopeProjectRepository extends AbstractRepository
         $query->where('title', '%URGENT%', 'LIKE');
     }
 
-    public function activeProjects(Query $query): void
+    public function activeProjects(Query $query, EntityInterface|EntityCollection $source): void
     {
         $query->where('name', 'INACTIVE:%', 'NOT LIKE');
     }
@@ -253,9 +256,18 @@ class ScopeTaskRepository extends AbstractRepository
         $this->setUpRepository($manager, null, ScopeTask::class);
     }
 
-    public function activeOnly(Query $query): void
+    public function activeOnly(Query $query, EntityInterface|EntityCollection $source): void
     {
         $query->where('title', 'DELETED:%', 'NOT LIKE');
+    }
+
+    public function titlePrefixedByProjectName(Query $query, EntityInterface|EntityCollection $projects): void
+    {
+        $project = $projects instanceof EntityInterface ? $projects : $projects->first();
+        if (!$project instanceof EntityInterface) {
+            return;
+        }
+        $query->where('title', $project->getRaw('name') . ':%', 'LIKE');
     }
 
     public function onlySpecialProjects(Query $query, EntityInterface|EntityCollection $tasks): void
@@ -277,7 +289,7 @@ class ScopeUserRepository extends AbstractRepository
         $query->where('nickname', 'admin_%', 'LIKE');
     }
 
-    public function activeUsersOnly(Query $query): void
+    public function activeUsersOnly(Query $query, EntityInterface|EntityCollection $source): void
     {
         $query->where('user_name', 'banned_%', 'NOT LIKE');
     }
@@ -296,7 +308,7 @@ class ScopeProfileRepository extends AbstractRepository
         $this->setUpRepository($manager, null, ScopeProfile::class);
     }
 
-    public function verifiedOnly(Query $query): void
+    public function verifiedOnly(Query $query, EntityInterface|EntityCollection $source): void
     {
         $query->where('nickname', 'unverified_%', 'NOT LIKE');
     }
@@ -315,7 +327,7 @@ class ScopeRoleRepository extends AbstractRepository
         $this->setUpRepository($manager, null, ScopeRole::class);
     }
 
-    public function adminRolesOnly(Query $query): void
+    public function adminRolesOnly(Query $query, EntityInterface|EntityCollection $source): void
     {
         $query->where('role_name', 'ROLE_ADMIN%', 'LIKE');
     }
@@ -413,6 +425,24 @@ final class RelationScopeAndFilterTest extends TestCase
         $loaded = $this->projectRepo->load($project, 'activeTasks');
         $this->assertCount(1, $loaded);
         $this->assertSame('Normal Task', $loaded[0]->getRaw('title'));
+    }
+
+    public function testHasManyTargetScopeUsesSourceEntity(): void
+    {
+        $project = $this->projectRepo->createEntity(['name' => 'Alpha']);
+        $this->projectRepo->save($project);
+
+        $task1 = $this->taskRepo->createEntity(['project_id' => $project->getId(), 'title' => 'Alpha: matching', 'created_at' => '2026-01-01 00:00:00']);
+        $task2 = $this->taskRepo->createEntity(['project_id' => $project->getId(), 'title' => 'Beta: other', 'created_at' => '2026-01-02 00:00:00']);
+        $this->taskRepo->save($task1);
+        $this->taskRepo->save($task2);
+
+        $this->manager->getEntityCache()->clear();
+        $project = $this->projectRepo->findById($project->getId());
+
+        $loaded = $this->projectRepo->load($project, 'prefixedTasks');
+        $this->assertCount(1, $loaded);
+        $this->assertSame('Alpha: matching', $loaded[0]->getRaw('title'));
     }
 
     public function testHasManySourceFilter(): void

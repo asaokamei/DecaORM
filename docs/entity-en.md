@@ -80,6 +80,17 @@ private ?User $user = null;
 
 #### Example: adding conditions with `sourceFilter` / `targetScope`
 
+`sourceFilter` and `targetScope` are both repository methods with this signature:
+
+```php
+public function methodName(Query $query, EntityInterface|EntityCollection $source): void
+```
+
+- First argument `$query`: the `Query` that fetches the related rows. Add `where` / `orderBy` / `joinRaw` here.
+- Second argument `$source`: the source-side entity being loaded from. A single entity for a single load, or `EntityCollection` for a batch load.
+
+Implement `sourceFilter` on the **source** repository and `targetScope` on the **target** repository. Declare the second parameter even if you do not use it (PHP 8 does not ignore extra arguments). The same signature applies to HasOne / BelongsToOne / ManyToMany.
+
 If the parent table can contain multiple rows for the same key (e.g. same `data_id` with different `status` like `ACTIVE` / `DELETED`), you can use `ownerKey` and `sourceFilter` (or legacy `apply`) or `targetScope` to load only the desired row.
 
 ##### 1. sourceFilter (calling method on source repository)
@@ -98,7 +109,7 @@ private string $data_id = '';
 private ?Data $data = null;
 ```
 
-Implement the `sourceFilter` method in the **source (calling) repository**. It receives the `Query` and can add constraints.
+Implement the `sourceFilter` method in the **source (calling) repository**.
 
 ```php
 // ChildRepository.php
@@ -106,7 +117,7 @@ use WScore\DecaORM\Sql\Query;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\EntityCollection;
 
-public function onlyActive(Query $query, EntityInterface|EntityCollection $children): void
+public function onlyActive(Query $query, EntityInterface|EntityCollection $source): void
 {
     $query->where('status', 'ACTIVE');
 }
@@ -130,8 +141,10 @@ private ?Data $data = null;
 ```php
 // DataRepository.php
 use WScore\DecaORM\Sql\Query;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\EntityCollection;
 
-public function activeOnly(Query $query): void
+public function activeOnly(Query $query, EntityInterface|EntityCollection $source): void
 {
     $query->where('status', 'ACTIVE');
 }
@@ -144,6 +157,7 @@ Many-to-many relations are managed through a join table.
 - `joinTable`: join table name (e.g. `user_role`)
 - `foreignKey`: FK column name on the **join table** that points to “this entity” (e.g. `user_id`)
 - `inverseForeignKey`: FK column name on the **join table** that points to the related entity (e.g. `role_id`)
+- `sourceFilter` / `targetScope` (optional): same two-argument signature as HasMany / BelongsTo.
 
 With `ManyToMany`, you do not create a dedicated entity/repository for the join table. Specify DB table/column names directly in the attribute.
 Create the join table in the DB beforehand.
@@ -243,10 +257,12 @@ Use for “one user has one profile” style relations.
 - **HasOne**: On the side that does **not** hold the FK (e.g. User).
   - `targetEntity`: Related class.
   - `mappedBy`: Property on the other side that points to this entity.
+  - `sourceFilter` / `targetScope` (optional): same two-argument signature as HasMany.
 - **BelongsToOne**: On the side that **holds** the FK (e.g. Profile).
   - `targetEntity`: Related class.
   - `foreignKey`: FK column name.
   - `inversedBy`: Property on the other side.
+  - `sourceFilter` / `targetScope` (optional): same two-argument signature as BelongsTo.
 
 ```php
 // User.php (owner)

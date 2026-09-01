@@ -31,8 +31,10 @@ class HasOne
     /**
      * @param string $targetEntity The target entity class name
      * @param string $mappedBy The property name on the inverse side (e.g., 'user')
-     * @param string|null $sourceFilter Optional method name in the source repository to modify the target query (Query hook).
-     * @param string|null $targetScope Optional method name in the target repository to apply scope to the target query.
+     * @param string|null $sourceFilter Optional method name in the source repository.
+     *        Signature: `(Query $query, EntityInterface|EntityCollection $source): void`
+     * @param string|null $targetScope Optional method name in the target repository.
+     *        Signature: `(Query $query, EntityInterface|EntityCollection $source): void`
      * @param string|null $apply Deprecated alias for sourceFilter.
      */
     public function __construct(

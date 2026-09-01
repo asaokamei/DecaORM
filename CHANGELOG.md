@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- リレーションアトリビュート（`HasMany`, `BelongsTo`, `HasOne`, `BelongsToOne`, `ManyToMany`）に `targetScope` 設定を追加しました。ターゲット側のリポジトリのメソッドを呼び出してクエリにスコープを適用できます。
+- リレーションアトリビュート（`HasMany`, `BelongsTo`, `HasOne`, `BelongsToOne`, `ManyToMany`）に `targetScope` 設定を追加しました。ターゲット側リポジトリのメソッドで関連取得クエリにスコープを適用できます。`sourceFilter` と同じく、メソッドシグネチャは `(Query $query, EntityInterface|EntityCollection $source): void` です。
 
 ### Changed
 - リレーションアトリビュート（`HasMany`, `BelongsTo`, `HasOne`, `BelongsToOne`, `ManyToMany`）の `apply` 設定を `sourceFilter` に名称変更しました。過去互換性を保持するため `apply` も引き続き利用可能です。

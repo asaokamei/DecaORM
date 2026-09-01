@@ -32,8 +32,10 @@ class BelongsTo
      * @param string $foreignKey The foreign key property name (e.g., 'user_id')
      * @param string|null $ownerKey The target entity property name to match against (defaults to target primary key)
      * @param string|null $inversedBy The property name on the inverse side (for bidirectional relationships)
-     * @param string|null $sourceFilter Optional method name in the source repository to modify the target query (Query hook).
-     * @param string|null $targetScope Optional method name in the target repository to apply scope to the target query.
+     * @param string|null $sourceFilter Optional method name in the source repository.
+     *        Signature: `(Query $query, EntityInterface|EntityCollection $source): void`
+     * @param string|null $targetScope Optional method name in the target repository.
+     *        Signature: `(Query $query, EntityInterface|EntityCollection $source): void`
      * @param string|null $apply Deprecated alias for sourceFilter.
      */
     public function __construct(

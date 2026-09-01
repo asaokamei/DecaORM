@@ -78,6 +78,17 @@ private ?User $user = null;
 
 #### 追加条件（sourceFilter / targetScope）の例
 
+`sourceFilter` と `targetScope` は、どちらも次のシグネチャのリポジトリメソッドです。
+
+```php
+public function methodName(Query $query, EntityInterface|EntityCollection $source): void
+```
+
+- 第1引数 `$query`: 関連先を取得する `Query`。ここに `where` / `orderBy` / `joinRaw` などを足します。
+- 第2引数 `$source`: ロード元（ソース側）のエンティティ。単体ロードならエンティティ1件、バッチロードなら `EntityCollection` です。
+
+`sourceFilter` は**ソース側**リポジトリ、`targetScope` は**ターゲット側**リポジトリに実装します。第2引数を使わない場合も、引数は宣言してください（PHP 8 では余分な引数を無視しません）。HasOne / BelongsToOne / ManyToMany でも同じシグネチャです。
+
 例えば「同じ `data_id` でも `status` が複数存在し、`ACTIVE` のみを親として扱いたい」場合は、`BelongsTo` に `ownerKey` と `sourceFilter`（または `apply`）や `targetScope` を指定します。
 
 ##### 1. sourceFilter（ソース側リポジトリのメソッドを呼ぶ）
@@ -96,7 +107,7 @@ private string $data_id = '';
 private ?Data $data = null;
 ```
 
-`sourceFilter` メソッドは、子側（呼び出し元）リポジトリに実装し、`Query` に条件を追加します。
+`sourceFilter` メソッドは、子側（呼び出し元）リポジトリに実装します。
 
 ```php
 // ChildRepository.php
@@ -104,7 +115,7 @@ use WScore\DecaORM\Sql\Query;
 use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\EntityCollection;
 
-public function onlyActive(Query $query, EntityInterface|EntityCollection $children): void
+public function onlyActive(Query $query, EntityInterface|EntityCollection $source): void
 {
     $query->where('status', 'ACTIVE');
 }
@@ -128,8 +139,10 @@ private ?Data $data = null;
 ```php
 // DataRepository.php
 use WScore\DecaORM\Sql\Query;
+use WScore\DecaORM\Contracts\EntityInterface;
+use WScore\DecaORM\EntityCollection;
 
-public function activeOnly(Query $query): void
+public function activeOnly(Query $query, EntityInterface|EntityCollection $source): void
 {
     $query->where('status', 'ACTIVE');
 }
@@ -142,6 +155,7 @@ public function activeOnly(Query $query): void
 - `joinTable`: 中間テーブル名（例: `user_role`）
 - `foreignKey`: **中間テーブル側**で「このエンティティ」を指す外部キーカラム名（例: `user_id`）
 - `inverseForeignKey`: **中間テーブル側**で「関連先エンティティ」を指す外部キーカラム名（例: `role_id`）
+- `sourceFilter` / `targetScope`（任意）: HasMany / BelongsTo と同じ2引数シグネチャです。
 
 `ManyToMany` では JoinTable 用のエンティティ/リポジトリは作成せず、上記の DB テーブル名・カラム名を直接指定します。
 中間テーブルは事前に DB に作成してください。
@@ -241,11 +255,13 @@ public function removePost(Post $post): void
 - **HasOne**: 所有する側（外部キーを持たない側）に記述します。
     - `targetEntity`: 関連先のクラス名。
     - `mappedBy`: 関連先で自身を指しているプロパティ名。
+    - `sourceFilter` / `targetScope`（任意）: HasMany と同じ2引数シグネチャです。
 
 - **BelongsToOne**: 所有される側（外部キーを持つ側）に記述します。
     - `targetEntity`: 関連先のクラス名。
     - `foreignKey`: データベース上の外部キーカラム名。
     - `inversedBy`: 関連先で自身を指しているプロパティ名。
+    - `sourceFilter` / `targetScope`（任意）: BelongsTo と同じ2引数シグネチャです。
 
 ```php
 // User.php (主)

@@ -101,10 +101,10 @@ class LoadBelongsToOne
         $query = $targetRepository->sqlQuery()
             ->whereIn($ownerKeyCol, $matchValues);
         if ($targetScope !== null) {
-            $targetScope($query, $children, $childRelation, $targetRepository, $sourceRepository);
+            $targetScope($query, $children);
         }
         if ($sourceFilter !== null) {
-            $sourceFilter($query, $children, $childRelation, $targetRepository, $sourceRepository);
+            $sourceFilter($query, $children);
         }
         $parents = $query->getResult();
 

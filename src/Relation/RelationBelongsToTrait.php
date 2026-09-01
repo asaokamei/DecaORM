@@ -51,10 +51,10 @@ trait RelationBelongsToTrait
         $query = $targetRepository->sqlQuery()
             ->where($ownerKeyCol, $matchValue);
         if ($targetScope !== null) {
-            $targetScope($query, $childEntity, $childRelation, $targetRepository, $sourceRepository);
+            $targetScope($query, $childEntity);
         }
         if ($sourceFilter !== null) {
-            $sourceFilter($query, $childEntity, $childRelation, $targetRepository, $sourceRepository);
+            $sourceFilter($query, $childEntity);
         }
         $parentEntity = $query->getResult();
 
