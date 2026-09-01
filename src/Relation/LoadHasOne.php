@@ -28,8 +28,8 @@ class LoadHasOne
         RepositoryInterface $targetRepository,
         ?RepositoryInterface $sourceRepository = null
     ): array {
-        $sourceFilter = self::wrapSourceFilter(self::getSourceFilter($parentRelation, $sourceRepository));
-        $targetScope = self::wrapTargetScope(self::getTargetScope($parentRelation, $targetRepository));
+        $sourceFilter = self::resolveSourceFilter($parentRelation, $sourceRepository);
+        $targetScope = self::resolveTargetScope($parentRelation, $targetRepository);
 
         if ($entities instanceof EntityInterface) {
             return self::loadSingle($entities, $parentRelation, $targetRepository, $sourceFilter, $sourceRepository, $targetScope);

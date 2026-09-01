@@ -12,82 +12,7 @@ use WScore\DecaORM\Contracts\RepositoryInterface;
 class LoadBelongsToOne
 {
     use RelationBelongsToTrait;
-
-    private static function getSourceFilter(BelongsToOne $relation, ?RepositoryInterface $sourceRepository): ?callable
-    {
-        $filter = $relation->sourceFilter ?? $relation->apply ?? null;
-        if ($filter === null || $filter === '') {
-            return null;
-        }
-        if ($sourceRepository === null) {
-            throw new RuntimeException('Source repository is required when using sourceFilter/apply for BelongsToOne.');
-        }
-        if (!method_exists($sourceRepository, $filter)) {
-            throw new RuntimeException(
-                'Source filter method "' . $filter . '" not found in repository: ' . $sourceRepository::class
-            );
-        }
-        $callable = [$sourceRepository, $filter];
-
-        return function (
-            \WScore\DecaORM\Sql\Query $query,
-            EntityInterface|EntityCollection $children,
-            BelongsToOne $rel,
-            RepositoryInterface $targetRepo,
-            ?RepositoryInterface $srcRepo
-        ) use ($callable): void {
-            $method = $callable[1] ?? null;
-            $argc = is_string($method) && method_exists($callable[0], $method)
-                ? (new \ReflectionMethod($callable[0], $method))->getNumberOfParameters()
-                : 2;
-            if ($argc <= 2) {
-                ($callable)($query, $children);
-                return;
-            }
-            ($callable)($query, $children, $rel, $targetRepo, $srcRepo);
-        };
-    }
-
-    private static function getApply(BelongsToOne $relation, ?RepositoryInterface $sourceRepository): ?callable
-    {
-        return self::getSourceFilter($relation, $sourceRepository);
-    }
-
-    private static function getTargetScope(BelongsToOne $relation, RepositoryInterface $targetRepository): ?callable
-    {
-        $scope = $relation->targetScope ?? null;
-        if ($scope === null || $scope === '') {
-            return null;
-        }
-        if (!method_exists($targetRepository, $scope)) {
-            throw new RuntimeException(
-                'Target scope method "' . $scope . '" not found in repository: ' . $targetRepository::class
-            );
-        }
-        $callable = [$targetRepository, $scope];
-
-        return function (
-            \WScore\DecaORM\Sql\Query $query,
-            EntityInterface|EntityCollection $children,
-            BelongsToOne $rel,
-            RepositoryInterface $targetRepo,
-            ?RepositoryInterface $srcRepo
-        ) use ($callable): void {
-            $method = $callable[1] ?? null;
-            $argc = is_string($method) && method_exists($callable[0], $method)
-                ? (new \ReflectionMethod($callable[0], $method))->getNumberOfParameters()
-                : 1;
-            if ($argc <= 1) {
-                ($callable)($query);
-                return;
-            }
-            if ($argc === 2) {
-                ($callable)($query, $children);
-                return;
-            }
-            ($callable)($query, $children, $rel, $targetRepo, $srcRepo);
-        };
-    }
+    use RelationTrait;
 
     /**
      * Load BelongsToOne relation for a single entity or multiple entities.
@@ -104,8 +29,8 @@ class LoadBelongsToOne
         RepositoryInterface $targetRepository,
         ?RepositoryInterface $sourceRepository = null
     ): array {
-        $sourceFilter = self::getSourceFilter($childRelation, $sourceRepository);
-        $targetScope = self::getTargetScope($childRelation, $targetRepository);
+        $sourceFilter = self::resolveSourceFilter($childRelation, $sourceRepository);
+        $targetScope = self::resolveTargetScope($childRelation, $targetRepository);
         if ($entities instanceof EntityInterface) {
             return self::loadSingle($entities, $childRelation, $targetRepository, $sourceFilter, $sourceRepository, $targetScope);
         }
