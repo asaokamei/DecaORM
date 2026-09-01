@@ -51,13 +51,15 @@ Typical “one parent, many children” relation (e.g. one User, many Posts).
 - **HasMany** (on the parent):
   - `targetEntity`: Related class.
   - `mappedBy`: Name of the property on the child that points back to this entity.
-  - `apply` (optional): Method name in the **source repository** used as a Query hook to modify the relation query (add `where`, `orderBy`, `joinRaw`, etc.).
+  - `sourceFilter` (optional): Method name in the **source repository** used as a Query hook to modify the relation query (add `where`, `orderBy`, `joinRaw`, etc.). `apply` is also supported for backward compatibility.
+  - `targetScope` (optional): Method name in the **target repository** used to apply a scope to the relation query.
 - **BelongsTo** (on the child):
   - `targetEntity`: Related class.
   - `foreignKey`: Name of the FK property (database column).
   - `ownerKey` (optional): Property name on the **target (parent)** to match against (defaults to the target primary key). Use this when the child’s FK points to a non-PK key like `data_id`.
   - `inversedBy`: Name of the property on the parent that holds the collection.
-  - `apply` (optional): Method name in the **source repository** used as a Query hook to add extra constraints (e.g. `status = ACTIVE`).
+  - `sourceFilter` (optional): Method name in the **source repository** used as a Query hook to add extra constraints (e.g. `status = ACTIVE`). `apply` is also supported for backward compatibility.
+  - `targetScope` (optional): Method name in the **target repository** used to apply a scope to the relation query.
 
 You need both the FK property and the relation property on the child:
 
@@ -76,9 +78,11 @@ private string $user_id = '';
 private ?User $user = null;
 ```
 
-#### Example: adding conditions with `apply`
+#### Example: adding conditions with `sourceFilter` / `targetScope`
 
-If the parent table can contain multiple rows for the same key (e.g. same `data_id` with different `status` like `ACTIVE` / `DELETED`), you can use `ownerKey` and `apply` to load only the desired row.
+If the parent table can contain multiple rows for the same key (e.g. same `data_id` with different `status` like `ACTIVE` / `DELETED`), you can use `ownerKey` and `sourceFilter` (or legacy `apply`) or `targetScope` to load only the desired row.
+
+##### 1. sourceFilter (calling method on source repository)
 
 ```php
 // Child.php
@@ -89,12 +93,12 @@ private string $data_id = '';
     targetEntity: Data::class,
     foreignKey: 'data_id',
     ownerKey: 'data_id',
-    apply: 'onlyActive'
+    sourceFilter: 'onlyActive' // or legacy apply: 'onlyActive'
 )]
 private ?Data $data = null;
 ```
 
-Implement the `apply` method in the **source (calling) repository**. It receives the `Query` and can add constraints.
+Implement the `sourceFilter` method in the **source (calling) repository**. It receives the `Query` and can add constraints.
 
 ```php
 // ChildRepository.php
@@ -103,6 +107,31 @@ use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\EntityCollection;
 
 public function onlyActive(Query $query, EntityInterface|EntityCollection $children): void
+{
+    $query->where('status', 'ACTIVE');
+}
+```
+
+##### 2. targetScope (calling method on target repository)
+
+You can also specify a scope method on the target repository.
+
+```php
+// Child.php
+#[BelongsTo(
+    targetEntity: Data::class,
+    foreignKey: 'data_id',
+    ownerKey: 'data_id',
+    targetScope: 'activeOnly'
+)]
+private ?Data $data = null;
+```
+
+```php
+// DataRepository.php
+use WScore\DecaORM\Sql\Query;
+
+public function activeOnly(Query $query): void
 {
     $query->where('status', 'ACTIVE');
 }

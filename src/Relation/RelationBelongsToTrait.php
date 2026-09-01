@@ -35,8 +35,9 @@ trait RelationBelongsToTrait
         EntityInterface $childEntity,
         BelongsTo|BelongsToOne $childRelation,
         RepositoryInterface $targetRepository,
-        ?callable $apply = null,
+        ?callable $sourceFilter = null,
         ?RepositoryInterface $sourceRepository = null,
+        ?callable $targetScope = null,
     ): ?EntityInterface {
 
         $ownerKeyCol = self::resolveOwnerKeyColumn($childRelation, $targetRepository);
@@ -49,8 +50,11 @@ trait RelationBelongsToTrait
 
         $query = $targetRepository->sqlQuery()
             ->where($ownerKeyCol, $matchValue);
-        if ($apply !== null) {
-            $apply($query, $childEntity, $childRelation, $targetRepository, $sourceRepository);
+        if ($targetScope !== null) {
+            $targetScope($query, $childEntity, $childRelation, $targetRepository, $sourceRepository);
+        }
+        if ($sourceFilter !== null) {
+            $sourceFilter($query, $childEntity, $childRelation, $targetRepository, $sourceRepository);
         }
         $parentEntity = $query->getResult();
 

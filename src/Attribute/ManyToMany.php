@@ -30,13 +30,19 @@ class ManyToMany
     /** @var string The property name on the attribute's entity */
     public string $propertyName = '';
 
+    public ?string $sourceFilter = null;
+    public ?string $apply = null;
+    public ?string $targetScope = null;
+
     /**
      * @param string $targetEntity The target entity class name (e.g., Course::class)
      * @param string $joinTable The join table name (e.g., 'student_course')
      * @param string $foreignKey The foreign key *column name* in the join table for this entity (e.g., 'student_id')
      * @param string $inverseForeignKey The foreign key *column name* in the join table for the target entity (e.g., 'course_id')
      * @param string|null $orderBy Optional ORDER BY clause (e.g., 'created_at DESC')
-     * @param string|null $apply Optional repository method name to customize target query.
+     * @param string|null $sourceFilter Optional repository method name in source repository to customize target query.
+     * @param string|null $targetScope Optional repository method name in target repository to customize target query.
+     * @param string|null $apply Deprecated alias for sourceFilter.
      */
     public function __construct(
         public string $targetEntity,
@@ -44,8 +50,13 @@ class ManyToMany
         public string $foreignKey,
         public string $inverseForeignKey,
         public ?string $orderBy = null,
-        public ?string $apply = null
+        ?string $sourceFilter = null,
+        ?string $targetScope = null,
+        ?string $apply = null,
     ) {
+        $this->sourceFilter = $sourceFilter ?? $apply;
+        $this->apply = $this->sourceFilter;
+        $this->targetScope = $targetScope;
     }
 
     /**

@@ -88,7 +88,8 @@ final class MappedByQuery
         EntityInterface|EntityCollection $parents,
         RepositoryInterface $parentRepository,
         ?string $orderBy = null,
-        ?callable $apply = null,
+        ?callable $sourceFilter = null,
+        ?callable $targetScope = null,
     ): EntityCollection {
         $inverse = $childRepository->getRelation($mappedByPropertyName);
         if ($inverse === null) {
@@ -108,8 +109,11 @@ final class MappedByQuery
             if ($orderBy !== null) {
                 $query->orderByRaw($orderBy);
             }
-            if ($apply !== null) {
-                $apply($query, $parents, $inverse, $childRepository, $parentRepository);
+            if ($targetScope !== null) {
+                $targetScope($query, $parents, $inverse, $childRepository, $parentRepository);
+            }
+            if ($sourceFilter !== null) {
+                $sourceFilter($query, $parents, $inverse, $childRepository, $parentRepository);
             }
             return $query->getResult();
         }
@@ -141,8 +145,11 @@ final class MappedByQuery
             if ($orderBy !== null) {
                 $query->orderByRaw($orderBy);
             }
-            if ($apply !== null) {
-                $apply($query, $parents, $inverse, $childRepository, $parentRepository);
+            if ($targetScope !== null) {
+                $targetScope($query, $parents, $inverse, $childRepository, $parentRepository);
+            }
+            if ($sourceFilter !== null) {
+                $sourceFilter($query, $parents, $inverse, $childRepository, $parentRepository);
             }
             return $query->getResult();
         }

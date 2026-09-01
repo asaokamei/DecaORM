@@ -28,11 +28,11 @@ class LoadHasOne
         RepositoryInterface $targetRepository,
         ?RepositoryInterface $sourceRepository = null
     ): array {
-
-        $apply = self::wrapApply(self::getApply($parentRelation, $sourceRepository));
+        $sourceFilter = self::wrapSourceFilter(self::getSourceFilter($parentRelation, $sourceRepository));
+        $targetScope = self::wrapTargetScope(self::getTargetScope($parentRelation, $targetRepository));
 
         if ($entities instanceof EntityInterface) {
-            return self::loadSingle($entities, $parentRelation, $targetRepository, $apply, $sourceRepository);
+            return self::loadSingle($entities, $parentRelation, $targetRepository, $sourceFilter, $sourceRepository, $targetScope);
         }
         if (count($entities) === 0) {
             return [];
@@ -42,9 +42,9 @@ class LoadHasOne
             if (!$first instanceof EntityInterface) {
                 return [];
             }
-            return self::loadSingle($first, $parentRelation, $targetRepository, $apply, $sourceRepository);
+            return self::loadSingle($first, $parentRelation, $targetRepository, $sourceFilter, $sourceRepository, $targetScope);
         }
-        return self::loadBatch($entities, $parentRelation, $targetRepository, $apply, $sourceRepository);
+        return self::loadBatch($entities, $parentRelation, $targetRepository, $sourceFilter, $sourceRepository, $targetScope);
     }
 
     /**
@@ -54,8 +54,9 @@ class LoadHasOne
         EntityInterface $parentEntity,
         HasOne $parentRelation,
         RepositoryInterface $targetRepository,
-        ?callable $apply = null,
-        ?RepositoryInterface $sourceRepository = null
+        ?callable $sourceFilter = null,
+        ?RepositoryInterface $sourceRepository = null,
+        ?callable $targetScope = null,
     ): array {
         $parentProperty = $parentRelation->propertyName;
         $childProperty = $parentRelation->mappedBy;
@@ -67,7 +68,8 @@ class LoadHasOne
             $parentEntity,
             $parentRepo,
             null,
-            $apply
+            $sourceFilter,
+            $targetScope,
         );
 
         if (count($children) === 0) {
@@ -89,15 +91,18 @@ class LoadHasOne
      * @param EntityCollection<EntityInterface> $parentEntities
      * @param HasOne $parentRelation
      * @param \WScore\DecaORM\Contracts\RepositoryInterface $targetRepository
-     * @param callable|null $loader
+     * @param callable|null $sourceFilter
+     * @param RepositoryInterface|null $sourceRepository
+     * @param callable|null $targetScope
      * @return \WScore\DecaORM\Contracts\EntityInterface[] All loaded children entities (array with 0 or 1 element per parent)
      */
     public static function loadBatch(
         EntityCollection $parentEntities,
         HasOne $parentRelation,
         RepositoryInterface $targetRepository,
-        ?callable $apply = null,
-        ?RepositoryInterface $sourceRepository = null
+        ?callable $sourceFilter = null,
+        ?RepositoryInterface $sourceRepository = null,
+        ?callable $targetScope = null,
     ): array {
         if (count($parentEntities) === 0) {
             return [];
@@ -110,7 +115,8 @@ class LoadHasOne
             $parentEntities,
             $parentRepo,
             null,
-            $apply
+            $sourceFilter,
+            $targetScope,
         );
 
         // Use applyLoaderResult to map children to parents

@@ -22,34 +22,64 @@ trait RelationTrait
      * @param RepositoryInterface|null $sourceRepository
      * @return array|null
      */
-    public static function getApply(HasMany|HasOne|ManyToMany $parentRelation, ?RepositoryInterface $sourceRepository): ?array
+    public static function getSourceFilter(HasMany|HasOne|ManyToMany $parentRelation, ?RepositoryInterface $sourceRepository): ?array
     {
-        $apply = null;
-        if ($parentRelation->apply !== null) {
-            if ($sourceRepository === null) {
-                throw new RuntimeException(
-                    'Source repository is required when using apply. ' .
-                    'Please pass the source repository to LoadHasMany/LoadHasOne::load()'
-                );
-            }
-
-            if (!method_exists($sourceRepository, $parentRelation->apply)) {
-                throw new RuntimeException(
-                    'Apply method "' . $parentRelation->apply . '" not found in repository: ' . $sourceRepository::class
-                );
-            }
-            $apply = [$sourceRepository, $parentRelation->apply];
+        $filter = $parentRelation->sourceFilter ?? $parentRelation->apply ?? null;
+        if ($filter === null || $filter === '') {
+            return null;
         }
-        return $apply;
+        if ($sourceRepository === null) {
+            throw new RuntimeException(
+                'Source repository is required when using sourceFilter/apply. ' .
+                'Please pass the source repository to LoadHasMany/LoadHasOne::load()'
+            );
+        }
+
+        if (!method_exists($sourceRepository, $filter)) {
+            throw new RuntimeException(
+                'Source filter method "' . $filter . '" not found in repository: ' . $sourceRepository::class
+            );
+        }
+        return [$sourceRepository, $filter];
     }
 
     /**
-     * Normalizes apply method to a callable that accepts:
+     * @param HasMany|HasOne|ManyToMany $parentRelation
+     * @param RepositoryInterface|null $sourceRepository
+     * @return array|null
+     */
+    public static function getApply(HasMany|HasOne|ManyToMany $parentRelation, ?RepositoryInterface $sourceRepository): ?array
+    {
+        return self::getSourceFilter($parentRelation, $sourceRepository);
+    }
+
+    /**
+     * @param HasMany|HasOne|ManyToMany $parentRelation
+     * @param RepositoryInterface $targetRepository
+     * @return array|null
+     */
+    public static function getTargetScope(HasMany|HasOne|ManyToMany $parentRelation, RepositoryInterface $targetRepository): ?array
+    {
+        $scope = $parentRelation->targetScope ?? null;
+        if ($scope === null || $scope === '') {
+            return null;
+        }
+
+        if (!method_exists($targetRepository, $scope)) {
+            throw new RuntimeException(
+                'Target scope method "' . $scope . '" not found in repository: ' . $targetRepository::class
+            );
+        }
+        return [$targetRepository, $scope];
+    }
+
+    /**
+     * Normalizes sourceFilter/apply method to a callable that accepts:
      *   (Query $query, EntityInterface|EntityCollection $owners, object $inverseRelation, RepositoryInterface $targetRepo, RepositoryInterface $ownerRepo): void
      */
-    public static function wrapApply(?array $apply): ?callable
+    public static function wrapSourceFilter(?array $filter): ?callable
     {
-        if ($apply === null) {
+        if ($filter === null) {
             return null;
         }
 
@@ -59,20 +89,62 @@ trait RelationTrait
             object $inverseRelation,
             RepositoryInterface $targetRepo,
             RepositoryInterface $ownerRepo
-        ) use ($apply): void {
+        ) use ($filter): void {
             // Support both signatures:
             // - (Query $query, EntityInterface|EntityCollection $owners): void
             // - (Query $query, EntityInterface|EntityCollection $owners, object $inverseRelation, RepositoryInterface $targetRepo, RepositoryInterface $ownerRepo): void
-            $method = $apply[1] ?? null;
-            $argc = is_string($method) && method_exists($apply[0], $method)
-                ? (new \ReflectionMethod($apply[0], $method))->getNumberOfParameters()
+            $method = $filter[1] ?? null;
+            $argc = is_string($method) && method_exists($filter[0], $method)
+                ? (new \ReflectionMethod($filter[0], $method))->getNumberOfParameters()
                 : 2;
 
             if ($argc <= 2) {
-                ($apply)($query, $owners);
+                ($filter)($query, $owners);
                 return;
             }
-            ($apply)($query, $owners, $inverseRelation, $targetRepo, $ownerRepo);
+            ($filter)($query, $owners, $inverseRelation, $targetRepo, $ownerRepo);
+        };
+    }
+
+    /**
+     * Normalizes apply method to a callable (alias for wrapSourceFilter).
+     */
+    public static function wrapApply(?array $apply): ?callable
+    {
+        return self::wrapSourceFilter($apply);
+    }
+
+    /**
+     * Normalizes targetScope method to a callable that accepts:
+     *   (Query $query, EntityInterface|EntityCollection $owners, object $inverseRelation, RepositoryInterface $targetRepo, ?RepositoryInterface $ownerRepo): void
+     */
+    public static function wrapTargetScope(?array $scope): ?callable
+    {
+        if ($scope === null) {
+            return null;
+        }
+
+        return function (
+            Query $query,
+            EntityInterface|EntityCollection $owners,
+            object $inverseRelation,
+            RepositoryInterface $targetRepo,
+            ?RepositoryInterface $ownerRepo = null
+        ) use ($scope): void {
+            $method = $scope[1] ?? null;
+            $argc = is_string($method) && method_exists($scope[0], $method)
+                ? (new \ReflectionMethod($scope[0], $method))->getNumberOfParameters()
+                : 1;
+
+            if ($argc <= 1) {
+                ($scope)($query);
+                return;
+            }
+            if ($argc === 2) {
+                ($scope)($query, $owners);
+                return;
+            }
+            ($scope)($query, $owners, $inverseRelation, $targetRepo, $ownerRepo);
         };
     }
 

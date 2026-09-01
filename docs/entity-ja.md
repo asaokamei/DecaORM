@@ -49,13 +49,15 @@ DecaORMでは、アトリビュートを使用してエンティティ間のリ�
 *   **HasMany**: 親から子への参照（1対多）。
     *   `targetEntity`: 関連先のクラス名。
     *   `mappedBy`: 関連先（子）で自身を指しているプロパティ名。
-    *   `apply`（任意）: 関連取得クエリ（`Query`）を加工するための、リポジトリ内メソッド名。追加の `where` / `orderBy` / `joinRaw` などを付与できます。
+    *   `sourceFilter`（任意）: 関連取得クエリ（`Query`）を加工するための、**ソース側（親）リポジトリ内**メソッド名。追加の `where` / `orderBy` / `joinRaw` などを付与できます（過去互換性のために `apply` も指定可能）。
+    *   `targetScope`（任意）: 関連取得クエリ（`Query`）にスコープを適用するための、**ターゲット側（子）リポジトリ内**メソッド名。
 *   **BelongsTo**: 子から親への参照（多対1）。
     *   `targetEntity`: 関連先のクラス名。
     *   `foreignKey`: データベース上の外部キープロパティ名。
     *   `ownerKey`（任意）: 関連先（親）側で突合に使うプロパティ名（デフォルトは親の主キー）。親の `id` ではなく `data_id` のような別キーで紐付ける場合に指定します。
     *   `inversedBy`: 関連先（親）で自身を指しているプロパティ名。
-    *   `apply`（任意）: 関連取得クエリ（`Query`）を加工するための、リポジトリ内メソッド名。`status=ACTIVE` のような追加条件を付与できます。
+    *   `sourceFilter`（任意）: 関連取得クエリ（`Query`）を加工するための、**ソース側（子）リポジトリ内**メソッド名。`status=ACTIVE` のような追加条件を付与できます（過去互換性のために `apply` も指定可能）。
+    *   `targetScope`（任意）: 関連取得クエリ（`Query`）にスコープを適用するための、**ターゲット側（親）リポジトリ内**メソッド名。
 
 ```php
 // User.php (親)
@@ -74,9 +76,11 @@ private string $user_id = '';
 private ?User $user = null;
 ```
 
-#### 追加条件（apply）の例
+#### 追加条件（sourceFilter / targetScope）の例
 
-例えば「同じ `data_id` でも `status` が複数存在し、`ACTIVE` のみを親として扱いたい」場合は、`BelongsTo` に `ownerKey` と `apply` を指定します。
+例えば「同じ `data_id` でも `status` が複数存在し、`ACTIVE` のみを親として扱いたい」場合は、`BelongsTo` に `ownerKey` と `sourceFilter`（または `apply`）や `targetScope` を指定します。
+
+##### 1. sourceFilter（ソース側リポジトリのメソッドを呼ぶ）
 
 ```php
 // Child.php
@@ -87,12 +91,12 @@ private string $data_id = '';
     targetEntity: Data::class,
     foreignKey: 'data_id',
     ownerKey: 'data_id',
-    apply: 'onlyActive'
+    sourceFilter: 'onlyActive' // または過去互換の apply: 'onlyActive'
 )]
 private ?Data $data = null;
 ```
 
-`apply` メソッドは、子側（呼び出し元）リポジトリに実装し、`Query` に条件を追加します。
+`sourceFilter` メソッドは、子側（呼び出し元）リポジトリに実装し、`Query` に条件を追加します。
 
 ```php
 // ChildRepository.php
@@ -101,6 +105,31 @@ use WScore\DecaORM\Contracts\EntityInterface;
 use WScore\DecaORM\EntityCollection;
 
 public function onlyActive(Query $query, EntityInterface|EntityCollection $children): void
+{
+    $query->where('status', 'ACTIVE');
+}
+```
+
+##### 2. targetScope（ターゲット側リポジトリのメソッドを呼ぶ）
+
+関連先（ターゲット側）のリポジトリに定義されているスコープメソッドを呼び出して条件を追加することもできます。
+
+```php
+// Child.php
+#[BelongsTo(
+    targetEntity: Data::class,
+    foreignKey: 'data_id',
+    ownerKey: 'data_id',
+    targetScope: 'activeOnly'
+)]
+private ?Data $data = null;
+```
+
+```php
+// DataRepository.php
+use WScore\DecaORM\Sql\Query;
+
+public function activeOnly(Query $query): void
 {
     $query->where('status', 'ACTIVE');
 }

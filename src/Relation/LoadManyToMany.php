@@ -316,9 +316,14 @@ class LoadManyToMany
             $query->orderBy($relation->orderBy);
         }
 
-        $apply = self::getApply($relation, $sourceRepository);
-        if ($apply !== null) {
-            $apply($query, $sourceEntities, $relation, $targetRepository, $sourceRepository);
+        $targetScope = self::wrapTargetScope(self::getTargetScope($relation, $targetRepository));
+        if ($targetScope !== null) {
+            $targetScope($query, $sourceEntities, $relation, $targetRepository, $sourceRepository);
+        }
+
+        $sourceFilter = self::wrapSourceFilter(self::getSourceFilter($relation, $sourceRepository));
+        if ($sourceFilter !== null) {
+            $sourceFilter($query, $sourceEntities, $relation, $targetRepository, $sourceRepository);
         }
 
         return $query->getResult();
